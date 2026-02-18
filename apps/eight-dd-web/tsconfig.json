@@ -1,7 +1,6 @@
 {
   "extends": "@17suit/typescript-config/nextjs",
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }

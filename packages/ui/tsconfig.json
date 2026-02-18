@@ -1,6 +1,7 @@
 {
   "extends": "@17suit/typescript-config/node",
   "compilerOptions": {
+    "rootDir": "src",
     "outDir": "dist",
     "jsx": "preserve",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
