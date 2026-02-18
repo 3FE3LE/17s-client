@@ -1,0 +1,29 @@
+{
+  "name": "@17suit/module-nine-to-nine-nurse",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@17suit/core": "workspace:*",
+    "@tamagui/babel-plugin": "2.0.0-rc.14",
+    "@tamagui/cli": "2.0.0-rc.14",
+    "@tamagui/config": "2.0.0-rc.14",
+    "@tamagui/core": "2.0.0-rc.14",
+    "@tamagui/next-plugin": "2.0.0-rc.14",
+    "tamagui": "2.0.0-rc.14",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@17suit/eslint-config": "workspace:*",
+    "@17suit/typescript-config": "workspace:*",
+    "typescript": "^5.8.2"
+  }
+}

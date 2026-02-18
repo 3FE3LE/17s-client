@@ -1,0 +1,8 @@
+{
+  "extends": "@17suit/typescript-config/react-native",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": "."
+  },
+  "include": ["app", "**/*.ts", "**/*.tsx"]
+}

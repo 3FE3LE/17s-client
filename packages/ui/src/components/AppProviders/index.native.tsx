@@ -1,0 +1,43 @@
+import type { PropsWithChildren } from 'react';
+import { Amaranth_400Regular, Amaranth_700Bold } from '@expo-google-fonts/amaranth';
+import { Arvo_400Regular, Arvo_700Bold } from '@expo-google-fonts/arvo';
+import {
+  ZillaSlab_300Light,
+  ZillaSlab_400Regular,
+  ZillaSlab_500Medium,
+  ZillaSlab_700Bold,
+} from '@expo-google-fonts/zilla-slab';
+import { useFonts } from 'expo-font';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { suitTheme } from '../../theme';
+import tamaguiConfig from '../../tamagui.config';
+import { TamaguiProvider } from 'tamagui';
+export function AppProviders({ children }: PropsWithChildren) {
+  const [fontsLoaded] = useFonts({
+    Amaranth_400Regular,
+    Amaranth_700Bold,
+    Arvo_400Regular,
+    Arvo_700Bold,
+    ZillaSlab_300Light,
+    ZillaSlab_400Regular,
+    ZillaSlab_500Medium,
+    ZillaSlab_700Bold,
+  });
+  if (!fontsLoaded) {
+    return null;
+  }
+  return (
+    <SafeAreaProvider>
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: suitTheme.colors.background,
+        }}
+      >
+        <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+          {children}
+        </TamaguiProvider>
+      </SafeAreaView>
+    </SafeAreaProvider>
+  );
+}

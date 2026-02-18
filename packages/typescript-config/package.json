@@ -1,0 +1,20 @@
+{
+  "name": "@17suit/typescript-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./base": "./base.json",
+    "./nextjs": "./nextjs.json",
+    "./react-native": "./react-native.json",
+    "./node": "./node.json"
+  },
+  "dependencies": {
+    "@tamagui/babel-plugin": "2.0.0-rc.14",
+    "@tamagui/cli": "2.0.0-rc.14",
+    "@tamagui/config": "2.0.0-rc.14",
+    "@tamagui/core": "2.0.0-rc.14",
+    "@tamagui/next-plugin": "2.0.0-rc.14",
+    "tamagui": "2.0.0-rc.14"
+  }
+}

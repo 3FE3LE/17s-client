@@ -1,0 +1,23 @@
+{
+  "name": "@17suit/tooling",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "product:new": "node ../../tooling/generators/create-product.mjs",
+    "build": "echo 'tooling package build not required'",
+    "lint": "echo 'tooling package lint not required'",
+    "typecheck": "echo 'tooling package typecheck not required'",
+    "clean": "echo 'tooling package clean not required'",
+    "dev:product": "node ../../tooling/scripts/run-product-dev.mjs",
+    "product": "node ../../tooling/scripts/run-product-dev.mjs"
+  },
+  "dependencies": {
+    "@tamagui/babel-plugin": "2.0.0-rc.14",
+    "@tamagui/cli": "2.0.0-rc.14",
+    "@tamagui/config": "2.0.0-rc.14",
+    "@tamagui/core": "2.0.0-rc.14",
+    "@tamagui/next-plugin": "2.0.0-rc.14",
+    "tamagui": "2.0.0-rc.14"
+  }
+}

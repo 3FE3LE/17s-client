@@ -1,0 +1,4 @@
+{
+  "extends": "@17suit/typescript-config/nextjs",
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"]
+}

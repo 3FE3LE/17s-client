@@ -1,0 +1,11 @@
+{
+  "extends": "@17suit/typescript-config/node",
+  "compilerOptions": {
+    "outDir": "dist",
+    "jsx": "preserve",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["react", "react-native"],
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

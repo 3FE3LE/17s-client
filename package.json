@@ -1,0 +1,48 @@
+{
+  "name": "suite",
+  "private": true,
+  "packageManager": "pnpm@10.30.0",
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky",
+    "dev:product": "pnpm --filter @17suit/tooling run dev:product",
+    "product": "pnpm --filter @17suit/tooling run dev:product"
+  },
+  "devDependencies": {
+    "@17suit/eslint-config": "workspace:*",
+    "@17suit/typescript-config": "workspace:*",
+    "@types/node": "^22.19.11",
+    "eslint": "^9.17.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.8.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
+      "@types/react": "19.1.10",
+      "@types/react-dom": "19.1.7",
+      "react-native-web": "0.21.2",
+      "tamagui": "2.0.0-rc.14",
+      "@tamagui/core": "2.0.0-rc.14",
+      "@tamagui/config": "2.0.0-rc.14",
+      "@tamagui/native": "2.0.0-rc.14",
+      "@tamagui/babel-plugin": "2.0.0-rc.14",
+      "@tamagui/next-plugin": "2.0.0-rc.14",
+      "@tamagui/cli": "2.0.0-rc.14",
+      "@tamagui/v2-toast>@tamagui/core": "2.0.0-rc.14"
+    }
+  }
+}

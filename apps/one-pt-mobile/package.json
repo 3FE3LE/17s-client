@@ -1,0 +1,50 @@
+{
+  "name": "@17suit/one-pt-mobile",
+  "private": true,
+  "version": "0.0.0",
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start --port 8081",
+    "dev:tunnel": "ANDROID_HOME= ANDROID_SDK_ROOT= expo start --port 8081 --tunnel",
+    "build": "expo export --platform all",
+    "lint": "eslint . --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf .expo dist web-build",
+    "build:ios": "eas build --platform ios",
+    "build:android": "eas build --platform android",
+    "dev:product": "pnpm run dev:tunnel || pnpm run dev"
+  },
+  "dependencies": {
+    "@17suit/core": "workspace:*",
+    "@17suit/module-one-plan-trip": "workspace:*",
+    "@17suit/ui": "workspace:*",
+    "@clerk/clerk-expo": "^2.19.24",
+    "@expo-google-fonts/amaranth": "latest",
+    "@expo-google-fonts/arvo": "latest",
+    "@expo-google-fonts/zilla-slab": "latest",
+    "@tamagui/config": "2.0.0-rc.14",
+    "@tamagui/core": "2.0.0-rc.14",
+    "@tamagui/next-plugin": "2.0.0-rc.14",
+    "expo": "^54.0.0",
+    "expo-font": "~14.0.11",
+    "expo-router": "~6.0.23",
+    "expo-secure-store": "~14.2.3",
+    "expo-web-browser": "~14.2.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "^5.6.2",
+    "react-native-web": "^0.21.2",
+    "tamagui": "2.0.0-rc.14",
+    "@tamagui/native": "2.0.0-rc.14",
+    "zeego": "^3.0.5"
+  },
+  "devDependencies": {
+    "@17suit/eslint-config": "workspace:*",
+    "@17suit/typescript-config": "workspace:*",
+    "@tamagui/babel-plugin": "2.0.0-rc.14",
+    "@tamagui/cli": "2.0.0-rc.14",
+    "@types/react": "~19.1.10",
+    "typescript": "^5.8.2"
+  }
+}
