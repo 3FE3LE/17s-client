@@ -4,6 +4,11 @@ import type { PropsWithChildren } from 'react';
 import { suitTheme } from '../../theme';
 import tamaguiConfig from '../../tamagui.config';
 import { TamaguiProvider } from 'tamagui';
+
+const providerConfig = tamaguiConfig as NonNullable<
+  Parameters<typeof TamaguiProvider>[0]['config']
+>;
+
 export function AppProviders({ children }: PropsWithChildren) {
   return (
     <>
@@ -21,7 +26,7 @@ export function AppProviders({ children }: PropsWithChildren) {
           }
         `}
       </style>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+      <TamaguiProvider config={providerConfig} defaultTheme="dark">
         <div
           style={{
             minHeight: '100vh',

@@ -43,9 +43,15 @@ const ParagraphAny = Paragraph as unknown as ComponentType<Record<string, unknow
 export interface AppButtonProps extends PropsWithChildren {
   onPress?: (() => void) | undefined;
   variant?: AppButtonVariant;
+  disabled?: boolean;
 }
 
-export function AppButton({ children, onPress, variant = 'primary' }: AppButtonProps) {
+export function AppButton({
+  children,
+  onPress,
+  variant = 'primary',
+  disabled = false,
+}: AppButtonProps) {
   const colors = variantStyles[variant];
   const buttonType = suitTheme.typography.styles.button;
   const lineHeight = isWeb
@@ -55,6 +61,7 @@ export function AppButton({ children, onPress, variant = 'primary' }: AppButtonP
   return createElement(ButtonAny, {
     unstyled: true,
     onPress,
+    disabled,
     backgroundColor: colors.backgroundColor,
     borderRadius: suitTheme.borderRadius.md,
     alignItems: 'center',

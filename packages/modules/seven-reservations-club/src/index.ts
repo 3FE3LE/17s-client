@@ -1,4 +1,5 @@
 import { z } from 'zod';
+export * from './onboarding-role';
 
 export const SevenReservationsClubEntitySchema = z.object({
   id: z.string().uuid(),

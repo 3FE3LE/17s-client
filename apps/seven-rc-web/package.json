@@ -12,6 +12,7 @@
     "dev:product": "pnpm run dev"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.3",
     "@17suit/core": "workspace:*",
     "@17suit/module-seven-reservations-club": "workspace:*",
     "@17suit/ui": "workspace:*",

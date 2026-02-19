@@ -12,6 +12,11 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { suitTheme } from '../../theme';
 import tamaguiConfig from '../../tamagui.config';
 import { TamaguiProvider } from 'tamagui';
+
+const providerConfig = tamaguiConfig as NonNullable<
+  Parameters<typeof TamaguiProvider>[0]['config']
+>;
+
 export function AppProviders({ children }: PropsWithChildren) {
   const [fontsLoaded] = useFonts({
     Amaranth_400Regular,
@@ -34,7 +39,7 @@ export function AppProviders({ children }: PropsWithChildren) {
           backgroundColor: suitTheme.colors.background,
         }}
       >
-        <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+        <TamaguiProvider config={providerConfig} defaultTheme="dark">
           {children}
         </TamaguiProvider>
       </SafeAreaView>

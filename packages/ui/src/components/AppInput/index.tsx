@@ -35,12 +35,14 @@ export function AppInput({
   rightIcon,
   onRightIconPress,
   showPasswordToggle = true,
-  keyboardType: _keyboardType,
-  autoCapitalize: _autoCapitalize,
+  keyboardType,
+  autoCapitalize,
   secureTextEntry,
   type,
   ...rest
 }: AppInputProps) {
+  void keyboardType;
+  void autoCapitalize;
   const bodyType = suitTheme.typography.styles.body;
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const isPasswordField = secureTextEntry || type === 'password';

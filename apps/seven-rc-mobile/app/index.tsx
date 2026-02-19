@@ -1,23 +1,36 @@
-import { useClerk, useUser } from '@clerk/clerk-expo';
-import { SevenReservationsClubFeatureFlags } from '@17suit/module-seven-reservations-club';
-import { AppFrame, AppProfile, suitTheme } from '@17suit/ui';
-import { Text } from 'react-native';
+import { useEffect } from 'react';
+import {
+  getSevenReservationsClubRoleHomePath,
+  useCurrentUserRoleQuery,
+} from '@17suit/module-seven-reservations-club/client';
+import { AppFrame } from '@17suit/ui';
+import { useRouter } from 'expo-router';
 
 export default function IndexScreen() {
-  const { signOut } = useClerk();
-  const { user } = useUser();
+  const router = useRouter();
+  const { role, isLoading, error } = useCurrentUserRoleQuery();
+
+  useEffect(() => {
+    if (error) {
+      router.replace('/onboarding/role');
+      return;
+    }
+
+    if (isLoading) {
+      return;
+    }
+
+    if (!role) {
+      router.replace('/onboarding/role');
+      return;
+    }
+
+    router.replace(getSevenReservationsClubRoleHomePath(role));
+  }, [error, isLoading, role, router]);
 
   return (
-    <AppFrame appName="Seven Reservations Club" subtitle="Shared Tamagui UI running on mobile.">
-      <AppProfile
-        fullName={user?.fullName ?? null}
-        email={user?.primaryEmailAddress?.emailAddress ?? null}
-        userId={user?.id ?? null}
-        onSignOut={() => signOut()}
-      />
-      <Text style={{ color: suitTheme.colors.muted }}>
-        Flag: {SevenReservationsClubFeatureFlags.enableV2Flow}
-      </Text>
+    <AppFrame appName="Seven Reservations Club" subtitle="Cargando experiencia...">
+      <></>
     </AppFrame>
   );
 }
