@@ -6,6 +6,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { useMemo } from 'react';
 import { z } from 'zod';
 import { AuthTabScreen } from '../../components/auth-tab-screen';
+import { IANA_TIMEZONES } from '../../lib/iana-timezones';
 import { useCreateVenueMutation } from '../../lib/owner-queries';
 
 const createComplexSchema = z.object({
@@ -34,21 +35,13 @@ function detectLocalTimezone(): string {
   return 'UTC';
 }
 
-const timezonePresets = [
-  'UTC',
-  'America/Argentina/Buenos_Aires',
-  'America/New_York',
-  'America/Mexico_City',
-  'Europe/Madrid',
-] as const;
-
 export default function CreateComplexScreen() {
   const router = useRouter();
   const toast = useAppToast();
   const { role } = useCurrentUserRoleQuery();
   const detectedTimezone = useMemo(() => detectLocalTimezone(), []);
   const timezoneOptions = useMemo(() => {
-    const unique = new Set<string>([detectedTimezone, ...timezonePresets]);
+    const unique = new Set<string>([detectedTimezone, ...IANA_TIMEZONES]);
     return Array.from(unique).map((value) => ({
       value,
       label: value,

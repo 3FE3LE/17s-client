@@ -1821,6 +1821,9 @@ importers:
       '@expo-google-fonts/zilla-slab':
         specifier: '*'
         version: 0.4.1
+      '@react-native-picker/picker':
+        specifier: '*'
+        version: 2.11.1(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0)
       '@tamagui/babel-plugin':
         specifier: 2.0.0-rc.14
         version: 2.0.0-rc.14(1d9be82e56722e381fbb03bc370296aa)
@@ -16694,6 +16697,11 @@ snapshots:
     dependencies:
       react: 19.1.0
       react-native: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10)
+
+  '@react-native-picker/picker@2.11.1(react-native@0.83.2(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0)':
+    dependencies:
+      react: 19.1.0
+      react-native: 0.83.2(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10)
 
   '@react-native/assets-registry@0.81.5': {}
 
