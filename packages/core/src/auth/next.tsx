@@ -68,11 +68,14 @@ export function WebAuthProvider({
   const resolvedSignInUrl = resolveSignInUrl(signInUrl);
   const resolvedSignUpUrl = resolveSignUpUrl(signUpUrl);
 
-  return ClerkProvider({
-    signInUrl: resolvedSignInUrl,
-    signUpUrl: resolvedSignUpUrl,
-    signInForceRedirectUrl: signInForceRedirectUrl ?? '/',
-    signUpForceRedirectUrl: signUpForceRedirectUrl ?? '/',
-    children,
-  });
+  return (
+    <ClerkProvider
+      signInUrl={resolvedSignInUrl}
+      signUpUrl={resolvedSignUpUrl}
+      signInForceRedirectUrl={signInForceRedirectUrl ?? '/'}
+      signUpForceRedirectUrl={signUpForceRedirectUrl ?? '/'}
+    >
+      {children}
+    </ClerkProvider>
+  );
 }

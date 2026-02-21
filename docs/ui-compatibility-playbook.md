@@ -36,21 +36,32 @@ Mantener estable la capa de presentacion mientras crece el producto, usando Tama
 
 ## Guardrails de estabilidad
 
-- Evitar usar `Modal` y `ScrollView` directos en pantallas app sin wrapper estable.
+- `Modal` y `ScrollView` estan permitidos en apps y en `@17suit/ui` cuando el runtime esta alineado.
+- No mezclar multiples versiones de `react-native` en el monorepo. Mantener una sola version efectiva.
 - Evitar importar `@tamagui/toast` fuera de `@17suit/ui`.
 - Validar siempre:
   - `pnpm run typecheck` en `packages/ui`
   - `pnpm exec tsc --noEmit` en app impactada
+  - `pnpm --filter <app> why react-native` para confirmar una sola version resuelta
 
 ## Diagnostico rapido de errores bridge (Android/iOS)
 
 - Errores tipo `cannot be cast` o `View config getter... undefined` suelen indicar:
   - prop con tipo incorrecto cruzando bridge
   - modulo nativo no estable/linkeado en runtime actual
-  - mezcla de componentes nativos fuera del wrapper esperado
+  - mismatch de versiones de `react-native` o runtime desalineado
 
 ## Decision de diseño
 
 - Si una variante nativa no es estable hoy, se prioriza:
   - fallback estable en native (aunque sea menos fancy)
   - y se conserva API comun para evolucionar luego sin romper apps.
+
+## Navegacion (tabs / sidebar)
+
+- Las tabs se pueden usar como router principal en mobile (`expo-router` + tab bar).
+- Para web o tablet, el mismo modelo de rutas puede renderizarse como sidebar manteniendo URLs y estado.
+- Recomendacion:
+  - definir rutas una vez (source of truth)
+  - mapear presentacion por plataforma (`tabs` en mobile, `sidebar` en web/tablet)
+  - mantener la misma API de navegacion en `@17suit/ui` para no duplicar logica de negocio

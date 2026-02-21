@@ -23,7 +23,11 @@ export function ExpoAuthProvider({ children }: { children: any }) {
   if (!publishableKey) {
     throw new Error('Missing EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY');
   }
-  return ClerkProvider({ tokenCache, publishableKey, children });
+  return (
+    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+      {children}
+    </ClerkProvider>
+  );
 }
 
 export function getExpoAuthRedirect(input: ExpoAuthRedirectInput): string | null {

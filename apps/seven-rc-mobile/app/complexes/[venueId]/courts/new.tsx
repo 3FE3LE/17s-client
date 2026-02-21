@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppButton, AppInput, YStack, useAppToast } from '@17suit/ui';
+import { AppButton, AppInput, AppSelect, YStack, useAppToast } from '@17suit/ui';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -27,6 +27,32 @@ const createCourtSchema = z.object({
 });
 
 type CreateCourtFormValues = z.infer<typeof createCourtSchema>;
+
+const sportOptions = [
+  { value: 'padel', label: 'Padel' },
+  { value: 'futbol-5', label: 'Futbol 5' },
+  { value: 'futbol-7', label: 'Futbol 7' },
+  { value: 'tenis', label: 'Tenis' },
+  { value: 'basquet', label: 'Basquet' },
+] as const;
+
+const capacityOptions = [
+  { value: '2', label: '2 jugadores' },
+  { value: '4', label: '4 jugadores' },
+  { value: '6', label: '6 jugadores' },
+  { value: '8', label: '8 jugadores' },
+  { value: '10', label: '10 jugadores' },
+  { value: '12', label: '12 jugadores' },
+] as const;
+
+const durationOptions = [
+  { value: '30', label: '30 minutos' },
+  { value: '45', label: '45 minutos' },
+  { value: '60', label: '60 minutos' },
+  { value: '75', label: '75 minutos' },
+  { value: '90', label: '90 minutos' },
+  { value: '120', label: '120 minutos' },
+] as const;
 
 export default function CreateCourtScreen() {
   const router = useRouter();
@@ -100,10 +126,12 @@ export default function CreateCourtScreen() {
           control={control}
           name="sportType"
           render={({ field, fieldState }) => (
-            <AppInput
+            <AppSelect
               value={field.value}
-              onChangeText={field.onChange}
-              placeholder="Deporte (ej: padel, futbol)"
+              onChangeValue={field.onChange}
+              options={sportOptions as unknown as { value: string; label: string }[]}
+              label="Deporte"
+              placeholder="Seleccionar deporte"
               error={fieldState.invalid}
             />
           )}
@@ -112,11 +140,12 @@ export default function CreateCourtScreen() {
           control={control}
           name="capacity"
           render={({ field, fieldState }) => (
-            <AppInput
+            <AppSelect
               value={field.value}
-              onChangeText={field.onChange}
-              keyboardType="number-pad"
-              placeholder="Capacidad"
+              onChangeValue={field.onChange}
+              options={capacityOptions as unknown as { value: string; label: string }[]}
+              label="Capacidad"
+              placeholder="Seleccionar capacidad"
               error={fieldState.invalid}
             />
           )}
@@ -125,11 +154,70 @@ export default function CreateCourtScreen() {
           control={control}
           name="slotDurationMinutes"
           render={({ field, fieldState }) => (
+            <AppSelect
+              value={field.value}
+              onChangeValue={field.onChange}
+              options={durationOptions as unknown as { value: string; label: string }[]}
+              label="Duracion por turno"
+              placeholder="Seleccionar duracion"
+              error={fieldState.invalid}
+            />
+          )}
+        />
+        <AppButton variant="neutral" disabled>
+          Bloque duplicado para validar scroll de vista
+        </AppButton>
+        <Controller
+          control={control}
+          name="name"
+          render={({ field, fieldState }) => (
             <AppInput
               value={field.value}
               onChangeText={field.onChange}
-              keyboardType="number-pad"
-              placeholder="Duracion de turno en minutos"
+              label="Nombre de la cancha (duplicado)"
+              placeholder="Nombre de la cancha"
+              error={fieldState.invalid}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="sportType"
+          render={({ field, fieldState }) => (
+            <AppSelect
+              value={field.value}
+              onChangeValue={field.onChange}
+              options={sportOptions as unknown as { value: string; label: string }[]}
+              label="Deporte (duplicado)"
+              placeholder="Seleccionar deporte"
+              error={fieldState.invalid}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="capacity"
+          render={({ field, fieldState }) => (
+            <AppSelect
+              value={field.value}
+              onChangeValue={field.onChange}
+              options={capacityOptions as unknown as { value: string; label: string }[]}
+              label="Capacidad (duplicado)"
+              placeholder="Seleccionar capacidad"
+              error={fieldState.invalid}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="slotDurationMinutes"
+          render={({ field, fieldState }) => (
+            <AppSelect
+              value={field.value}
+              onChangeValue={field.onChange}
+              options={durationOptions as unknown as { value: string; label: string }[]}
+              label="Duracion por turno (duplicado)"
+              placeholder="Seleccionar duracion"
               error={fieldState.invalid}
             />
           )}
