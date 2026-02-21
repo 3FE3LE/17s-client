@@ -1,16 +1,13 @@
 import '@tamagui/native/setup-zeego';
 import { ExpoAuthProvider, getExpoAuthRedirect } from '@17suit/core/auth/expo';
-import {
-  useCurrentUserRoleQuery,
-  getSevenReservationsClubRoleHomePath,
-} from '@17suit/module-seven-reservations-club/client';
+import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppProviders } from '@17suit/ui';
 import { Slot, usePathname, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { useEffect } from 'react';
 import { SevenRcClientProviders } from '../components/seven-rc-client-providers';
 
-const PUBLIC_PATHS = ['/sign-in', '/sign-up', '/forgot-password'];
+const PUBLIC_PATHS = ['/sign-in', '/sign-up', '/sign-up-verify', '/forgot-password'];
 
 function AuthRouteGuard() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -38,7 +35,7 @@ function AuthRouteGuard() {
 
     const isPublicPath = PUBLIC_PATHS.includes(pathname);
     if (isPublicPath) {
-      router.replace('/');
+      router.replace('/home');
       return;
     }
 
@@ -53,19 +50,14 @@ function AuthRouteGuard() {
       return;
     }
 
-    const roleHome = getSevenReservationsClubRoleHomePath(role);
-    if (pathname === '/' || pathname === '/onboarding/role') {
-      router.replace(roleHome);
+    if (
+      pathname === '/' ||
+      pathname === '/onboarding/role' ||
+      pathname === '/owner' ||
+      pathname === '/play'
+    ) {
+      router.replace('/home');
       return;
-    }
-
-    if (pathname === '/owner' && role !== 'OWNER') {
-      router.replace(roleHome);
-      return;
-    }
-
-    if (pathname === '/play' && role !== 'PLAYER') {
-      router.replace(roleHome);
     }
   }, [isLoaded, isSignedIn, pathname, router, role, isRoleLoading]);
 

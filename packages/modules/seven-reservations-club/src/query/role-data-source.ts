@@ -114,14 +114,22 @@ export function createExternalPlatformRoleDataSource(options: {
         headers,
         cache: 'no-store',
       });
-      const response =
-        primaryResponse.status === 404
-          ? await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/me'), {
-              method: 'GET',
-              headers,
-              cache: 'no-store',
-            })
-          : primaryResponse;
+
+      let response = primaryResponse;
+      if (response.status === 404) {
+        response = await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/api/me'), {
+          method: 'GET',
+          headers,
+          cache: 'no-store',
+        });
+      }
+      if (response.status === 404) {
+        response = await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/me'), {
+          method: 'GET',
+          headers,
+          cache: 'no-store',
+        });
+      }
 
       if (!response.ok) {
         const payload = await parseJsonSafe(response);

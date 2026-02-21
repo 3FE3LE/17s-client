@@ -193,9 +193,9 @@ function cleanupPortProcesses(port) {
 }
 
 const webPort = parsePort(readScript(webDir, 'dev'));
-const mobilePort =
-  parsePort(readScript(mobileDir, 'dev:tunnel')) ?? parsePort(readScript(mobileDir, 'dev'));
-const portsToCheck = [webPort, mobilePort].filter((port) => Number.isInteger(port));
+const mobilePort = parsePort(readScript(mobileDir, 'dev'));
+const landingPort = parsePort(readScript(join(appsDir, 'landing'), 'dev'));
+const portsToCheck = [landingPort, webPort, mobilePort].filter((port) => Number.isInteger(port));
 
 const turboArgs = [
   'turbo',
@@ -203,6 +203,8 @@ const turboArgs = [
   'dev:product',
   '--parallel',
   '--continue=always',
+  '--filter',
+  './apps/landing',
   '--filter',
   `./apps/${product}-web`,
   '--filter',

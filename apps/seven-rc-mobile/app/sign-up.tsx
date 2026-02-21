@@ -27,7 +27,7 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSignUp = async () => {
+  const handleCreateAccount = async () => {
     if (!isLoaded) return;
 
     if (password !== confirmPassword) {
@@ -47,7 +47,8 @@ export default function SignUpScreen() {
         return;
       }
 
-      Alert.alert('Registro', 'Tu cuenta requiere un paso adicional para completarse.');
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      router.push('/sign-up-verify');
     } catch (err) {
       Alert.alert('Registro', getClerkErrorMessage(err));
     } finally {
@@ -77,7 +78,9 @@ export default function SignUpScreen() {
           secureTextEntry
           placeholder="Confirmar password"
         />
-        <AppButton onPress={handleSignUp}>{isSubmitting ? 'Creando...' : 'Crear cuenta'}</AppButton>
+        <AppButton onPress={handleCreateAccount}>
+          {isSubmitting ? 'Creando...' : 'Crear cuenta'}
+        </AppButton>
         <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo cuenta</AppLinkAction>
       </YStack>
     </AppFrame>

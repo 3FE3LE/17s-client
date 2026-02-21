@@ -2,12 +2,11 @@ import {
   useSetCurrentUserRoleMutation,
   useCurrentUserRoleQuery,
   OnboardingRoleSelector,
-  getSevenReservationsClubRoleHomePath,
 } from '@17suit/module-seven-reservations-club/client';
-import { AppFrame } from '@17suit/ui';
+import { AppFrame, YStack } from '@17suit/ui';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert } from 'react-native';
 
 export default function OnboardingRoleScreen() {
   const router = useRouter();
@@ -22,7 +21,7 @@ export default function OnboardingRoleScreen() {
 
     try {
       await setRoleMutation.mutateAsync(role);
-      router.replace(getSevenReservationsClubRoleHomePath(role));
+      router.replace('/home');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'No se pudo guardar el rol. Intenta nuevamente.';
@@ -38,7 +37,7 @@ export default function OnboardingRoleScreen() {
       appName="Seven Reservations Club"
       subtitle="Elige tu perfil inicial para personalizar tu experiencia"
     >
-      <View style={{ gap: 12 }}>
+      <YStack style={{ gap: 12 }}>
         <OnboardingRoleSelector
           role={currentRole}
           source={source}
@@ -53,7 +52,7 @@ export default function OnboardingRoleScreen() {
             void handleSetRole(role);
           }}
         />
-      </View>
+      </YStack>
     </AppFrame>
   );
 }

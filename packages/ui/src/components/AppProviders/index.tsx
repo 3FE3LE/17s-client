@@ -1,9 +1,11 @@
 'use client';
 
 import type { PropsWithChildren } from 'react';
+import { ToastProvider, ToastViewport } from '@tamagui/toast';
 import { suitTheme } from '../../theme';
 import tamaguiConfig from '../../tamagui.config';
-import { TamaguiProvider } from 'tamagui';
+import { PortalProvider, TamaguiProvider } from 'tamagui';
+import { AppToastHost } from './toast-host';
 
 const providerConfig = tamaguiConfig as NonNullable<
   Parameters<typeof TamaguiProvider>[0]['config']
@@ -27,13 +29,19 @@ export function AppProviders({ children }: PropsWithChildren) {
         `}
       </style>
       <TamaguiProvider config={providerConfig} defaultTheme="dark">
-        <div
-          style={{
-            minHeight: '100vh',
-          }}
-        >
-          {children}
-        </div>
+        <PortalProvider>
+          <ToastProvider>
+            <div
+              style={{
+                minHeight: '100vh',
+              }}
+            >
+              {children}
+            </div>
+            <AppToastHost />
+            <ToastViewport />
+          </ToastProvider>
+        </PortalProvider>
       </TamaguiProvider>
     </>
   );

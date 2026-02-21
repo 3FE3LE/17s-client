@@ -157,7 +157,6 @@ pnpm --filter @17suit/seven-rc-mobile dev
 ### Mobile
 
 - `pnpm --filter @17suit/two-sb-mobile dev` starts Expo (standard mode).
-- `pnpm --filter @17suit/two-sb-mobile dev:tunnel` starts Expo with tunnel for Expo Go.
 
 4. Quality gates:
 

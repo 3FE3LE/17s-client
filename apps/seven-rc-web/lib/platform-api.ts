@@ -18,18 +18,27 @@ export async function fetchPlatformMe(accessToken: string): Promise<unknown> {
     },
     cache: 'no-store',
   });
-  const response =
-    primaryResponse.status === 404
-      ? await fetch(`${apiBaseUrl}/me`, {
-          headers: {
-            ...headers,
-          },
-          cache: 'no-store',
-        })
-      : primaryResponse;
+
+  let response = primaryResponse;
+  if (response.status === 404) {
+    response = await fetch(`${apiBaseUrl}/api/me`, {
+      headers: {
+        ...headers,
+      },
+      cache: 'no-store',
+    });
+  }
+  if (response.status === 404) {
+    response = await fetch(`${apiBaseUrl}/me`, {
+      headers: {
+        ...headers,
+      },
+      cache: 'no-store',
+    });
+  }
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch /me (${response.status})`);
+    throw new Error(`Failed to fetch profile (${response.status})`);
   }
 
   return (await response.json()) as unknown;

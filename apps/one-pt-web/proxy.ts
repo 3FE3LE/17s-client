@@ -1,7 +1,7 @@
 import { createNextClerkMiddleware } from '@17suit/core/auth/next';
 
 export default createNextClerkMiddleware({
-  publicRoutes: ['/sign-in(.*)', '/sign-up(.*)', '/forgot-password(.*)', '/sso-callback(.*)'],
+  publicRoutes: ['/sso-callback(.*)'],
 });
 
 export const config = {

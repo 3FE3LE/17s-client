@@ -1,8 +1,5 @@
 import { useEffect } from 'react';
-import {
-  getSevenReservationsClubRoleHomePath,
-  useCurrentUserRoleQuery,
-} from '@17suit/module-seven-reservations-club/client';
+import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppFrame } from '@17suit/ui';
 import { useRouter } from 'expo-router';
 
@@ -25,7 +22,7 @@ export default function IndexScreen() {
       return;
     }
 
-    router.replace(getSevenReservationsClubRoleHomePath(role));
+    router.replace('/home');
   }, [error, isLoading, role, router]);
 
   return (

@@ -12,7 +12,7 @@
     "clean": "rm -rf .expo dist web-build",
     "build:ios": "eas build --platform ios",
     "build:android": "eas build --platform android",
-    "dev:product": "pnpm run dev:tunnel || pnpm run dev"
+    "dev:product": "pnpm run dev"
   },
   "dependencies": {
     "@17suit/core": "workspace:*",

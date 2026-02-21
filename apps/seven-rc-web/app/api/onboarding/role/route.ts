@@ -23,16 +23,10 @@ export async function POST(request: Request) {
 
   const role: SevenReservationsClubSetRolePayload['role'] = body.role;
   const tokenTemplate = process.env.CLERK_JWT_TEMPLATE;
-  if (!tokenTemplate) {
-    return NextResponse.json(
-      { error: 'Missing CLERK_JWT_TEMPLATE configuration' },
-      { status: 500 },
-    );
-  }
-  const token = await getToken({ template: tokenTemplate });
+  const token = tokenTemplate ? await getToken({ template: tokenTemplate }) : await getToken();
 
   if (!token) {
-    return NextResponse.json({ error: 'Missing Clerk template token' }, { status: 401 });
+    return NextResponse.json({ error: 'Missing Clerk token' }, { status: 401 });
   }
 
   try {

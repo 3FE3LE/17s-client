@@ -6,4 +6,10 @@ declare module '@expo/vector-icons' {
     size?: number;
     color?: string;
   }>;
+
+  export const Feather: ComponentType<{
+    name: string;
+    size?: number;
+    color?: string;
+  }>;
 }

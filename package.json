@@ -1,5 +1,6 @@
 {
   "name": "suite",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.30.0",
   "engines": {
@@ -43,6 +44,13 @@
       "@tamagui/next-plugin": "2.0.0-rc.14",
       "@tamagui/cli": "2.0.0-rc.14",
       "@tamagui/v2-toast>@tamagui/core": "2.0.0-rc.14"
+    },
+    "packageExtensions": {
+      "@tamagui/native@2.0.0-rc.14": {
+        "peerDependencies": {
+          "@react-native-menu/menu": ">=1.2.2"
+        }
+      }
     }
   }
 }

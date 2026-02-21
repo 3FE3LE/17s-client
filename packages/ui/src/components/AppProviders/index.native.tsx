@@ -9,9 +9,11 @@ import {
 } from '@expo-google-fonts/zilla-slab';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { ToastProvider, ToastViewport } from '@tamagui/toast';
 import { suitTheme } from '../../theme';
 import tamaguiConfig from '../../tamagui.config';
-import { TamaguiProvider } from 'tamagui';
+import { PortalProvider, TamaguiProvider } from 'tamagui';
+import { AppToastHost } from './toast-host';
 
 const providerConfig = tamaguiConfig as NonNullable<
   Parameters<typeof TamaguiProvider>[0]['config']
@@ -40,7 +42,13 @@ export function AppProviders({ children }: PropsWithChildren) {
         }}
       >
         <TamaguiProvider config={providerConfig} defaultTheme="dark">
-          {children}
+          <PortalProvider>
+            <ToastProvider>
+              {children}
+              <AppToastHost />
+              <ToastViewport />
+            </ToastProvider>
+          </PortalProvider>
         </TamaguiProvider>
       </SafeAreaView>
     </SafeAreaProvider>

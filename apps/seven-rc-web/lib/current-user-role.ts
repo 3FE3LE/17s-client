@@ -16,7 +16,7 @@ export async function getCurrentUserRole(): Promise<CurrentUserRoleResult> {
   }
 
   const tokenTemplate = process.env.CLERK_JWT_TEMPLATE;
-  const token = tokenTemplate ? await getToken({ template: tokenTemplate }) : null;
+  const token = tokenTemplate ? await getToken({ template: tokenTemplate }) : await getToken();
   if (token) {
     try {
       const payload = await fetchPlatformMe(token);

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AppProviders } from '@17suit/ui/app-providers';
+import { ClerkProvider } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
@@ -11,7 +12,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
       <body>
-        <AppProviders>{children}</AppProviders>
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInForceRedirectUrl="/"
+          signUpForceRedirectUrl="/"
+        >
+          <AppProviders>{children}</AppProviders>
+        </ClerkProvider>
       </body>
     </html>
   );

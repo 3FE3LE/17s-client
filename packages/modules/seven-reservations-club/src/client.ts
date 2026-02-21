@@ -9,3 +9,4 @@ export * from './components/OnboardingRoleSelector';
 export * from './query/RoleDataSourceProvider';
 export * from './query/role-data-source';
 export * from './query/role-query';
+export * from './query/query-client';
