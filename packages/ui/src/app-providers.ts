@@ -1,1 +1,1 @@
-export { AppProviders } from './components/AppProviders';
+export { AppProviders } from '@17suit/ui-web';

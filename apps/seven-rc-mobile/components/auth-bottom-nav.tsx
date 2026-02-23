@@ -1,5 +1,6 @@
 import { AppBottomTabBar } from '@17suit/ui';
 import { usePathname, useRouter } from 'expo-router';
+import { requestTabTransition } from './tab-transition';
 
 type UserRole = 'OWNER' | 'PLAYER' | null | undefined;
 
@@ -20,14 +21,20 @@ export function AuthBottomNav({ role }: AuthBottomNavProps) {
           key: 'home',
           label: 'Inicio',
           isActive: pathname === '/home',
-          onPress: () => router.replace('/home'),
+          onPress: () => {
+            if (pathname === '/home') return;
+            requestTabTransition('right', () => router.replace('/home'));
+          },
           iconName: 'home',
         },
         {
           key: 'profile',
           label: 'Perfil',
           isActive: pathname === '/profile',
-          onPress: () => router.replace('/profile'),
+          onPress: () => {
+            if (pathname === '/profile') return;
+            requestTabTransition('left', () => router.replace('/profile'));
+          },
           iconName: 'profile',
         },
       ]}

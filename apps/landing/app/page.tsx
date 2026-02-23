@@ -20,7 +20,7 @@ export default function HomePage() {
       appName="Marketing Site"
       subtitle="17suit.com host for SEO and product landing pages."
     >
-      <AppButton>Shared Tamagui Button</AppButton>
+      <AppButton>Shared UI Button</AppButton>
       {products.map((product) => (
         <Link key={product.slug} href={`/${product.slug}`}>
           {product.name}

@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Mantener estable la capa de presentacion mientras crece el producto, usando Tamagui como base compartida y componentes nativos/web solo cuando corresponde.
+Mantener estable la capa de presentacion mientras crece el producto, usando una base UI compartida y componentes nativos/web solo cuando corresponde.
 
 ## Regla principal
 
@@ -12,9 +12,9 @@ Mantener estable la capa de presentacion mientras crece el producto, usando Tama
   - `index.native.tsx` para mobile
   - `index.tsx` para web
 
-## Que va en Tamagui compartido
+## Que va en UI compartida
 
-- Layout (`XStack`, `YStack`, `ZStack`)
+- Layout base (containers flex simples)
 - Tipografia
 - Botones simples
 - Inputs base
@@ -38,7 +38,7 @@ Mantener estable la capa de presentacion mientras crece el producto, usando Tama
 
 - `Modal` y `ScrollView` estan permitidos en apps y en `@17suit/ui` cuando el runtime esta alineado.
 - No mezclar multiples versiones de `react-native` en el monorepo. Mantener una sola version efectiva.
-- Evitar importar `@tamagui/toast` fuera de `@17suit/ui`.
+- Evitar importar stacks o helpers internos fuera de `@17suit/ui`.
 - Validar siempre:
   - `pnpm run typecheck` en `packages/ui`
   - `pnpm exec tsc --noEmit` en app impactada

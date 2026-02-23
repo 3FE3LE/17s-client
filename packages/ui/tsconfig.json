@@ -6,7 +6,20 @@
     "jsx": "preserve",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["react", "react-native"],
+    "baseUrl": ".",
+    "paths": {
+      "@17suit/design-system": ["../design-system/src"],
+      "@17suit/design-system/*": ["../design-system/src/*"]
+    },
     "exactOptionalPropertyTypes": false
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "src/index.ts",
+    "src/index.native.ts",
+    "src/app-providers.ts",
+    "src/app-providers.native.ts",
+    "src/theme.ts",
+    "src/hooks/**/*.ts",
+    "src/hooks/**/*.tsx"
+  ]
 }

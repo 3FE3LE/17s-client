@@ -11,13 +11,5 @@
     "clean": "echo 'tooling package clean not required'",
     "dev:product": "node ../../tooling/scripts/run-product-dev.mjs",
     "product": "node ../../tooling/scripts/run-product-dev.mjs"
-  },
-  "dependencies": {
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/cli": "2.0.0-rc.14",
-    "@tamagui/config": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
-    "tamagui": "2.0.0-rc.14"
   }
 }

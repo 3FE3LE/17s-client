@@ -1,1 +1,0 @@
-export { ProductShell } from './shared';

@@ -1,78 +1,48 @@
-import '@tamagui/native/setup-zeego';
-import { ExpoAuthProvider, getExpoAuthRedirect } from '@17suit/core/auth/expo';
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
+import 'react-native-gesture-handler';
+import { ExpoAuthProvider } from '@17suit/core/auth/expo';
 import { AppProviders } from '@17suit/ui';
-import { Slot, usePathname, useRouter } from 'expo-router';
-import { useAuth } from '@clerk/clerk-expo';
-import { useEffect } from 'react';
+import { Slot } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SevenRcClientProviders } from '../components/seven-rc-client-providers';
+import * as SecureStore from 'expo-secure-store';
+import type { ThemeModePreference } from '@17suit/ui';
 
-const PUBLIC_PATHS = ['/sign-in', '/sign-up', '/sign-up-verify', '/forgot-password'];
-
-function AuthRouteGuard() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const { role, isLoading: isRoleLoading } = useCurrentUserRoleQuery();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  useEffect(() => {
-    const target = getExpoAuthRedirect({
-      isLoaded,
-      isSignedIn,
-      pathname,
-      publicPaths: PUBLIC_PATHS,
-      signedInPath: '/',
-      signedOutPath: '/sign-in',
-    });
-    if (target && target !== pathname) {
-      router.replace(target);
-      return;
-    }
-
-    if (!isLoaded || !isSignedIn) {
-      return;
-    }
-
-    const isPublicPath = PUBLIC_PATHS.includes(pathname);
-    if (isPublicPath) {
-      router.replace('/home');
-      return;
-    }
-
-    if (isRoleLoading) {
-      return;
-    }
-
-    if (!role) {
-      if (pathname !== '/onboarding/role') {
-        router.replace('/onboarding/role');
-      }
-      return;
-    }
-
-    if (
-      pathname === '/' ||
-      pathname === '/onboarding/role' ||
-      pathname === '/owner' ||
-      pathname === '/play'
-    ) {
-      router.replace('/home');
-      return;
-    }
-  }, [isLoaded, isSignedIn, pathname, router, role, isRoleLoading]);
-
-  if (!isLoaded) return null;
-  return <Slot />;
-}
+const THEME_STORAGE_KEY = '17suit.theme.mode';
 
 export default function Layout() {
+  const [themeMode, setThemeMode] = useState<ThemeModePreference>('system');
+
+  useEffect(() => {
+    let isMounted = true;
+    SecureStore.getItemAsync(THEME_STORAGE_KEY)
+      .then((value) => {
+        if (!isMounted || !value) return;
+        if (value === 'system' || value === 'dark' || value === 'light') {
+          setThemeMode(value);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
-    <ExpoAuthProvider>
-      <SevenRcClientProviders>
-        <AppProviders>
-          <AuthRouteGuard />
-        </AppProviders>
-      </SevenRcClientProviders>
-    </ExpoAuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ExpoAuthProvider>
+        <SevenRcClientProviders>
+          <AppProviders
+            themeMode={themeMode}
+            onThemeModeChange={(mode) => {
+              setThemeMode(mode);
+              void SecureStore.setItemAsync(THEME_STORAGE_KEY, mode);
+            }}
+          >
+            <Slot />
+          </AppProviders>
+        </SevenRcClientProviders>
+      </ExpoAuthProvider>
+    </GestureHandlerRootView>
   );
 }

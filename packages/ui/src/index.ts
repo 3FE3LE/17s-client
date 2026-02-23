@@ -1,14 +1,4 @@
-export * from './components/AppButton';
-export * from './components/AppBottomTabBar';
-export * from './components/AppDivider';
-export * from './components/AppFrame';
-export * from './components/AppInput';
-export * from './components/AppLinkAction';
-export * from './components/AppProviders';
-export * from './components/AppProfile';
-export * from './components/AppSelect';
-export * from './components/AppTitle';
-export * from './hooks/useAppToast';
-export * from './theme';
-export { default as tamaguiConfig } from './tamagui.config';
-export { XStack, YStack } from 'tamagui';
+export * from '@17suit/ui-web';
+export { useAppToast } from './hooks/useAppToast';
+export type { SuitTheme } from './theme';
+export { suitTheme } from './theme';

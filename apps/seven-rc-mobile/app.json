@@ -7,16 +7,26 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "jsEngine": "hermes",
+    "icon": "./assets/icon-17suit.png",
     "splash": {
       "backgroundColor": "#0B1020"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.seventeensuit.sevenrc"
+    },
+    "android": {
+      "package": "com.seventeensuit.sevenrc",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-17suit.png",
+        "backgroundColor": "#0B1020"
+      }
     },
     "web": {
+      "favicon": "./assets/icon-17suit.png",
       "bundler": "metro"
     },
-    "plugins": ["expo-router"]
+    "plugins": ["expo-router", "@react-native-community/datetimepicker"]
   }
 }

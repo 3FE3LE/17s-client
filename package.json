@@ -39,22 +39,7 @@
       "@types/react": "19.1.10",
       "@types/react-dom": "19.1.7",
       "react-native-web": "0.21.2",
-      "react-native-svg": "15.12.1",
-      "tamagui": "2.0.0-rc.14",
-      "@tamagui/core": "2.0.0-rc.14",
-      "@tamagui/config": "2.0.0-rc.14",
-      "@tamagui/native": "2.0.0-rc.14",
-      "@tamagui/babel-plugin": "2.0.0-rc.14",
-      "@tamagui/next-plugin": "2.0.0-rc.14",
-      "@tamagui/cli": "2.0.0-rc.14",
-      "@tamagui/v2-toast>@tamagui/core": "2.0.0-rc.14"
-    },
-    "packageExtensions": {
-      "@tamagui/native@2.0.0-rc.14": {
-        "peerDependencies": {
-          "@react-native-menu/menu": ">=1.2.2"
-        }
-      }
+      "react-native-svg": "15.12.1"
     }
   }
 }

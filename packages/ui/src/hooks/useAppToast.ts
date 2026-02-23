@@ -1,30 +1,20 @@
-import { useToastController } from '@tamagui/toast';
-
 export interface AppToastOptions {
   message?: string;
 }
 
 export function useAppToast() {
-  const toast = useToastController();
-
   return {
-    show(title: string, options?: AppToastOptions) {
-      toast.show(title, {
-        message: options?.message,
-      });
+    show(_title: string, _options?: AppToastOptions) {
+      // No-op: toast system removed.
     },
-    success(title: string, message?: string) {
-      toast.show(title, {
-        message,
-      });
+    success(_title: string, _message?: string) {
+      // No-op: toast system removed.
     },
-    error(title: string, message?: string) {
-      toast.show(title, {
-        message,
-      });
+    error(_title: string, _message?: string) {
+      // No-op: toast system removed.
     },
     hide() {
-      toast.hide();
+      // No-op: toast system removed.
     },
   };
 }

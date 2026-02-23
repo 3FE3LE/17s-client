@@ -8,16 +8,20 @@ import type {
 import { useSevenReservationsClubRoleDataSource } from './RoleDataSourceProvider';
 
 export const sevenReservationsClubQueryKeys = {
-  currentRole: ['seven-reservations-club', 'current-role'] as const,
+  currentRole: (userId?: string | null) =>
+    ['seven-reservations-club', 'current-role', userId ?? 'anonymous'] as const,
 };
 
-export function useCurrentUserRoleQuery() {
+export function useCurrentUserRoleQuery(options?: { userId?: string | null; enabled?: boolean }) {
   const dataSource = useSevenReservationsClubRoleDataSource();
+  const userId = options?.userId ?? null;
+  const enabled = options?.enabled ?? true;
 
   const query = useQuery({
-    queryKey: sevenReservationsClubQueryKeys.currentRole,
+    queryKey: sevenReservationsClubQueryKeys.currentRole(userId),
     queryFn: () => dataSource.getCurrentUserRole(),
     staleTime: 15_000,
+    enabled,
   });
 
   return {
@@ -37,10 +41,12 @@ export function useSetCurrentUserRoleMutation() {
   return useMutation({
     mutationFn: (role: SevenReservationsClubRole) => dataSource.setCurrentUserRole(role),
     onSuccess: (user: SevenReservationsClubPlatformUser) => {
-      queryClient.setQueryData(sevenReservationsClubQueryKeys.currentRole, {
-        role: user.role,
-        source: 'backend' as const,
-      });
+      const cachePayload = { role: user.role, source: 'backend' as const };
+      queryClient.setQueryData(sevenReservationsClubQueryKeys.currentRole(user.id), cachePayload);
+      queryClient.setQueryData(
+        sevenReservationsClubQueryKeys.currentRole(user.clerkUserId),
+        cachePayload,
+      );
     },
   });
 }

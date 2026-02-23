@@ -1,8 +1,7 @@
 import { useSignIn } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme } from '@17suit/ui';
+import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme, GapView } from '@17suit/ui';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
-import { YStack } from 'tamagui';
+import { Alert, View } from 'react-native';
 import { useState } from 'react';
 
 function getClerkErrorMessage(error: unknown): string {
@@ -76,7 +75,7 @@ export default function ForgotPasswordScreen() {
 
   return (
     <AppFrame appName="Two Split Bill" subtitle="Recupera tu contrasena con codigo por email.">
-      <YStack style={{ gap: suitTheme.spacing.sm }}>
+      <GapView gap="sm">
         {step === 'request' ? (
           <>
             <AppInput
@@ -120,7 +119,7 @@ export default function ForgotPasswordScreen() {
         <AppLinkAction onPress={() => router.push('/sign-in')}>
           Volver a iniciar sesion
         </AppLinkAction>
-      </YStack>
+      </GapView>
     </AppFrame>
   );
 }

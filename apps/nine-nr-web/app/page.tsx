@@ -9,7 +9,7 @@ export default function Page() {
   const { user } = useUser();
 
   return (
-    <AppFrame appName="Nine To Nine Nurse Web" subtitle="Shared Tamagui UI running on web.">
+    <AppFrame appName="Nine To Nine Nurse Web" subtitle="Shared UI running on web.">
       <AppProfile
         fullName={user?.fullName ?? null}
         email={user?.primaryEmailAddress?.emailAddress ?? null}

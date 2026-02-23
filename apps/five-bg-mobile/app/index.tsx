@@ -8,7 +8,7 @@ export default function IndexScreen() {
   const { user } = useUser();
 
   return (
-    <AppFrame appName="Five Barber Go" subtitle="Shared Tamagui UI running on mobile.">
+    <AppFrame appName="Five Barber Go" subtitle="Shared UI running on mobile.">
       <AppProfile
         fullName={user?.fullName ?? null}
         email={user?.primaryEmailAddress?.emailAddress ?? null}

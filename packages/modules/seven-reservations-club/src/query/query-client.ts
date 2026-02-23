@@ -7,6 +7,10 @@ const sevenRcQueryClientConfig: QueryClientConfig = {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
     },
     mutations: {
       retry: 0,

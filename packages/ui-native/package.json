@@ -1,0 +1,36 @@
+{
+  "name": "@17suit/ui-native",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@17suit/design-system": "workspace:*",
+    "@expo-google-fonts/amaranth": "*",
+    "@expo-google-fonts/arvo": "*",
+    "@expo-google-fonts/zilla-slab": "*",
+    "@expo/vector-icons": "*",
+    "@react-native-picker/picker": "^2.11.0",
+    "expo-font": "~14.0.11",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "15.12.1"
+  },
+  "devDependencies": {
+    "@17suit/eslint-config": "workspace:*",
+    "@17suit/typescript-config": "workspace:*",
+    "@types/react": "~19.1.10",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,8 +1,7 @@
 import { useSignUp } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme } from '@17suit/ui';
+import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme, GapView } from '@17suit/ui';
 import { useRouter } from 'expo-router';
-import { Alert } from 'react-native';
-import { YStack } from 'tamagui';
+import { Alert, View } from 'react-native';
 import { useState } from 'react';
 
 function getClerkErrorMessage(error: unknown): string {
@@ -58,7 +57,7 @@ export default function SignUpScreen() {
 
   return (
     <AppFrame appName="Four You Closet" subtitle="Crea tu cuenta con email y password.">
-      <YStack style={{ gap: suitTheme.spacing.sm }}>
+      <GapView gap="sm">
         <AppInput
           value={email}
           onChangeText={setEmail}
@@ -80,7 +79,7 @@ export default function SignUpScreen() {
         />
         <AppButton onPress={handleSignUp}>{isSubmitting ? 'Creando...' : 'Crear cuenta'}</AppButton>
         <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo cuenta</AppLinkAction>
-      </YStack>
+      </GapView>
     </AppFrame>
   );
 }

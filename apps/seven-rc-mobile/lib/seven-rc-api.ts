@@ -108,6 +108,14 @@ export interface OwnerVenue {
   };
 }
 
+export interface PublicVenue {
+  id: string;
+  name: string;
+  address?: string | null;
+  timezone: string;
+  createdAt?: string;
+}
+
 export interface Pitch {
   id: string;
   venueId: string;
@@ -117,10 +125,58 @@ export interface Pitch {
   slotDurationMinutes: number;
 }
 
+export type ReservationStatus =
+  | 'pending_confirmation'
+  | 'confirmed'
+  | 'rejected'
+  | 'cancelled'
+  | 'completed';
+
+export interface ReservationBase {
+  id: string;
+  venueId: string;
+  pitchId: string;
+  userId: string;
+  status: ReservationStatus;
+  startAt: string;
+  endAt: string;
+  invitedCount: number;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt?: string | null;
+  rejectedAt?: string | null;
+  cancelledAt?: string | null;
+}
+
+export interface ReservationWithVenuePitch extends ReservationBase {
+  pitch: Pitch;
+  venue: OwnerVenue;
+}
+
+export interface VenueReservation extends ReservationBase {
+  pitch: Pitch;
+  user: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+    clerkUserId: string;
+    role?: string | null;
+  };
+}
+
 export interface CreateVenueInput {
   name: string;
   location?: string;
   timezone?: string;
+}
+
+export interface CreateReservationInput {
+  pitchId: string;
+  startAt: string;
+  endAt: string;
+  invitedCount?: number;
+  notes?: string;
 }
 
 export interface CreatePitchInput {
@@ -128,6 +184,15 @@ export interface CreatePitchInput {
   sportType?: string;
   capacity?: number;
   slotDurationMinutes?: number;
+}
+
+export interface ConfigurePitchSlotsInput {
+  slotDurationMinutes?: number;
+  openingHours: Array<{
+    dayOfWeek: number;
+    openTime: string;
+    closeTime: string;
+  }>;
 }
 
 interface SevenRcOwnerApiOptions {
@@ -158,7 +223,12 @@ export function createSevenRcOwnerApi(options: SevenRcOwnerApiOptions) {
         });
 
         if (response.ok) {
-          return (await response.json()) as T;
+          const payload = (await response.json()) as T;
+          if (path.startsWith('/7rc/venues') && typeof console !== 'undefined') {
+            const size = Array.isArray(payload) ? payload.length : 1;
+            console.log(`[api] ${path} -> ${baseUrl} (${size})`);
+          }
+          return payload;
         }
 
         const payload = await parseJsonSafe(response);
@@ -202,6 +272,97 @@ export function createSevenRcOwnerApi(options: SevenRcOwnerApiOptions) {
     },
     createPitchForVenue(venueId: string, input: CreatePitchInput) {
       return request<Pitch>(`/7rc/venues/${venueId}/pitches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
+      });
+    },
+    configurePitchSlots(pitchId: string, input: ConfigurePitchSlotsInput) {
+      return request<{ id: string }>(`/7rc/pitches/${pitchId}/slots`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(input),
+      });
+    },
+    listVenueReservations(venueId: string, dateFrom: string, dateTo: string) {
+      const query = new URLSearchParams({ dateFrom, dateTo });
+      return request<VenueReservation[]>(`/7rc/venues/${venueId}/reservations?${query}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+    },
+  };
+}
+
+export function createSevenRcPlayerApi(options: SevenRcOwnerApiOptions) {
+  const { apiBaseUrls, getAccessToken } = options;
+
+  async function request<T>(path: string, init: RequestInit): Promise<T> {
+    const token = await getAccessToken();
+    if (!token) {
+      throw new Error('Unauthorized');
+    }
+
+    let lastError: unknown = null;
+
+    for (const baseUrl of apiBaseUrls) {
+      try {
+        const response = await fetchWithTimeout(`${baseUrl}${path}`, {
+          ...init,
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+            ...(init.headers ?? {}),
+          },
+        });
+
+        if (response.ok) {
+          return (await response.json()) as T;
+        }
+
+        const payload = await parseJsonSafe(response);
+        const error = new Error(
+          extractErrorMessage(payload, `Request failed (${response.status})`),
+        );
+        lastError = error;
+
+        if (response.status >= 400 && response.status < 500 && response.status !== 404) {
+          throw error;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    throw toError(lastError, 'Unable to reach API');
+  }
+
+  return {
+    listVenues(query?: string) {
+      const search = query ? `?q=${encodeURIComponent(query)}` : '';
+      return request<PublicVenue[]>(`/7rc/venues${search}`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+    },
+    listVenuePitches(venueId: string) {
+      return request<Pitch[]>(`/7rc/venues/${venueId}/pitches`, {
+        method: 'GET',
+        cache: 'no-store',
+      });
+    },
+    listMyReservations() {
+      return request<ReservationWithVenuePitch[]>('/7rc/reservations', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+    },
+    createReservation(input: CreateReservationInput) {
+      return request<ReservationBase>('/7rc/reservations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

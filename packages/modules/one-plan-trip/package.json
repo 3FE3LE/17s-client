@@ -13,12 +13,6 @@
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/cli": "2.0.0-rc.14",
-    "@tamagui/config": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
-    "tamagui": "2.0.0-rc.14",
     "zod": "^3.24.1"
   },
   "devDependencies": {

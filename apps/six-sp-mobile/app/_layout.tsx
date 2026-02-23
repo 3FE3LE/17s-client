@@ -1,4 +1,3 @@
-import '@tamagui/native/setup-zeego';
 import { ExpoAuthProvider, getExpoAuthRedirect } from '@17suit/core/auth/expo';
 import { AppProviders } from '@17suit/ui';
 import { Slot, usePathname, useRouter } from 'expo-router';

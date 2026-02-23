@@ -20,15 +20,10 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@17suit/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.3",
     "@17suit/core": "workspace:*",
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/cli": "2.0.0-rc.14",
-    "@tamagui/config": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
     "react": "19.1.0",
-    "tamagui": "2.0.0-rc.14",
     "zod": "^3.24.1"
   },
   "peerDependencies": {

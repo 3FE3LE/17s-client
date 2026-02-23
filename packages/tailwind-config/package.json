@@ -7,12 +7,7 @@
     ".": "./tailwind.config.ts"
   },
   "dependencies": {
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/cli": "2.0.0-rc.14",
-    "@tamagui/config": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
-    "tailwindcss": "^3.4.17",
-    "tamagui": "2.0.0-rc.14"
+    "@17suit/design-system": "workspace:*",
+    "tailwindcss": "^3.4.17"
   }
 }

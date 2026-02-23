@@ -1,15 +1,37 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppFrame } from '@17suit/ui';
-import { useRouter } from 'expo-router';
+import { useAppTheme } from '@17suit/ui';
+import { useRouter, useRootNavigationState } from 'expo-router';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import { Animated, Image, View } from 'react-native';
 
 export default function IndexScreen() {
   const router = useRouter();
-  const { role, isLoading, error } = useCurrentUserRoleQuery();
+  const rootNavigationState = useRootNavigationState();
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const { role, isLoading, error } = useCurrentUserRoleQuery({
+    userId: user?.id,
+    enabled: Boolean(user?.id),
+  });
+  const { theme } = useAppTheme();
+  const pulse = useRef(new Animated.Value(0)).current;
+  const logo = useMemo(() => require('../assets/icon-17suit.png'), []);
 
   useEffect(() => {
+    if (!rootNavigationState?.key || !isLoaded) {
+      return;
+    }
+
+    if (!isSignedIn) {
+      console.log('[nav] index -> /sign-in');
+      router.replace('/sign-in');
+      return;
+    }
+
     if (error) {
-      router.replace('/onboarding/role');
+      console.log('[nav] index error -> /role');
+      router.replace('/role');
       return;
     }
 
@@ -18,16 +40,39 @@ export default function IndexScreen() {
     }
 
     if (!role) {
-      router.replace('/onboarding/role');
+      console.log('[nav] index no role -> /role');
+      router.replace('/role');
       return;
     }
 
+    console.log('[nav] index -> /home');
     router.replace('/home');
-  }, [error, isLoading, role, router]);
+  }, [error, isLoading, isLoaded, isSignedIn, role, router, rootNavigationState?.key]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+      ]),
+    ).start();
+  }, [pulse]);
+
+  const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] });
+  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
 
   return (
-    <AppFrame appName="Seven Reservations Club" subtitle="Cargando experiencia...">
-      <></>
-    </AppFrame>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: theme.colors.background,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Animated.View style={{ transform: [{ scale }], opacity }}>
+        <Image source={logo} style={{ width: 140, height: 140 }} />
+      </Animated.View>
+    </View>
   );
 }

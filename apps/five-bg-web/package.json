@@ -16,19 +16,13 @@
     "@17suit/module-five-barber-go": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@clerk/nextjs": "^6.30.5",
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/config": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
     "next": "^16.0.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "tamagui": "2.0.0-rc.14"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
-    "@tamagui/cli": "2.0.0-rc.14",
     "@types/node": "^22.19.11",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",

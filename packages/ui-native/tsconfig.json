@@ -1,0 +1,13 @@
+{
+  "extends": "@17suit/typescript-config/react-native",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@17suit/design-system": ["../design-system/src"],
+      "@17suit/design-system/*": ["../design-system/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

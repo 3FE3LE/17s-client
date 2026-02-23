@@ -12,35 +12,27 @@
       "default": "./src/index.ts"
     },
     "./app-providers": {
-      "react-native": "./src/components/AppProviders/index.native.tsx",
+      "react-native": "./src/app-providers.native.ts",
       "default": "./src/app-providers.ts"
-    },
-    "./tamagui-config": {
-      "react-native": "./src/tamagui.config.ts",
-      "default": "./src/tamagui.config.ts"
     }
   },
   "scripts": {
-    "build": "pnpm run tamagui:build:web && tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --max-warnings=0",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src/index.ts src/index.native.ts src/app-providers.ts src/app-providers.native.ts src/theme.ts src/hooks --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "clean": "rm -rf dist",
-    "tamagui:build:web": "pnpm exec tamagui generate",
-    "tamagui:build:native": "pnpm exec tamagui generate"
+    "clean": "rm -rf dist"
   },
   "peerDependencies": {
     "@expo-google-fonts/amaranth": "*",
     "@expo-google-fonts/arvo": "*",
     "@expo-google-fonts/zilla-slab": "*",
     "@expo/vector-icons": "*",
-    "@tamagui/config": "2.0.0-rc.14",
     "expo-font": "~14.0.11",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": ">=0.81.0 <0.84.0",
     "react-native-safe-area-context": "*",
-    "react-native-svg": "15.12.1",
-    "tamagui": "2.0.0-rc.14"
+    "react-native-svg": "15.12.1"
   },
   "peerDependenciesMeta": {
     "@expo/vector-icons": {
@@ -69,16 +61,13 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
     "@expo/vector-icons": "^15.0.3",
-    "@tamagui/cli": "2.0.0-rc.14",
     "@types/react": "~19.1.10",
     "typescript": "^5.8.2"
   },
   "dependencies": {
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/native": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
-    "@tamagui/toast": "2.0.0-rc.14",
+    "@17suit/design-system": "workspace:*",
+    "@17suit/ui-native": "workspace:*",
+    "@17suit/ui-web": "workspace:*",
     "lucide-react": "^0.542.0",
     "lucide-react-native": "^0.542.0"
   }

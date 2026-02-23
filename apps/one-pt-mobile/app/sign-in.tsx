@@ -1,9 +1,16 @@
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
-import { AppButton, AppDivider, AppFrame, AppInput, AppLinkAction, suitTheme } from '@17suit/ui';
+import {
+  AppButton,
+  AppDivider,
+  AppFrame,
+  AppInput,
+  AppLinkAction,
+  suitTheme,
+  GapView,
+} from '@17suit/ui';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Alert } from 'react-native';
-import { XStack, YStack } from 'tamagui';
+import { Alert, View } from 'react-native';
 import { useState } from 'react';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -70,7 +77,7 @@ export default function SignInScreen() {
       appName="One Plan Trip"
       subtitle="Inicia sesion con email y password o continua con Google."
     >
-      <YStack style={{ gap: suitTheme.spacing.sm }}>
+      <GapView gap="sm">
         <AppButton variant="neutral" onPress={handleGoogleSignIn}>
           Continuar con Google
         </AppButton>
@@ -93,13 +100,13 @@ export default function SignInScreen() {
         <AppButton onPress={handlePasswordSignIn}>
           {isSubmitting ? 'Ingresando...' : 'Ingresar'}
         </AppButton>
-        <XStack style={{ gap: suitTheme.spacing.md, flexWrap: 'wrap' }}>
+        <GapView gap="md" style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
           <AppLinkAction onPress={() => router.push('/sign-up')}>No tengo cuenta</AppLinkAction>
           <AppLinkAction onPress={() => router.push('/forgot-password')}>
             Olvide mi contrasena
           </AppLinkAction>
-        </XStack>
-      </YStack>
+        </GapView>
+      </GapView>
     </AppFrame>
   );
 }

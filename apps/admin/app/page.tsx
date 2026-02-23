@@ -8,7 +8,7 @@ export default function Page() {
       appName="Admin Web"
       subtitle="Control plane para tenants, analytics, billing y feature flags."
     >
-      <AppButton>Shared Tamagui Button</AppButton>
+      <AppButton>Shared UI Button</AppButton>
     </AppFrame>
   );
 }

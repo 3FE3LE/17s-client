@@ -25,14 +25,8 @@
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.24",
     "@clerk/nextjs": "^6.30.5",
-    "@tamagui/babel-plugin": "2.0.0-rc.14",
-    "@tamagui/cli": "2.0.0-rc.14",
-    "@tamagui/config": "2.0.0-rc.14",
-    "@tamagui/core": "2.0.0-rc.14",
-    "@tamagui/next-plugin": "2.0.0-rc.14",
     "expo-secure-store": "~14.2.3",
     "react": "19.1.0",
-    "tamagui": "2.0.0-rc.14",
     "zod": "^3.24.1"
   },
   "peerDependencies": {

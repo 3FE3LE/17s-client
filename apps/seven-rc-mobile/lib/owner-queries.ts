@@ -4,6 +4,8 @@ import { useMemo } from 'react';
 import {
   type CreatePitchInput,
   type CreateVenueInput,
+  type ConfigurePitchSlotsInput,
+  type VenueReservation,
   createSevenRcOwnerApi,
   resolveApiBaseUrls,
   resolveClerkJwtTemplate,
@@ -12,6 +14,8 @@ import {
 const ownerQueryKeys = {
   venues: ['seven-rc', 'owner', 'venues'] as const,
   venuePitches: (venueId: string) => ['seven-rc', 'owner', 'venues', venueId, 'pitches'] as const,
+  venueReservations: (venueId: string, dateFrom: string, dateTo: string) =>
+    ['seven-rc', 'owner', 'venues', venueId, 'reservations', dateFrom, dateTo] as const,
 };
 
 function useOwnerApi() {
@@ -40,7 +44,10 @@ export function useOwnerVenuesQuery() {
   return useQuery({
     queryKey: ownerQueryKeys.venues,
     queryFn: () => api.listOwnerVenues(),
-    staleTime: 15_000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -68,7 +75,10 @@ export function useOwnerVenuePitchesQuery(venueId: string | null) {
       return api.listOwnerVenuePitches(venueId);
     },
     enabled: Boolean(venueId),
-    staleTime: 15_000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -86,5 +96,44 @@ export function useCreateVenuePitchMutation(venueId: string) {
         queryKey: ownerQueryKeys.venues,
       });
     },
+  });
+}
+
+export function useConfigurePitchSlotsMutation(pitchId: string, venueId?: string | null) {
+  const queryClient = useQueryClient();
+  const api = useOwnerApi();
+
+  return useMutation({
+    mutationFn: (input: ConfigurePitchSlotsInput) => api.configurePitchSlots(pitchId, input),
+    onSuccess: () => {
+      if (venueId) {
+        void queryClient.invalidateQueries({
+          queryKey: ownerQueryKeys.venuePitches(venueId),
+        });
+      }
+    },
+  });
+}
+
+export function useOwnerVenueReservationsQuery(
+  venueId: string | null,
+  dateFrom: string,
+  dateTo: string,
+) {
+  const api = useOwnerApi();
+
+  return useQuery<VenueReservation[]>({
+    queryKey: ownerQueryKeys.venueReservations(venueId ?? 'missing', dateFrom, dateTo),
+    queryFn: () => {
+      if (!venueId) {
+        throw new Error('Venue id is required');
+      }
+      return api.listVenueReservations(venueId, dateFrom, dateTo);
+    },
+    enabled: Boolean(venueId),
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
