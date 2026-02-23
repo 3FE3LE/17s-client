@@ -6,7 +6,6 @@
     "jsx": "react-jsx",
     "types": ["react", "react-dom"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "baseUrl": ".",
     "paths": {
       "@17suit/design-system": ["../design-system/src"],
       "@17suit/design-system/*": ["../design-system/src/*"]
