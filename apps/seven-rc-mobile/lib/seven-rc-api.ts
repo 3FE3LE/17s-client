@@ -295,6 +295,16 @@ export function createSevenRcOwnerApi(options: SevenRcOwnerApiOptions) {
         cache: 'no-store',
       });
     },
+    confirmReservation(reservationId: string) {
+      return request<ReservationBase>(`/7rc/reservations/${reservationId}/confirm`, {
+        method: 'PATCH',
+      });
+    },
+    rejectReservation(reservationId: string) {
+      return request<ReservationBase>(`/7rc/reservations/${reservationId}/reject`, {
+        method: 'PATCH',
+      });
+    },
   };
 }
 

@@ -5,6 +5,7 @@ import {
   type CreatePitchInput,
   type CreateVenueInput,
   type ConfigurePitchSlotsInput,
+  type ReservationBase,
   type VenueReservation,
   createSevenRcOwnerApi,
   resolveApiBaseUrls,
@@ -14,6 +15,8 @@ import {
 const ownerQueryKeys = {
   venues: ['seven-rc', 'owner', 'venues'] as const,
   venuePitches: (venueId: string) => ['seven-rc', 'owner', 'venues', venueId, 'pitches'] as const,
+  venueReservationsBase: (venueId: string) =>
+    ['seven-rc', 'owner', 'venues', venueId, 'reservations'] as const,
   venueReservations: (venueId: string, dateFrom: string, dateTo: string) =>
     ['seven-rc', 'owner', 'venues', venueId, 'reservations', dateFrom, dateTo] as const,
 };
@@ -135,5 +138,37 @@ export function useOwnerVenueReservationsQuery(
     gcTime: 15 * 60 * 1000,
     refetchOnMount: false,
     refetchOnReconnect: false,
+  });
+}
+
+export function useConfirmVenueReservationMutation(venueId?: string | null) {
+  const queryClient = useQueryClient();
+  const api = useOwnerApi();
+
+  return useMutation<ReservationBase, Error, string>({
+    mutationFn: (reservationId: string) => api.confirmReservation(reservationId),
+    onSuccess: () => {
+      if (venueId) {
+        void queryClient.invalidateQueries({
+          queryKey: ownerQueryKeys.venueReservationsBase(venueId),
+        });
+      }
+    },
+  });
+}
+
+export function useRejectVenueReservationMutation(venueId?: string | null) {
+  const queryClient = useQueryClient();
+  const api = useOwnerApi();
+
+  return useMutation<ReservationBase, Error, string>({
+    mutationFn: (reservationId: string) => api.rejectReservation(reservationId),
+    onSuccess: () => {
+      if (venueId) {
+        void queryClient.invalidateQueries({
+          queryKey: ownerQueryKeys.venueReservationsBase(venueId),
+        });
+      }
+    },
   });
 }

@@ -1,5 +1,16 @@
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppButton, GapView } from '@17suit/ui';
+import {
+  AppAlert,
+  AppBadge,
+  AppButton,
+  AppCard,
+  AppEmpty,
+  AppSeparator,
+  AppSkeleton,
+  AppSpinner,
+  AppTypography,
+  GapView,
+} from '@17suit/ui';
 import { useRouter } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { useEffect } from 'react';
@@ -9,6 +20,26 @@ import { VenueCard } from '../../components/venue-card';
 import { useMyReservationsQuery, usePlayerVenuesQuery } from '../../lib/player-queries';
 import { PlayerVenueCard } from '../../components/player-venue-card';
 
+function formatReservationStatus(status: string): string {
+  return status.replaceAll('_', ' ');
+}
+
+function reservationBadgeVariant(
+  status: string,
+): 'neutral' | 'success' | 'destructive' | 'warning' | 'info' {
+  if (status === 'confirmed') return 'success';
+  if (status === 'pending_confirmation') return 'warning';
+  if (status === 'rejected' || status === 'cancelled') return 'destructive';
+  if (status === 'completed') return 'info';
+  return 'neutral';
+}
+
+function reservationDateLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
 function RoleModeBanner({ role }: { role: 'OWNER' | 'PLAYER' }) {
   const isOwner = role === 'OWNER';
   const label = isOwner ? 'Modo OWNER activo' : 'Modo PLAYER activo';
@@ -17,14 +48,14 @@ function RoleModeBanner({ role }: { role: 'OWNER' | 'PLAYER' }) {
     : 'Vista orientada a exploracion y reservas.';
 
   return (
-    <GapView gap="sm">
-      <AppButton variant={isOwner ? 'success' : 'info'} disabled>
-        {label}
-      </AppButton>
-      <AppButton variant="neutral" disabled>
-        {detail}
-      </AppButton>
-    </GapView>
+    <AppCard tone="accent">
+      <GapView gap="sm">
+        <AppBadge variant={isOwner ? 'success' : 'info'}>{label}</AppBadge>
+        <AppTypography variant="body" color="#cfcfcf">
+          {detail}
+        </AppTypography>
+      </GapView>
+    </AppCard>
   );
 }
 
@@ -33,7 +64,7 @@ export default function HomeScreen() {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { role, isLoading, error, refetch } = useCurrentUserRoleQuery({
-    userId: user?.id,
+    userId: user?.id ?? null,
     enabled: Boolean(user?.id),
   });
   const venuesQuery = useOwnerVenuesQuery();
@@ -46,7 +77,6 @@ export default function HomeScreen() {
     }
 
     if (!isLoading && !error && !role) {
-      console.log('[nav] home -> /role');
       router.replace('/role');
     }
   }, [error, isLoading, isSignedIn, role, router]);
@@ -58,7 +88,12 @@ export default function HomeScreen() {
         subtitle="Loading your home..."
         swipeRoutes={{ left: '/profile' }}
       >
-        <></>
+        <GapView gap="md">
+          <AppSpinner size={28} />
+          <AppTypography variant="body" align="center" color="#cfcfcf">
+            Cargando panel...
+          </AppTypography>
+        </GapView>
       </AuthTabScreen>
     );
   }
@@ -67,7 +102,6 @@ export default function HomeScreen() {
     const venues = venuesQuery.data ?? [];
     const isLoadingVenues = venuesQuery.isLoading;
     const isRefreshingVenues = venuesQuery.isFetching && !venuesQuery.isLoading;
-    const hasVenues = venues.length > 0;
 
     return (
       <AuthTabScreen
@@ -83,36 +117,50 @@ export default function HomeScreen() {
 
           <AppButton onPress={() => router.push('/complexes/new')}>Crear complejo</AppButton>
 
-          {isLoadingVenues ? (
-            <AppButton variant="neutral" disabled>
-              Cargando complejos...
-            </AppButton>
-          ) : null}
-          {isRefreshingVenues ? (
-            <AppButton variant="neutral" disabled>
-              Actualizando complejos...
-            </AppButton>
+          <AppSeparator />
+          <AppTypography variant="subtitle2">Mis complejos</AppTypography>
+
+          {isLoadingVenues || isRefreshingVenues ? (
+            <GapView gap="sm">
+              <AppSkeleton height={84} rounded="lg" />
+              <AppSkeleton height={84} rounded="lg" />
+            </GapView>
           ) : null}
 
-          {!isLoadingVenues && !hasVenues ? (
-            <AppButton variant="neutral" disabled>
-              Aun no tienes complejos. Crea el primero para habilitar canchas.
-            </AppButton>
+          {!isLoadingVenues && venues.length === 0 ? (
+            <AppEmpty
+              title="Aun no tienes complejos"
+              description="Crea el primer complejo para habilitar canchas y reservas."
+              icon="+"
+              actionLabel="Crear complejo"
+              onAction={() => router.push('/complexes/new')}
+            />
           ) : null}
 
-          {!isLoadingVenues && hasVenues
+          {!isLoadingVenues && venues.length > 0
             ? venues.map((venue) => <VenueCard key={venue.id} venue={venue} />)
             : null}
 
           {!isLoadingVenues && venuesQuery.error ? (
-            <AppButton
+            <AppAlert
               variant="warning"
-              onPress={() => {
-                void venuesQuery.refetch();
-              }}
-            >
-              Reintentar carga de complejos
-            </AppButton>
+              title="No se pudo cargar complejos"
+              description={
+                venuesQuery.error instanceof Error
+                  ? venuesQuery.error.message
+                  : 'Error desconocido.'
+              }
+              action={
+                <AppButton
+                  variant="warning"
+                  onPress={() => {
+                    void venuesQuery.refetch();
+                  }}
+                >
+                  Reintentar
+                </AppButton>
+              }
+            />
           ) : null}
         </GapView>
       </AuthTabScreen>
@@ -120,6 +168,14 @@ export default function HomeScreen() {
   }
 
   if (error) {
+    const roleErrorMessage =
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error &&
+      typeof (error as { message?: unknown }).message === 'string'
+        ? ((error as { message: string }).message ?? 'Error desconocido.')
+        : 'Error desconocido.';
+
     return (
       <AuthTabScreen
         appName="Inicio"
@@ -127,19 +183,27 @@ export default function HomeScreen() {
         swipeRoutes={{ left: '/profile' }}
       >
         <GapView gap="md">
-          <AppButton
-            onPress={() => {
-              void refetch();
-            }}
-          >
-            Reintentar
-          </AppButton>
+          <AppAlert
+            variant="destructive"
+            title="Error de rol"
+            description={roleErrorMessage}
+            action={
+              <AppButton
+                onPress={() => {
+                  void refetch();
+                }}
+              >
+                Reintentar
+              </AppButton>
+            }
+          />
         </GapView>
       </AuthTabScreen>
     );
   }
 
   const playerVenues = playerVenuesQuery.data ?? [];
+  const reservations = myReservationsQuery.data ?? [];
 
   return (
     <AuthTabScreen
@@ -156,69 +220,101 @@ export default function HomeScreen() {
       <GapView gap="md">
         <RoleModeBanner role="PLAYER" />
 
-        <AppButton variant="neutral" disabled>
-          Complejos disponibles
-        </AppButton>
+        <AppSeparator />
+        <AppTypography variant="subtitle2">Complejos disponibles</AppTypography>
+
         {playerVenuesQuery.isLoading ? (
-          <AppButton variant="neutral" disabled>
-            Cargando complejos...
-          </AppButton>
+          <GapView gap="sm">
+            <AppSkeleton height={150} rounded="lg" />
+            <AppSkeleton height={150} rounded="lg" />
+          </GapView>
         ) : null}
+
         {!playerVenuesQuery.isLoading && playerVenues.length === 0 ? (
-          <AppButton variant="neutral" disabled>
-            No hay complejos disponibles todavia.
-          </AppButton>
+          <AppEmpty
+            title="No hay complejos disponibles"
+            description="Cuando un owner publique su complejo aparecera aqui."
+            icon="..."
+          />
         ) : null}
-        {!playerVenuesQuery.isLoading && playerVenuesQuery.error ? (
-          <AppButton variant="warning" disabled>
-            {`Error al cargar complejos: ${
-              playerVenuesQuery.error instanceof Error
-                ? playerVenuesQuery.error.message
-                : 'Desconocido'
-            }`}
-          </AppButton>
-        ) : null}
+
         {!playerVenuesQuery.isLoading && playerVenues.length > 0
           ? playerVenues.map((venue) => <PlayerVenueCard key={venue.id} venue={venue} />)
           : null}
+
         {playerVenuesQuery.error ? (
-          <AppButton
+          <AppAlert
             variant="warning"
-            onPress={() => {
-              void playerVenuesQuery.refetch();
-            }}
-          >
-            Reintentar carga de complejos
-          </AppButton>
+            title="Error al cargar complejos"
+            description={
+              playerVenuesQuery.error instanceof Error
+                ? playerVenuesQuery.error.message
+                : 'Error desconocido.'
+            }
+            action={
+              <AppButton
+                variant="warning"
+                onPress={() => {
+                  void playerVenuesQuery.refetch();
+                }}
+              >
+                Reintentar
+              </AppButton>
+            }
+          />
         ) : null}
 
-        <AppButton variant="neutral" disabled>
-          Mis reservas
-        </AppButton>
+        <AppSeparator />
+        <AppTypography variant="subtitle2">Mis reservas</AppTypography>
+
         {myReservationsQuery.isLoading ? (
-          <AppButton variant="neutral" disabled>
-            Cargando reservas...
-          </AppButton>
+          <GapView gap="sm">
+            <AppSkeleton height={88} rounded="lg" />
+            <AppSkeleton height={88} rounded="lg" />
+          </GapView>
         ) : null}
-        {!myReservationsQuery.isLoading && (myReservationsQuery.data ?? []).length === 0 ? (
-          <AppButton variant="neutral" disabled>
-            No tienes reservas aun.
-          </AppButton>
+
+        {!myReservationsQuery.isLoading && reservations.length === 0 ? (
+          <AppEmpty
+            title="No tienes reservas aun"
+            description="Explora complejos y crea tu primera reserva."
+            icon="..."
+          />
         ) : null}
-        {(myReservationsQuery.data ?? []).map((reservation) => (
-          <AppButton key={reservation.id} variant="neutral" disabled>
-            {`${reservation.venue?.name ?? 'Complejo'} · ${reservation.pitch?.name ?? 'Cancha'} · ${reservation.status}`}
-          </AppButton>
+
+        {reservations.map((reservation) => (
+          <AppCard
+            key={reservation.id}
+            title={`${reservation.venue?.name ?? 'Complejo'} · ${reservation.pitch?.name ?? 'Cancha'}`}
+            subtitle={reservationDateLabel(reservation.startAt)}
+            footer={
+              <AppBadge variant={reservationBadgeVariant(reservation.status)}>
+                {formatReservationStatus(reservation.status)}
+              </AppBadge>
+            }
+          />
         ))}
+
         {myReservationsQuery.error ? (
-          <AppButton
+          <AppAlert
             variant="warning"
-            onPress={() => {
-              void myReservationsQuery.refetch();
-            }}
-          >
-            Reintentar carga de reservas
-          </AppButton>
+            title="Error al cargar reservas"
+            description={
+              myReservationsQuery.error instanceof Error
+                ? myReservationsQuery.error.message
+                : 'Error desconocido.'
+            }
+            action={
+              <AppButton
+                variant="warning"
+                onPress={() => {
+                  void myReservationsQuery.refetch();
+                }}
+              >
+                Reintentar
+              </AppButton>
+            }
+          />
         ) : null}
       </GapView>
     </AuthTabScreen>
