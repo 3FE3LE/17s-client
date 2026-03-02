@@ -45,7 +45,7 @@ export default function ForgotPasswordScreen() {
       });
       setStep('reset');
     } catch (err) {
-      Alert.alert('Recuperar password', getClerkErrorMessage(err));
+      Alert.alert('Recuperar contrasena', getClerkErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -62,7 +62,7 @@ export default function ForgotPasswordScreen() {
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      Alert.alert('Recuperar password', 'Las contrasenas no coinciden.');
+      Alert.alert('Recuperar contrasena', 'Las contrasenas no coinciden.');
       return;
     }
 
@@ -80,9 +80,12 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
-      Alert.alert('Recuperar password', 'No se pudo completar el restablecimiento de contrasena.');
+      Alert.alert(
+        'Recuperar contrasena',
+        'No se pudo completar el restablecimiento de contrasena.',
+      );
     } catch (err) {
-      Alert.alert('Recuperar password', getClerkErrorMessage(err));
+      Alert.alert('Recuperar contrasena', getClerkErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -91,7 +94,7 @@ export default function ForgotPasswordScreen() {
   return (
     <AppFrame
       appName="Seven Reservations Club"
-      subtitle="Recupera tu contrasena con codigo por email."
+      subtitle="Recupera tu contrasena con un codigo por correo."
     >
       <GapView gap="sm">
         {step === 'request' ? (
@@ -101,10 +104,10 @@ export default function ForgotPasswordScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholder="you@company.com"
+              placeholder="tu@empresa.com"
             />
             {submitAttempted && email.trim().length === 0 ? (
-              <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu email.</Text>
+              <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu correo.</Text>
             ) : null}
             <AppButton onPress={sendResetCode} disabled={email.trim().length === 0 || isSubmitting}>
               {isSubmitting ? 'Enviando...' : 'Enviar codigo'}
@@ -126,22 +129,22 @@ export default function ForgotPasswordScreen() {
               value={newPassword}
               onChangeText={setNewPassword}
               secureTextEntry
-              placeholder="Nueva password"
+              placeholder="Nueva contrasena"
             />
             {submitAttempted && newPassword.trim().length === 0 ? (
               <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                Ingresa la nueva password.
+                Ingresa la nueva contrasena.
               </Text>
             ) : null}
             <AppInput
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
               secureTextEntry
-              placeholder="Confirmar nueva password"
+              placeholder="Confirmar nueva contrasena"
             />
             {submitAttempted && confirmNewPassword.trim().length === 0 ? (
               <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                Confirma la nueva password.
+                Confirma la nueva contrasena.
               </Text>
             ) : null}
             {submitAttempted && newPassword !== confirmNewPassword ? (
@@ -159,7 +162,7 @@ export default function ForgotPasswordScreen() {
                 isSubmitting
               }
             >
-              {isSubmitting ? 'Actualizando...' : 'Actualizar password'}
+              {isSubmitting ? 'Actualizando...' : 'Actualizar contrasena'}
             </AppButton>
           </>
         )}

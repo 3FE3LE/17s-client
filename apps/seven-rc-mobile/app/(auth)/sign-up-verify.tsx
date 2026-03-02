@@ -16,7 +16,7 @@ function getClerkErrorMessage(error: unknown): string {
       if (first?.code) return first.code;
     }
   }
-  return 'No fue posible verificar tu email.';
+  return 'No fue posible verificar tu correo.';
 }
 
 export default function SignUpVerifyScreen() {
@@ -59,7 +59,7 @@ export default function SignUpVerifyScreen() {
     setIsSubmitting(true);
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      Alert.alert('Registro', 'Enviamos un nuevo codigo a tu email.');
+      Alert.alert('Registro', 'Enviamos un nuevo codigo a tu correo.');
     } catch (err) {
       Alert.alert('Registro', getClerkErrorMessage(err));
     } finally {
@@ -70,7 +70,7 @@ export default function SignUpVerifyScreen() {
   return (
     <AppFrame
       appName="Seven Reservations Club"
-      subtitle="Ingresa el codigo de verificacion que recibiste por email."
+      subtitle="Ingresa el codigo de verificacion que recibiste por correo."
     >
       <GapView gap="sm">
         <AppInput
@@ -87,7 +87,7 @@ export default function SignUpVerifyScreen() {
           </Text>
         ) : null}
         <AppButton onPress={handleVerifyEmail} disabled={!isFormValid || isSubmitting}>
-          {isSubmitting ? 'Verificando...' : 'Verificar email'}
+          {isSubmitting ? 'Verificando...' : 'Verificar correo'}
         </AppButton>
         <AppButton variant="neutral" onPress={handleResendCode}>
           Reenviar codigo

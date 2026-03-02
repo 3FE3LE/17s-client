@@ -24,6 +24,7 @@
     "@expo-google-fonts/amaranth": "latest",
     "@expo-google-fonts/arvo": "latest",
     "@expo-google-fonts/zilla-slab": "latest",
+    "@expo/vector-icons": "^15.0.3",
     "@hookform/resolvers": "^3.10.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-picker/picker": "2.11.1",
@@ -35,10 +36,12 @@
     "expo-router": "~6.0.23",
     "expo-secure-store": "~14.2.3",
     "expo-web-browser": "~14.2.0",
+    "nativewind": "^4.2.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.71.2",
     "react-native": "0.81.5",
+    "react-native-css-interop": "0.2.2",
     "react-native-gesture-handler": "~2.28.0",
     "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "^5.6.2",
@@ -49,8 +52,11 @@
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",
+    "@17suit/tailwind-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
     "@types/react": "~19.1.10",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.8.2"
   }
 }

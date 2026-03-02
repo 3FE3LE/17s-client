@@ -1,6 +1,5 @@
 import type { CSSProperties, PropsWithChildren } from 'react';
 import type { SuitTheme } from '@17suit/design-system';
-import { useAppTheme } from '../theme/theme-context';
 
 export type GapToken = keyof SuitTheme['spacing'];
 
@@ -11,13 +10,21 @@ export interface GapViewProps extends PropsWithChildren {
 }
 
 export function GapView({ gap, direction = 'column', style, children }: GapViewProps) {
-  const { theme } = useAppTheme();
+  const gapClassMap: Record<GapToken, string> = {
+    xs: 'gap-xs',
+    sm: 'gap-sm',
+    md: 'gap-md',
+    lg: 'gap-lg',
+    xl: 'gap-xl',
+    x2l: 'gap-x2l',
+    x3l: 'gap-x3l',
+    x4l: 'gap-x4l',
+  };
+
   return (
     <div
+      className={`flex ${direction === 'row' ? 'flex-row' : 'flex-col'} ${gapClassMap[gap]}`}
       style={{
-        display: 'flex',
-        flexDirection: direction,
-        gap: theme.spacing[gap],
         ...style,
       }}
     >

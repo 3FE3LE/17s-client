@@ -32,7 +32,6 @@ export function AppSelect({
 }: AppSelectProps) {
   const { theme } = useAppTheme();
   const bodyType = theme.typography.styles.body;
-  const captionType = theme.typography.styles.caption;
   const resolvedLabel = label ?? placeholder;
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value) ?? null,
@@ -44,37 +43,15 @@ export function AppSelect({
   }
 
   return (
-    <View
-      style={{
-        width: '100%',
-      }}
-    >
+    <View className="w-full">
       {resolvedLabel ? (
-        <Text
-          style={{
-            color: theme.colors.muted,
-            fontFamily: captionType.nativeFamily,
-            fontSize: theme.fontSizes.sm,
-            lineHeight: Math.round(theme.fontSizes.sm * bodyType.lineHeightRecommended),
-            letterSpacing: bodyType.letterSpacingPx,
-            marginBottom: theme.spacing.xs,
-          }}
-        >
-          {resolvedLabel}
-        </Text>
+        <Text className="mb-xs font-zilla text-sm leading-[21px] text-muted">{resolvedLabel}</Text>
       ) : null}
 
       <View
-        style={{
-          minHeight: theme.sizes.control.md,
-          borderRadius: theme.borderRadius.md,
-          borderWidth: 1,
-          borderColor: error ? theme.colors.destructive : theme.grayscale[3],
-          backgroundColor: theme.colors.surface,
-          paddingHorizontal: theme.sizes.control.inputPaddingX,
-          justifyContent: 'center',
-          opacity: disabled ? 0.75 : 1,
-        }}
+        className={`min-h-11 justify-center rounded-md border bg-surface px-3 ${
+          error ? 'border-destructive' : 'border-black/20'
+        } ${disabled ? 'opacity-75' : ''}`}
       >
         <Picker
           selectedValue={value}
@@ -94,7 +71,7 @@ export function AppSelect({
         </Picker>
       </View>
 
-      {header ? <View style={{ marginTop: theme.spacing.xs }}>{header}</View> : null}
+      {header ? <View className="mt-xs">{header}</View> : null}
     </View>
   );
 }

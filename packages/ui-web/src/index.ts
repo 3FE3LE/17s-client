@@ -44,6 +44,8 @@ export { AppTitle } from './components/AppTitle';
 export type { AppTitleProps } from './components/AppTitle';
 export { AppProviders } from './components/AppProviders';
 export { ProductShell } from './components/ProductShell';
+export { AppProductFooter } from './components/AppProductFooter';
+export type { AppProductFooterProps, AppProductFooterLink } from './components/AppProductFooter';
 export { suitTheme } from '@17suit/design-system';
 export type { SuitTheme } from '@17suit/design-system';
 export { ThemeProvider, useAppTheme } from './theme/theme-context';

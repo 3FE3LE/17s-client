@@ -1,9 +1,10 @@
 'use client';
 
 import { useSignUp } from '@clerk/nextjs';
-import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { AuthShell } from '../../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
@@ -17,7 +18,7 @@ function getClerkErrorMessage(error: unknown): string {
       if (first?.code) return first.code;
     }
   }
-  return 'Unable to create account.';
+  return 'No fue posible crear la cuenta.';
 }
 
 function resolveRedirectTarget(rawValue: string | null): string {
@@ -33,8 +34,7 @@ function resolveRedirectTarget(rawValue: string | null): string {
   return '/';
 }
 
-export default function SignUpPage() {
-  const bodyType = suitTheme.typography.styles.body;
+function SignUpPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -54,7 +54,7 @@ export default function SignUpPage() {
     if (!isLoaded) return;
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('Las contrasenas no coinciden.');
       return;
     }
 
@@ -79,7 +79,7 @@ export default function SignUpPage() {
         return;
       }
 
-      setError('Could not start sign-up flow. Please retry.');
+      setError('No se pudo iniciar el registro. Intenta de nuevo.');
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
@@ -101,7 +101,7 @@ export default function SignUpPage() {
         return;
       }
 
-      setError('Could not complete verification.');
+      setError('No se pudo completar la verificacion.');
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
@@ -110,89 +110,102 @@ export default function SignUpPage() {
   };
 
   return (
-    <AppFrame appName="17Suit" subtitle="Create your account once for all 17Suit products.">
-      <div
-        style={{
-          width: '100%',
-          maxWidth: suitTheme.sizes.layout.form,
-          display: 'grid',
-          gap: suitTheme.spacing.md,
-        }}
-      >
+    <AuthShell
+      pageLabel="Registro"
+      title="Crea tu cuenta en minutos"
+      description="Completa tu registro una vez y usa la suite completa con la misma identidad."
+    >
+      <div className="mx-auto grid w-full max-w-form gap-sm">
         {!needsVerification ? (
-          <div style={{ display: 'grid', gap: suitTheme.spacing.sm }}>
+          <div className="grid gap-sm">
             <AppInput
               type="email"
               value={email}
               onChangeText={setEmail}
-              placeholder="you@company.com"
+              label=""
+              placeholder="tu@empresa.com"
               autoComplete="email"
               required
+              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
               value={password}
               onChangeText={setPassword}
-              placeholder="Password"
+              label=""
+              placeholder="Contrasena"
               autoComplete="new-password"
               required
+              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="Confirm password"
+              label=""
+              placeholder="Confirmar contrasena"
               autoComplete="new-password"
               required
+              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={handleCreateAccount}>
-              {isSubmitting ? 'Creating...' : 'Create account'}
+            <AppButton onPress={handleCreateAccount} compact>
+              {isSubmitting ? 'Creando...' : 'Crear cuenta'}
             </AppButton>
             <div id="clerk-captcha" />
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: suitTheme.spacing.sm }}>
+          <div className="grid gap-sm">
+            <AppTypography variant="overline" color={suitTheme.colors.muted}>
+              Verificacion de correo
+            </AppTypography>
+            <AppTypography variant="body" color={suitTheme.colors.muted}>
+              Ingresa el codigo que recibiste para activar tu cuenta.
+            </AppTypography>
+          </div>
+        )}
+
+        {needsVerification ? (
+          <div className="grid gap-sm">
             <AppInput
               type="text"
               value={code}
               onChangeText={setCode}
-              placeholder="Verification code"
+              label=""
+              placeholder="Codigo de verificacion"
               autoComplete="one-time-code"
               required
               compact
               error={Boolean(error)}
             />
-            <AppButton onPress={handleVerifyEmail}>
-              {isSubmitting ? 'Verifying...' : 'Verify email'}
+            <AppButton onPress={handleVerifyEmail} compact>
+              {isSubmitting ? 'Verificando...' : 'Verificar correo'}
             </AppButton>
           </div>
-        )}
+        ) : null}
 
         <AppLinkAction
           onPress={() => router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`)}
         >
-          I already have an account
+          Ya tengo una cuenta
         </AppLinkAction>
 
         {error ? (
-          <p
-            style={{
-              margin: 0,
-              color: suitTheme.colors.destructive,
-              fontFamily: bodyType.webFamily,
-              fontSize: bodyType.fontSize,
-              lineHeight: `${bodyType.lineHeightRecommended}`,
-              fontWeight: bodyType.fontWeight,
-              letterSpacing: bodyType.letterSpacingEm,
-            }}
-          >
+          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
             {error}
-          </p>
+          </AppTypography>
         ) : null}
       </div>
-    </AppFrame>
+    </AuthShell>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpPageContent />
+    </Suspense>
   );
 }

@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react';
-import { Children } from 'react';
 import { View, type ViewProps } from 'react-native';
 import type { SuitTheme } from '@17suit/design-system';
-import { useAppTheme } from '../theme/theme-context';
 
 type GapToken = keyof SuitTheme['spacing'];
 
@@ -12,18 +10,20 @@ type GapViewProps = {
 } & ViewProps;
 
 export function GapView({ gap, children, style, ...rest }: GapViewProps) {
-  const { theme } = useAppTheme();
-  const items = Children.toArray(children);
+  const gapClassMap: Record<GapToken, string> = {
+    xs: 'gap-xs',
+    sm: 'gap-sm',
+    md: 'gap-md',
+    lg: 'gap-lg',
+    xl: 'gap-xl',
+    x2l: 'gap-x2l',
+    x3l: 'gap-x3l',
+    x4l: 'gap-x4l',
+  };
+
   return (
-    <View {...rest} style={style}>
-      {items.map((child, index) => (
-        <View
-          key={index}
-          style={{ marginBottom: index === items.length - 1 ? 0 : theme.spacing[gap] }}
-        >
-          {child}
-        </View>
-      ))}
+    <View {...rest} className={`flex flex-col ${gapClassMap[gap]}`} style={style}>
+      {children}
     </View>
   );
 }

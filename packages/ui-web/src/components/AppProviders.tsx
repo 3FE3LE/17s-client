@@ -1,3 +1,5 @@
+'use client';
+
 import type { PropsWithChildren } from 'react';
 import { ThemeProvider, useAppTheme } from '../theme/theme-context';
 import type { ThemeModePreference } from '../theme/theme-context';
@@ -8,8 +10,21 @@ export interface AppProvidersProps extends PropsWithChildren {
 }
 
 export function AppProviders({ children, themeMode, onThemeModeChange }: AppProvidersProps) {
+  const themeProviderProps: {
+    mode?: ThemeModePreference;
+    onModeChange?: (mode: ThemeModePreference) => void;
+  } = {};
+
+  if (themeMode !== undefined) {
+    themeProviderProps.mode = themeMode;
+  }
+
+  if (onThemeModeChange !== undefined) {
+    themeProviderProps.onModeChange = onThemeModeChange;
+  }
+
   return (
-    <ThemeProvider mode={themeMode} onModeChange={onThemeModeChange}>
+    <ThemeProvider {...themeProviderProps}>
       <ThemeStyles>{children}</ThemeStyles>
     </ThemeProvider>
   );

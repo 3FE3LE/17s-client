@@ -1,0 +1,79 @@
+:root {
+  --suit-color-background: #f7f8fa;
+  --suit-color-surface: #ffffff;
+  --suit-color-accent: #35a7ff;
+  --suit-color-text: #00151c;
+  --suit-color-muted: #394448;
+  --suit-color-success: #44af69;
+  --suit-color-destructive: #f8333c;
+  --suit-color-warning: #f3863d;
+  --suit-color-caution: #edd83d;
+  --suit-color-info: #1e91d6;
+
+  --suit-color-brand-primary: #35a7ff;
+  --suit-color-brand-secondary: #00916e;
+  --suit-color-brand-accent: #ff495c;
+  --suit-color-brand-light: #f0f0f0;
+  --suit-color-brand-dark: #00171f;
+
+  --suit-font-arvo: 'Arvo', serif;
+  --suit-font-amaranth: 'Amaranth', sans-serif;
+  --suit-font-zilla: 'Zilla Slab', serif;
+
+  --suit-spacing-xs: 4px;
+  --suit-spacing-sm: 8px;
+  --suit-spacing-md: 16px;
+  --suit-spacing-lg: 24px;
+  --suit-spacing-xl: 32px;
+  --suit-spacing-x2l: 40px;
+  --suit-spacing-x3l: 48px;
+  --suit-spacing-x4l: 56px;
+
+  --suit-radius-sm: 8px;
+  --suit-radius-md: 12px;
+  --suit-radius-lg: 20px;
+  --suit-radius-xl: 28px;
+  --suit-radius-full: 999px;
+
+  --suit-text-xs: 12px;
+  --suit-text-sm: 14px;
+  --suit-text-md: 16px;
+  --suit-text-lg: 24px;
+  --suit-text-xl: 34px;
+  --suit-text-x2l: 48px;
+  --suit-text-x3l: 60px;
+  --suit-text-x4l: 96px;
+
+  --suit-tracking-minus1_5: -0.015em;
+  --suit-tracking-minus0_5: -0.005em;
+  --suit-tracking-zero: 0em;
+  --suit-tracking-plus0_25: 0.0025em;
+  --suit-tracking-plus0_4: 0.004em;
+  --suit-tracking-plus1_25: 0.0125em;
+  --suit-tracking-plus1_5: 0.015em;
+
+  --suit-container-form: 420px;
+  --suit-container-content: 960px;
+  --suit-container-wide: 1080px;
+  --suit-container-measure: 760px;
+  --suit-container-narrow: 720px;
+}
+
+.dark {
+  --suit-color-background: #00151c;
+  --suit-color-surface: #394448;
+  --suit-color-accent: #35a7ff;
+  --suit-color-text: #f0f0f0;
+  --suit-color-muted: #cfcfcf;
+  --suit-color-success: #44af69;
+  --suit-color-destructive: #f8333c;
+  --suit-color-warning: #f3863d;
+  --suit-color-caution: #edd83d;
+  --suit-color-info: #1e91d6;
+
+  --suit-color-brand-primary: #35a7ff;
+  --suit-color-brand-secondary: #00916e;
+  --suit-color-brand-accent: #ff495c;
+  --suit-color-brand-light: #eeeeee;
+  --suit-color-brand-dark: #00171f;
+}

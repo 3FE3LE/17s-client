@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler';
+import '../global.css';
 import { ExpoAuthProvider } from '@17suit/core/auth/expo';
 import { AppProviders } from '@17suit/ui';
 import { Slot } from 'expo-router';

@@ -1,21 +1,17 @@
-import { useAuth } from '@clerk/clerk-expo';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
 import {
+  createSevenRcPlayerApi,
   type CreateReservationInput,
-  type ReservationWithVenuePitch,
   type Pitch,
   type PublicVenue,
-  createSevenRcPlayerApi,
-  resolveApiBaseUrls,
-  resolveClerkJwtTemplate,
-} from './seven-rc-api';
-
-const playerQueryKeys = {
-  reservations: ['seven-rc', 'player', 'reservations'] as const,
-  venues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
-  venuePitches: (venueId: string) => ['seven-rc', 'player', 'venues', venueId, 'pitches'] as const,
-};
+  type ReservationWithVenuePitch,
+  useSevenRcCreateReservationMutation,
+  useSevenRcMyReservationsQuery,
+  useSevenRcPlayerVenuePitchesQuery,
+  useSevenRcPlayerVenuesQuery,
+} from '@17suit/module-seven-reservations-club/client';
+import { useAuth } from '@clerk/clerk-expo';
+import { useMemo } from 'react';
+import { resolveApiBaseUrls, resolveClerkJwtTemplate } from './seven-rc-api';
 
 function usePlayerApi() {
   const { getToken } = useAuth();
@@ -39,57 +35,22 @@ function usePlayerApi() {
 
 export function useMyReservationsQuery() {
   const api = usePlayerApi();
-
-  return useQuery<ReservationWithVenuePitch[]>({
-    queryKey: playerQueryKeys.reservations,
-    queryFn: () => api.listMyReservations(),
-    staleTime: 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-  });
+  return useSevenRcMyReservationsQuery(api);
 }
 
 export function usePlayerVenuesQuery(query?: string) {
   const api = usePlayerApi();
-
-  return useQuery<PublicVenue[]>({
-    queryKey: playerQueryKeys.venues(query),
-    queryFn: () => api.listVenues(query),
-    staleTime: 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-  });
+  return useSevenRcPlayerVenuesQuery(api, query);
 }
 
 export function usePlayerVenuePitchesQuery(venueId: string | null) {
   const api = usePlayerApi();
-
-  return useQuery<Pitch[]>({
-    queryKey: playerQueryKeys.venuePitches(venueId ?? 'missing'),
-    queryFn: () => {
-      if (!venueId) {
-        throw new Error('Venue id is required');
-      }
-      return api.listVenuePitches(venueId);
-    },
-    enabled: Boolean(venueId),
-    staleTime: 60 * 1000,
-    gcTime: 15 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
-  });
+  return useSevenRcPlayerVenuePitchesQuery(api, venueId);
 }
 
 export function useCreateReservationMutation() {
   const api = usePlayerApi();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (input: CreateReservationInput) => api.createReservation(input),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: playerQueryKeys.reservations });
-    },
-  });
+  return useSevenRcCreateReservationMutation(api);
 }
+
+export type { CreateReservationInput, Pitch, PublicVenue, ReservationWithVenuePitch };

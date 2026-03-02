@@ -182,6 +182,7 @@ const darkColors = {
   text: '#f0f0f0',
   muted: '#cfcfcf',
   success: '#44af69',
+  error: '#f8333c',
   destructive: '#f8333c',
   warning: '#f3863d',
   caution: '#edd83d',
@@ -200,6 +201,7 @@ const lightColors = {
   text: '#00151c',
   muted: '#394448',
   success: '#44af69',
+  error: '#f8333c',
   destructive: '#f8333c',
   warning: '#f3863d',
   caution: '#edd83d',
@@ -221,7 +223,7 @@ export const suitThemeLight = {
   colors: lightColors,
 } as const;
 
-export type SuitTheme = typeof suitThemeDark;
+export type SuitTheme = typeof suitThemeDark | typeof suitThemeLight;
 export type ThemeMode = 'light' | 'dark';
 
 export const getSuitTheme = (mode: ThemeMode) =>

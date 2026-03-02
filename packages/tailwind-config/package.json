@@ -4,10 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./tailwind.config.ts"
+    "./theme.css": "./theme.css",
+    "./variables.css": "./variables.css",
+    "./native-theme": "./native-theme.cjs"
   },
   "dependencies": {
-    "@17suit/design-system": "workspace:*",
-    "tailwindcss": "^3.4.17"
+    "@17suit/design-system": "workspace:*"
   }
 }

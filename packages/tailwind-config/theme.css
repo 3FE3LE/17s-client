@@ -1,0 +1,62 @@
+@import './variables.css';
+
+@theme {
+  --color-background: var(--suit-color-background);
+  --color-surface: var(--suit-color-surface);
+  --color-accent: var(--suit-color-accent);
+  --color-text: var(--suit-color-text);
+  --color-muted: var(--suit-color-muted);
+  --color-success: var(--suit-color-success);
+  --color-destructive: var(--suit-color-destructive);
+  --color-warning: var(--suit-color-warning);
+  --color-caution: var(--suit-color-caution);
+  --color-info: var(--suit-color-info);
+
+  --color-brand-primary: var(--suit-color-brand-primary);
+  --color-brand-secondary: var(--suit-color-brand-secondary);
+  --color-brand-accent: var(--suit-color-brand-accent);
+  --color-brand-light: var(--suit-color-brand-light);
+  --color-brand-dark: var(--suit-color-brand-dark);
+
+  --font-arvo: var(--suit-font-arvo);
+  --font-amaranth: var(--suit-font-amaranth);
+  --font-zilla: var(--suit-font-zilla);
+
+  --spacing-xs: var(--suit-spacing-xs);
+  --spacing-sm: var(--suit-spacing-sm);
+  --spacing-md: var(--suit-spacing-md);
+  --spacing-lg: var(--suit-spacing-lg);
+  --spacing-xl: var(--suit-spacing-xl);
+  --spacing-x2l: var(--suit-spacing-x2l);
+  --spacing-x3l: var(--suit-spacing-x3l);
+  --spacing-x4l: var(--suit-spacing-x4l);
+
+  --radius-sm: var(--suit-radius-sm);
+  --radius-md: var(--suit-radius-md);
+  --radius-lg: var(--suit-radius-lg);
+  --radius-xl: var(--suit-radius-xl);
+  --radius-full: var(--suit-radius-full);
+
+  --text-xs: var(--suit-text-xs);
+  --text-sm: var(--suit-text-sm);
+  --text-md: var(--suit-text-md);
+  --text-lg: var(--suit-text-lg);
+  --text-xl: var(--suit-text-xl);
+  --text-x2l: var(--suit-text-x2l);
+  --text-x3l: var(--suit-text-x3l);
+  --text-x4l: var(--suit-text-x4l);
+
+  --tracking-minus1_5: var(--suit-tracking-minus1_5);
+  --tracking-minus0_5: var(--suit-tracking-minus0_5);
+  --tracking-zero: var(--suit-tracking-zero);
+  --tracking-plus0_25: var(--suit-tracking-plus0_25);
+  --tracking-plus0_4: var(--suit-tracking-plus0_4);
+  --tracking-plus1_25: var(--suit-tracking-plus1_25);
+  --tracking-plus1_5: var(--suit-tracking-plus1_5);
+
+  --container-form: var(--suit-container-form);
+  --container-content: var(--suit-container-content);
+  --container-wide: var(--suit-container-wide);
+  --container-measure: var(--suit-container-measure);
+  --container-narrow: var(--suit-container-narrow);
+}

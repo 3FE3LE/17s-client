@@ -24,15 +24,10 @@ export function AppFrame({
   children,
 }: AppFrameProps) {
   const { theme } = useAppTheme();
-  const overlineType = theme.typography.styles.overline;
-  const bodyType = theme.typography.styles.body;
 
   return (
     <ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background,
-      }}
+      className="flex-1 bg-background"
       contentContainerStyle={{
         padding: theme.spacing.lg,
         paddingBottom: theme.spacing.x2l,
@@ -49,49 +44,24 @@ export function AppFrame({
       }
       keyboardShouldPersistTaps="handled"
     >
-      <View style={{ width: '100%' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      <View className="w-full">
+        <View className="flex-row items-center">
           {typeof onBack === 'function' ? (
             <Pressable
               onPress={onBack}
-              style={{
-                paddingHorizontal: theme.spacing.sm,
-                paddingVertical: theme.spacing.xs,
-                borderRadius: theme.borderRadius.md,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: theme.grayscale[3],
-                backgroundColor: theme.colors.surface,
-              }}
+              className="items-center justify-center rounded-md border border-black/20 bg-surface px-sm py-xs"
             >
               <Feather name="chevron-left" size={20} color={theme.colors.text} />
             </Pressable>
           ) : null}
-          {typeof onBack === 'function' ? <View style={{ width: theme.spacing.sm }} /> : null}
-          <Text
-            style={{
-              color: theme.colors.info,
-              fontSize: overlineType.fontSize,
-              fontFamily: overlineType.nativeFamily,
-              lineHeight: Math.round(overlineType.fontSize * overlineType.lineHeightRecommended),
-              letterSpacing: overlineType.letterSpacingPx,
-            }}
-          >
+          {typeof onBack === 'function' ? <View className="w-sm" /> : null}
+          <Text className="font-zilla text-xs font-light uppercase leading-[17px] tracking-plus1_5 text-info">
             {APP_FRAME_BADGE}
           </Text>
         </View>
         <AppTitle text={appName} />
         {subtitle ? (
-          <Text
-            style={{
-              color: theme.colors.muted,
-              fontSize: bodyType.fontSize,
-              fontFamily: bodyType.nativeFamily,
-              lineHeight: Math.round(bodyType.fontSize * bodyType.lineHeightRecommended),
-              letterSpacing: bodyType.letterSpacingPx,
-            }}
-          >
+          <Text className="font-zilla text-md leading-[24px] tracking-normal text-muted">
             {subtitle}
           </Text>
         ) : null}

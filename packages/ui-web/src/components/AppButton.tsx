@@ -1,5 +1,4 @@
 import type { ButtonHTMLAttributes, PropsWithChildren } from 'react';
-import { useAppTheme } from '../theme/theme-context';
 
 type AppButtonVariant = 'primary' | 'success' | 'destructive' | 'warning' | 'info' | 'neutral';
 
@@ -8,6 +7,8 @@ export interface AppButtonProps
   onPress?: (() => void) | undefined;
   variant?: AppButtonVariant;
   disabled?: boolean;
+  fullWidth?: boolean;
+  compact?: boolean;
 }
 
 export function AppButton({
@@ -15,38 +16,30 @@ export function AppButton({
   onPress,
   variant = 'primary',
   disabled = false,
+  fullWidth = true,
+  compact = false,
+  style,
   ...rest
 }: AppButtonProps) {
-  const { theme } = useAppTheme();
-  const variantStyles: Record<AppButtonVariant, { backgroundColor: string; textColor: string }> = {
-    primary: {
-      backgroundColor: theme.colors.brandPrimary,
-      textColor: theme.colors.brandDark,
-    },
-    success: {
-      backgroundColor: theme.colors.success,
-      textColor: theme.colors.brandDark,
-    },
-    destructive: {
-      backgroundColor: theme.colors.destructive,
-      textColor: theme.colors.brandLight,
-    },
-    warning: {
-      backgroundColor: theme.colors.warning,
-      textColor: theme.colors.background,
-    },
-    info: {
-      backgroundColor: theme.colors.info,
-      textColor: theme.colors.brandLight,
-    },
-    neutral: {
-      backgroundColor: theme.grayscale[4],
-      textColor: theme.colors.brandDark,
-    },
+  const variantClasses: Record<AppButtonVariant, string> = {
+    primary: 'bg-brand-primary text-brand-dark',
+    success: 'bg-success text-brand-dark',
+    destructive: 'bg-destructive text-brand-light',
+    warning: 'bg-warning text-background',
+    info: 'bg-info text-brand-light',
+    neutral: 'bg-brand-light text-brand-dark',
   };
-  const colors = variantStyles[variant];
-  const buttonType = theme.typography.styles.button;
-  const lineHeight = buttonType.fontSize * buttonType.lineHeightRecommended;
+  const buttonClassName = [
+    'inline-flex items-center justify-center rounded-md border border-black/10 shadow-[0_1px_2px_rgba(0,0,0,0.35)] transition-transform duration-150 enabled:hover:-translate-y-px',
+    'font-zilla text-md font-bold leading-[1.4] tracking-plus1_25',
+    fullWidth ? 'w-full' : 'w-auto',
+    compact ? 'min-h-10 px-md py-xs' : 'min-h-11 px-lg py-sm',
+    disabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer',
+    variantClasses[variant],
+    typeof rest.className === 'string' ? rest.className : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <button
@@ -54,35 +47,12 @@ export function AppButton({
       type="button"
       onClick={onPress}
       disabled={disabled}
+      className={buttonClassName}
       style={{
-        backgroundColor: colors.backgroundColor,
-        borderRadius: theme.borderRadius.md,
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        minHeight: theme.sizes.control.md,
-        padding: `${theme.spacing.sm}px ${theme.spacing.lg}px`,
-        border: 'none',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.35)',
-        transition: 'transform 120ms ease, filter 120ms ease',
-        opacity: disabled ? 0.75 : 1,
+        ...style,
       }}
     >
-      <span
-        style={{
-          color: colors.textColor,
-          margin: 0,
-          textAlign: 'center',
-          fontFamily: buttonType.webFamily,
-          fontSize: buttonType.fontSize,
-          lineHeight,
-          fontWeight: buttonType.fontWeight,
-          letterSpacing: buttonType.letterSpacingEm,
-        }}
-      >
-        {children}
-      </span>
+      <span className="m-0 text-center">{children}</span>
     </button>
   );
 }

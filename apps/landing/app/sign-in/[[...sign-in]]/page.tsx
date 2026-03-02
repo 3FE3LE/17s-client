@@ -1,9 +1,10 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppDivider, AppFrame, AppInput, AppLinkAction, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { AuthShell } from '../../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
@@ -17,7 +18,7 @@ function getClerkErrorMessage(error: unknown): string {
       if (first?.code) return first.code;
     }
   }
-  return 'Sign in failed.';
+  return 'No fue posible iniciar sesion.';
 }
 
 function resolveRedirectTarget(rawValue: string | null): string {
@@ -33,8 +34,7 @@ function resolveRedirectTarget(rawValue: string | null): string {
   return '/';
 }
 
-export default function SignInPage() {
-  const bodyType = suitTheme.typography.styles.body;
+function SignInPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -65,7 +65,7 @@ export default function SignInPage() {
         return;
       }
 
-      setError('Your session needs an additional step to complete.');
+      setError('Tu sesion necesita un paso adicional para completarse.');
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
@@ -88,78 +88,79 @@ export default function SignInPage() {
   };
 
   return (
-    <AppFrame appName="17Suit" subtitle="Sign in once and continue to any 17Suit product.">
-      <div
-        style={{
-          width: '100%',
-          maxWidth: suitTheme.sizes.layout.form,
-          display: 'grid',
-          gap: suitTheme.spacing.md,
-        }}
-      >
-        <AppButton variant="neutral" onPress={onGoogleSSO}>
-          Continue with Google
+    <AuthShell
+      pageLabel="Iniciar sesion"
+      title="Accede y continua en tu flujo"
+      description="Entra con Google o con tu correo para abrir tus herramientas sin pasos extra."
+    >
+      <div className="mx-auto grid w-full max-w-form gap-sm">
+        <AppButton
+          variant="neutral"
+          onPress={onGoogleSSO}
+          compact
+          fullWidth={false}
+          style={{ justifySelf: 'start' }}
+        >
+          Continuar con Google
         </AppButton>
 
-        <AppDivider />
-
-        <div style={{ display: 'grid', gap: suitTheme.spacing.sm }}>
+        <div className="grid gap-sm">
           <AppInput
             type="email"
             value={email}
             onChangeText={setEmail}
-            placeholder="you@company.com"
+            label=""
+            placeholder="tu@empresa.com"
             autoComplete="email"
             required
+            compact
           />
           <AppInput
             type="password"
             value={password}
             onChangeText={setPassword}
-            placeholder="Password"
+            label=""
+            placeholder="Contrasena"
             autoComplete="current-password"
             required
+            compact
           />
-          <AppButton onPress={handlePasswordSignIn}>
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
+          <AppButton onPress={handlePasswordSignIn} compact>
+            {isSubmitting ? 'Iniciando sesion...' : 'Iniciar sesion'}
           </AppButton>
         </div>
 
-        <div style={{ display: 'flex', gap: suitTheme.spacing.md, flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap gap-sm">
           <AppLinkAction
             onPress={() =>
               router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectTarget)}`)
             }
           >
-            Create account
+            Crear cuenta
           </AppLinkAction>
           <AppLinkAction
             onPress={() =>
               router.push(`/forgot-password?redirect_url=${encodeURIComponent(redirectTarget)}`)
             }
           >
-            Forgot password
+            Olvide mi contrasena
           </AppLinkAction>
         </div>
 
-        <AppLinkAction onPress={() => router.replace('/')}>Back to landing</AppLinkAction>
-
         {error ? (
-          <p
-            style={{
-              margin: 0,
-              color: suitTheme.colors.destructive,
-              fontFamily: bodyType.webFamily,
-              fontSize: bodyType.fontSize,
-              lineHeight: `${bodyType.lineHeightRecommended}`,
-              fontWeight: bodyType.fontWeight,
-              letterSpacing: bodyType.letterSpacingEm,
-            }}
-          >
+          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
             {error}
-          </p>
+          </AppTypography>
         ) : null}
       </div>
-    </AppFrame>
+    </AuthShell>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPageContent />
+    </Suspense>
   );
 }

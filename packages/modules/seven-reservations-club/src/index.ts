@@ -1,5 +1,6 @@
 import { z } from 'zod';
 export * from './onboarding-role';
+export * from './sdk/seven-rc-api';
 
 export const SevenReservationsClubEntitySchema = z.object({
   id: z.string().uuid(),

@@ -1,16 +1,8 @@
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
-import {
-  AppButton,
-  AppDivider,
-  AppFrame,
-  AppInput,
-  AppLinkAction,
-  GapView,
-  useAppTheme,
-} from '@17suit/ui';
+import { AppButton, AppDivider, AppFrame, AppInput, AppLinkAction, GapView } from '@17suit/ui';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Alert, Text } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { useState } from 'react';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -27,14 +19,13 @@ function getClerkErrorMessage(error: unknown): string {
       if (first?.code) return first.code;
     }
   }
-  return 'No fue posible iniciar sesion con email y password.';
+  return 'No fue posible iniciar sesion.';
 }
 
 export default function SignInScreen() {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,9 +52,9 @@ export default function SignInScreen() {
         return;
       }
 
-      Alert.alert('Sign in', 'Tu sesion requiere un paso adicional.');
+      Alert.alert('Iniciar sesion', 'Tu sesion requiere un paso adicional para completarse.');
     } catch (err) {
-      Alert.alert('Sign in error', getClerkErrorMessage(err));
+      Alert.alert('Error de inicio de sesion', getClerkErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
@@ -77,16 +68,21 @@ export default function SignInScreen() {
         router.replace('/');
       }
     } catch {
-      Alert.alert('Sign in error', 'No fue posible iniciar sesion con Google.');
+      Alert.alert('Error de inicio de sesion', 'No fue posible iniciar sesion con Google.');
     }
   };
 
   return (
     <AppFrame
       appName="Seven Reservations Club"
-      subtitle="Inicia sesion con email y password o continua con Google."
+      subtitle="Inicia sesion con correo y contrasena o continua con Google."
     >
       <GapView gap="sm">
+        <View className="mb-2 rounded-md border border-brand-primary bg-brand-light px-3 py-2">
+          <Text className="font-amaranth text-xs tracking-plus0_4 text-brand-dark">
+            Tailwind/NativeWind activo en esta pantalla
+          </Text>
+        </View>
         <AppButton variant="neutral" onPress={handleGoogleSignIn}>
           Continuar con Google
         </AppButton>
@@ -98,29 +94,29 @@ export default function SignInScreen() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholder="you@company.com"
+          placeholder="tu@empresa.com"
         />
         {submitAttempted && email.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu email.</Text>
+          <Text className="text-xs text-destructive">Ingresa tu correo.</Text>
         ) : null}
         <AppInput
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="Password"
+          placeholder="Contrasena"
         />
         {submitAttempted && password.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu password.</Text>
+          <Text className="text-xs text-destructive">Ingresa tu contrasena.</Text>
         ) : null}
         <AppButton onPress={handlePasswordSignIn} disabled={!isFormValid || isSubmitting}>
-          {isSubmitting ? 'Ingresando...' : 'Ingresar'}
+          {isSubmitting ? 'Iniciando sesion...' : 'Iniciar sesion'}
         </AppButton>
-        <GapView gap="md" style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          <AppLinkAction onPress={() => router.push('/sign-up')}>No tengo cuenta</AppLinkAction>
+        <View className="mt-2 flex-row flex-wrap items-center gap-4">
+          <AppLinkAction onPress={() => router.push('/sign-up')}>Crear cuenta</AppLinkAction>
           <AppLinkAction onPress={() => router.push('/forgot-password')}>
             Olvide mi contrasena
           </AppLinkAction>
-        </GapView>
+        </View>
       </GapView>
     </AppFrame>
   );

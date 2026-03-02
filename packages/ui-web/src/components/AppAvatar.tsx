@@ -1,3 +1,5 @@
+'use client';
+
 import type { CSSProperties, ImgHTMLAttributes } from 'react';
 import { useMemo } from 'react';
 import { useAppTheme } from '../theme/theme-context';

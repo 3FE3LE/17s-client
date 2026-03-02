@@ -1,7 +1,8 @@
+'use client';
+
 import { Eye, EyeOff } from 'lucide-react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useState } from 'react';
-import { useAppTheme } from '../theme/theme-context';
 
 export interface AppInputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -43,8 +44,6 @@ export function AppInput({
 }: AppInputProps) {
   void keyboardType;
   void autoCapitalize;
-  const { theme } = useAppTheme();
-  const bodyType = theme.typography.styles.body;
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const isPasswordField = secureTextEntry || type === 'password';
   const shouldShowPasswordToggle = isPasswordField && showPasswordToggle;
@@ -56,50 +55,29 @@ export function AppInput({
       ? 'password'
       : type;
   const resolvedLabel = label ?? placeholder;
-  const inputPaddingLeft = leftIcon ? 40 : theme.sizes.control.inputPaddingX;
   const hasRightAction = Boolean(shouldShowPasswordToggle || rightIcon);
-  const inputPaddingRight = hasRightAction ? 40 : theme.sizes.control.inputPaddingX;
+  const inputClassName = [
+    'h-11 w-full rounded-md border bg-surface px-3 font-zilla text-md leading-[1.5] tracking-normal text-text outline-none transition-colors',
+    'placeholder:text-muted',
+    compact ? 'h-10' : 'h-11',
+    leftIcon ? 'pl-10' : 'pl-3',
+    hasRightAction ? 'pr-10' : 'pr-3',
+    error ? 'border-destructive' : 'border-black/20',
+    disabled ? 'cursor-not-allowed opacity-75' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <div
-      style={{
-        width: '100%',
-        display: 'grid',
-        gap: theme.spacing.xs,
-      }}
-    >
+    <div className="grid w-full gap-xs">
       {resolvedLabel ? (
-        <label
-          style={{
-            color: theme.colors.muted,
-            fontFamily: bodyType.webFamily,
-            fontSize: theme.fontSizes.sm,
-            lineHeight: `${bodyType.lineHeightRecommended}`,
-            fontWeight: bodyType.fontWeight,
-            letterSpacing: bodyType.letterSpacingEm,
-          }}
-        >
+        <label className="font-zilla text-sm leading-[1.5] tracking-normal text-muted">
           {resolvedLabel}
         </label>
       ) : null}
-      <div
-        style={{
-          position: 'relative',
-          width: '100%',
-        }}
-      >
+      <div className="relative w-full">
         {leftIcon ? (
-          <span
-            style={{
-              position: 'absolute',
-              left: 12,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              color: theme.colors.muted,
-            }}
-          >
+          <span className="absolute left-3 top-1/2 inline-flex -translate-y-1/2 items-center text-muted">
             {leftIcon}
           </span>
         ) : null}
@@ -110,6 +88,7 @@ export function AppInput({
           disabled={disabled}
           aria-invalid={error}
           type={resolvedType}
+          className={inputClassName}
           onChange={(event) =>
             onChangeText(
               (
@@ -119,44 +98,12 @@ export function AppInput({
               ).value,
             )
           }
-          style={{
-            width: '100%',
-            height: compact ? theme.sizes.control.sm : theme.sizes.control.md,
-            borderRadius: theme.borderRadius.md,
-            border: `1px solid ${error ? theme.colors.destructive : theme.grayscale[3]}`,
-            background: theme.colors.surface,
-            color: disabled ? theme.colors.muted : theme.colors.text,
-            opacity: disabled ? 0.75 : 1,
-            paddingLeft: inputPaddingLeft,
-            paddingRight: inputPaddingRight,
-            fontFamily: bodyType.webFamily,
-            fontSize: bodyType.fontSize,
-            lineHeight: `${bodyType.lineHeightRecommended}`,
-            fontWeight: bodyType.fontWeight,
-            letterSpacing: bodyType.letterSpacingEm,
-          }}
         />
         {shouldShowPasswordToggle ? (
           <button
             type="button"
             onClick={() => setIsPasswordVisible((current) => !current)}
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 24,
-              height: 24,
-              border: 'none',
-              background: 'transparent',
-              padding: 0,
-              margin: 0,
-              cursor: 'pointer',
-              color: theme.colors.muted,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="absolute right-[10px] top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
             aria-label={isPasswordVisible ? 'Ocultar contrasena' : 'Mostrar contrasena'}
           >
             {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -166,23 +113,8 @@ export function AppInput({
           <button
             type="button"
             onClick={onRightIconPress}
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 24,
-              height: 24,
-              border: 'none',
-              background: 'transparent',
-              padding: 0,
-              margin: 0,
-              cursor: onRightIconPress ? 'pointer' : 'default',
-              color: theme.colors.muted,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="absolute right-[10px] top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
+            style={{ cursor: onRightIconPress ? 'pointer' : 'default' }}
             aria-label="Input action"
           >
             {rightIcon}

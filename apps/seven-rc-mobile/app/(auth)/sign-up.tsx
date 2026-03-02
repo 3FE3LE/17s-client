@@ -67,35 +67,35 @@ export default function SignUpScreen() {
   };
 
   return (
-    <AppFrame appName="Seven Reservations Club" subtitle="Crea tu cuenta con email y password.">
+    <AppFrame appName="Seven Reservations Club" subtitle="Crea tu cuenta con correo y contrasena.">
       <GapView gap="sm">
         <AppInput
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          placeholder="you@company.com"
+          placeholder="tu@empresa.com"
         />
         {submitAttempted && email.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu email.</Text>
+          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu correo.</Text>
         ) : null}
         <AppInput
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          placeholder="Password"
+          placeholder="Contrasena"
         />
         {submitAttempted && password.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu password.</Text>
+          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu contrasena.</Text>
         ) : null}
         <AppInput
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
-          placeholder="Confirmar password"
+          placeholder="Confirmar contrasena"
         />
         {submitAttempted && confirmPassword.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Confirma tu password.</Text>
+          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Confirma tu contrasena.</Text>
         ) : null}
         {submitAttempted && !passwordsMatch ? (
           <Text style={{ color: theme.colors.error, fontSize: 12 }}>
@@ -105,7 +105,7 @@ export default function SignUpScreen() {
         <AppButton onPress={handleCreateAccount} disabled={!isFormValid || isSubmitting}>
           {isSubmitting ? 'Creando...' : 'Crear cuenta'}
         </AppButton>
-        <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo cuenta</AppLinkAction>
+        <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo una cuenta</AppLinkAction>
       </GapView>
     </AppFrame>
   );

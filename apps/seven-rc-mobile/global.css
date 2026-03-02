@@ -1,0 +1,5 @@
+@import '@17suit/tailwind-config/variables.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

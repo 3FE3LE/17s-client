@@ -1,6 +1,7 @@
+'use client';
+
 import type { SelectHTMLAttributes } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useAppTheme } from '../theme/theme-context';
 
 export interface AppSelectOption {
   label: string;
@@ -32,8 +33,6 @@ export function AppSelect({
 }: AppSelectProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const { theme } = useAppTheme();
-  const bodyType = theme.typography.styles.body;
   const resolvedLabel = label ?? placeholder;
   const selectedOption = useMemo(
     () => options.find((option) => option.value === value) ?? null,
@@ -71,26 +70,9 @@ export function AppSelect({
   }, [open]);
 
   return (
-    <div
-      ref={rootRef}
-      style={{
-        width: '100%',
-        display: 'grid',
-        gap: theme.spacing.xs,
-        position: 'relative',
-      }}
-    >
+    <div ref={rootRef} className="relative grid w-full gap-xs">
       {resolvedLabel ? (
-        <label
-          style={{
-            color: theme.colors.muted,
-            fontFamily: bodyType.webFamily,
-            fontSize: theme.fontSizes.sm,
-            lineHeight: `${bodyType.lineHeightRecommended}`,
-            fontWeight: bodyType.fontWeight,
-            letterSpacing: bodyType.letterSpacingEm,
-          }}
-        >
+        <label className="font-zilla text-sm leading-[1.5] tracking-normal text-muted">
           {resolvedLabel}
         </label>
       ) : null}
@@ -125,37 +107,13 @@ export function AppSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        style={{
-          width: '100%',
-          minHeight: theme.sizes.control.md,
-          borderRadius: theme.borderRadius.md,
-          border: `1px solid ${error ? theme.colors.destructive : theme.grayscale[3]}`,
-          background: theme.colors.surface,
-          color: selectedOption ? theme.colors.text : theme.colors.muted,
-          opacity: disabled ? 0.75 : 1,
-          paddingLeft: theme.sizes.control.inputPaddingX,
-          paddingRight: theme.sizes.control.inputPaddingX,
-          fontFamily: bodyType.webFamily,
-          fontSize: bodyType.fontSize,
-          lineHeight: `${bodyType.lineHeightRecommended}`,
-          fontWeight: bodyType.fontWeight,
-          letterSpacing: bodyType.letterSpacingEm,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: theme.spacing.sm,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          textAlign: 'left',
-        }}
+        className={`flex min-h-11 w-full items-center justify-between gap-sm rounded-md border bg-surface px-3 text-left font-zilla text-md leading-[1.5] tracking-normal ${
+          error ? 'border-destructive' : 'border-black/20'
+        } ${disabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} ${
+          selectedOption ? 'text-text' : 'text-muted'
+        }`}
       >
-        <span
-          style={{
-            flex: 1,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
+        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
           {selectedOption?.label ?? placeholder}
         </span>
         <span aria-hidden>{open ? '▲' : '▼'}</span>
@@ -164,11 +122,8 @@ export function AppSelect({
       <div
         role="listbox"
         aria-hidden={!open}
+        className="overflow-hidden rounded-lg border border-black/20 bg-background"
         style={{
-          borderRadius: theme.borderRadius.lg,
-          border: `1px solid ${theme.grayscale[3]}`,
-          background: theme.colors.background,
-          overflow: 'hidden',
           maxHeight: open ? 280 : 0,
           opacity: open ? 1 : 0,
           transform: open ? 'translateY(0)' : 'translateY(-6px)',
@@ -176,21 +131,10 @@ export function AppSelect({
           pointerEvents: open ? 'auto' : 'none',
         }}
       >
-        <div
-          style={{
-            padding: `${theme.spacing.sm}px ${theme.spacing.md}px`,
-            borderBottom: `1px solid ${theme.grayscale[3]}`,
-            color: theme.colors.text,
-            fontFamily: bodyType.webFamily,
-            fontSize: theme.fontSizes.sm,
-            lineHeight: `${bodyType.lineHeightRecommended}`,
-            fontWeight: bodyType.fontWeight,
-            letterSpacing: bodyType.letterSpacingEm,
-          }}
-        >
+        <div className="border-b border-black/20 px-md py-sm font-zilla text-sm leading-[1.5] tracking-normal text-text">
           {resolvedLabel}
         </div>
-        <div style={{ maxHeight: 220, overflowY: 'auto', padding: `${theme.spacing.xs}px 0` }}>
+        <div className="max-h-[220px] overflow-y-auto py-xs">
           {options.map((option) => {
             const isSelected = option.value === value;
             return (
@@ -203,25 +147,9 @@ export function AppSelect({
                   onChangeValue(option.value);
                   setOpen(false);
                 }}
-                style={{
-                  width: '100%',
-                  minHeight: theme.sizes.control.md,
-                  border: 0,
-                  background: isSelected ? theme.colors.surface : 'transparent',
-                  color: theme.colors.text,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: theme.spacing.sm,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  padding: `0 ${theme.spacing.md}px`,
-                  fontFamily: bodyType.webFamily,
-                  fontSize: bodyType.fontSize,
-                  lineHeight: `${bodyType.lineHeightRecommended}`,
-                  fontWeight: bodyType.fontWeight,
-                  letterSpacing: bodyType.letterSpacingEm,
-                }}
+                className={`flex min-h-11 w-full items-center justify-between gap-sm border-0 px-md text-left font-zilla text-md leading-[1.5] tracking-normal text-text ${
+                  isSelected ? 'bg-surface' : 'bg-transparent'
+                }`}
               >
                 <span>{option.label}</span>
                 {isSelected ? <span aria-hidden>✓</span> : null}

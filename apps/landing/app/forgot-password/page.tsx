@@ -1,9 +1,10 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
+import { AuthShell } from '../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
@@ -17,7 +18,7 @@ function getClerkErrorMessage(error: unknown): string {
       if (first?.code) return first.code;
     }
   }
-  return 'Unable to reset password.';
+  return 'No fue posible restablecer la contrasena.';
 }
 
 function resolveRedirectTarget(rawValue: string | null): string {
@@ -33,8 +34,7 @@ function resolveRedirectTarget(rawValue: string | null): string {
   return '/';
 }
 
-export default function ForgotPasswordPage() {
-  const bodyType = suitTheme.typography.styles.body;
+function ForgotPasswordPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded, signIn, setActive } = useSignIn();
@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
   const resetPassword = async () => {
     if (!isLoaded) return;
     if (newPassword !== confirmNewPassword) {
-      setError('Passwords do not match.');
+      setError('Las contrasenas no coinciden.');
       return;
     }
 
@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      setError('Could not complete password reset.');
+      setError('No se pudo completar el restablecimiento.');
     } catch (err) {
       setError(getClerkErrorMessage(err));
     } finally {
@@ -98,37 +98,37 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <AppFrame appName="17Suit" subtitle="Reset your password for all 17Suit products.">
-      <div
-        style={{
-          width: '100%',
-          maxWidth: suitTheme.sizes.layout.form,
-          display: 'grid',
-          gap: suitTheme.spacing.md,
-        }}
-      >
+    <AuthShell
+      pageLabel="Restablecer contrasena"
+      title="Recupera el acceso"
+      description="Restablece tu contrasena y vuelve a entrar con el mismo flujo de autenticacion."
+    >
+      <div className="mx-auto grid w-full max-w-form gap-sm">
         {step === 'request' ? (
-          <div style={{ display: 'grid', gap: suitTheme.spacing.sm }}>
+          <div className="grid gap-sm">
             <AppInput
               type="email"
               value={email}
               onChangeText={setEmail}
-              placeholder="you@company.com"
+              label=""
+              placeholder="tu@empresa.com"
               autoComplete="email"
               required
+              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={sendResetCode}>
-              {isSubmitting ? 'Sending...' : 'Send code'}
+            <AppButton onPress={sendResetCode} compact>
+              {isSubmitting ? 'Enviando...' : 'Enviar codigo'}
             </AppButton>
           </div>
         ) : (
-          <div style={{ display: 'grid', gap: suitTheme.spacing.sm }}>
+          <div className="grid gap-sm">
             <AppInput
               type="text"
               value={code}
               onChangeText={setCode}
-              placeholder="Verification code"
+              label=""
+              placeholder="Codigo de verificacion"
               autoComplete="one-time-code"
               required
               compact
@@ -138,22 +138,26 @@ export default function ForgotPasswordPage() {
               type="password"
               value={newPassword}
               onChangeText={setNewPassword}
-              placeholder="New password"
+              label=""
+              placeholder="Nueva contrasena"
               autoComplete="new-password"
               required
+              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
-              placeholder="Confirm new password"
+              label=""
+              placeholder="Confirmar nueva contrasena"
               autoComplete="new-password"
               required
+              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={resetPassword}>
-              {isSubmitting ? 'Updating...' : 'Update password'}
+            <AppButton onPress={resetPassword} compact>
+              {isSubmitting ? 'Actualizando...' : 'Actualizar contrasena'}
             </AppButton>
           </div>
         )}
@@ -161,25 +165,23 @@ export default function ForgotPasswordPage() {
         <AppLinkAction
           onPress={() => router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`)}
         >
-          Back to sign in
+          Volver a iniciar sesion
         </AppLinkAction>
 
         {error ? (
-          <p
-            style={{
-              margin: 0,
-              color: suitTheme.colors.destructive,
-              fontFamily: bodyType.webFamily,
-              fontSize: bodyType.fontSize,
-              lineHeight: `${bodyType.lineHeightRecommended}`,
-              fontWeight: bodyType.fontWeight,
-              letterSpacing: bodyType.letterSpacingEm,
-            }}
-          >
+          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
             {error}
-          </p>
+          </AppTypography>
         ) : null}
       </div>
-    </AppFrame>
+    </AuthShell>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ForgotPasswordPageContent />
+    </Suspense>
   );
 }

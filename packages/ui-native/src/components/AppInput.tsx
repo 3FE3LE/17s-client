@@ -38,55 +38,30 @@ export function AppInput({
   secureTextEntry,
 }: AppInputProps) {
   const { theme } = useAppTheme();
-  const bodyType = theme.typography.styles.body;
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const isPasswordField = Boolean(secureTextEntry);
   const shouldShowPasswordToggle = isPasswordField && showPasswordToggle;
   const resolvedLabel = label ?? placeholder;
-  const inputPaddingLeft = leftIcon ? 40 : theme.sizes.control.inputPaddingX;
   const hasRightAction = Boolean(shouldShowPasswordToggle || rightIcon);
-  const inputPaddingRight = hasRightAction ? 40 : theme.sizes.control.inputPaddingX;
-  const lineHeight = Math.round(bodyType.fontSize * bodyType.lineHeightRecommended);
+  const inputClassName = [
+    'w-full rounded-md border bg-surface font-zilla text-md leading-[24px] text-text',
+    compact ? 'h-10' : 'h-11',
+    error ? 'border-destructive' : 'border-black/20',
+    leftIcon ? 'pl-10' : 'pl-3',
+    hasRightAction ? 'pr-10' : 'pr-3',
+    disabled ? 'opacity-75' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <View
-      style={{
-        width: '100%',
-      }}
-    >
+    <View className="w-full">
       {resolvedLabel ? (
-        <Text
-          style={{
-            color: theme.colors.muted,
-            fontFamily: bodyType.nativeFamily,
-            fontSize: theme.fontSizes.sm,
-            lineHeight: Math.round(theme.fontSizes.sm * bodyType.lineHeightRecommended),
-            letterSpacing: bodyType.letterSpacingPx,
-            marginBottom: theme.spacing.xs,
-          }}
-        >
-          {resolvedLabel}
-        </Text>
+        <Text className="mb-xs font-zilla text-sm leading-[21px] text-muted">{resolvedLabel}</Text>
       ) : null}
-      <View
-        style={{
-          position: 'relative',
-          width: '100%',
-        }}
-      >
+      <View className="relative w-full">
         {leftIcon ? (
-          <View
-            style={{
-              position: 'absolute',
-              left: 12,
-              top: '50%',
-              transform: [{ translateY: -10 }],
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: 20,
-              width: 20,
-            }}
-          >
+          <View className="absolute left-3 top-1/2 h-5 w-5 -translate-y-[10px] items-center justify-center">
             {leftIcon}
           </View>
         ) : null}
@@ -99,34 +74,15 @@ export function AppInput({
           keyboardType={keyboardType as never}
           autoCapitalize={autoCapitalize as never}
           placeholderTextColor={theme.colors.muted}
+          className={inputClassName}
           style={{
-            height: compact ? theme.sizes.control.sm : theme.sizes.control.md,
-            borderRadius: theme.borderRadius.md,
-            borderWidth: 1,
-            borderColor: error ? theme.colors.destructive : theme.grayscale[3],
-            backgroundColor: theme.colors.surface,
             color: disabled ? theme.colors.muted : theme.colors.text,
-            opacity: disabled ? 0.75 : 1,
-            paddingLeft: inputPaddingLeft,
-            paddingRight: inputPaddingRight,
-            fontFamily: bodyType.nativeFamily,
-            fontSize: bodyType.fontSize,
-            lineHeight,
           }}
         />
         {shouldShowPasswordToggle ? (
           <Pressable
             onPress={() => setIsPasswordVisible((current) => !current)}
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: '50%',
-              transform: [{ translateY: -12 }],
-              width: 24,
-              height: 24,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="absolute right-[10px] top-1/2 h-6 w-6 -translate-y-[12px] items-center justify-center"
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off' : 'eye'}
@@ -138,16 +94,7 @@ export function AppInput({
         {!shouldShowPasswordToggle && rightIcon ? (
           <Pressable
             onPress={onRightIconPress}
-            style={{
-              position: 'absolute',
-              right: 10,
-              top: '50%',
-              transform: [{ translateY: -12 }],
-              width: 24,
-              height: 24,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="absolute right-[10px] top-1/2 h-6 w-6 -translate-y-[12px] items-center justify-center"
           >
             {rightIcon}
           </Pressable>
