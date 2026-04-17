@@ -1,8 +1,9 @@
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { getSuitTheme } from '@17suit/design-system';
 import type { SuitTheme, ThemeMode } from '@17suit/design-system';
+import { Uniwind } from 'uniwind';
 
 export type ThemeModePreference = ThemeMode | 'system';
 
@@ -33,6 +34,10 @@ export function ThemeProvider({
   const resolvedMode: ThemeMode =
     effectiveMode === 'system' ? (systemScheme === 'light' ? 'light' : 'dark') : effectiveMode;
   const theme = useMemo(() => getSuitTheme(resolvedMode), [resolvedMode]);
+
+  useEffect(() => {
+    Uniwind.setTheme(effectiveMode);
+  }, [effectiveMode]);
 
   const setMode = (nextMode: ThemeModePreference) => {
     if (mode) {

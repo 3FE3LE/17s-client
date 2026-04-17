@@ -25,7 +25,8 @@
     "@react-native-picker/picker": "^2.11.0",
     "expo-font": "~14.0.11",
     "react-native-safe-area-context": "*",
-    "react-native-svg": "15.12.1"
+    "react-native-svg": "15.12.1",
+    "uniwind": "^1.6.0"
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",

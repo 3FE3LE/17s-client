@@ -1,5 +1,5 @@
-@import '@17suit/tailwind-config/variables.css';
+@import 'tailwindcss';
+@import 'uniwind';
+@import '@17suit/tailwind-config/native-theme.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@source '../../packages/ui-native/src';

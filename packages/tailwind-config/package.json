@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./native-theme.css": "./native-theme.css",
     "./theme.css": "./theme.css",
     "./variables.css": "./variables.css",
     "./native-theme": "./native-theme.cjs"

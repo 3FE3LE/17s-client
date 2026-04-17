@@ -8,5 +8,5 @@
       "@17suit/design-system/*": ["../design-system/src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "nativewind-env.d.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
