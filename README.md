@@ -4,7 +4,7 @@ Enterprise-grade multi-product monorepo for 17Suit, designed for scaling from da
 
 ## Stack
 
-- Node `22.20.0` (mínimo `>=22.20.0`)
+- Node `24.13.1` (mínimo `>=24.0.0 <25`)
 - `pnpm` workspaces (`10.30.0`)
 - Turborepo
 - TypeScript everywhere

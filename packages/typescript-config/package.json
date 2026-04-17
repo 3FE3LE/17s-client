@@ -10,6 +10,6 @@
     "./node": "./node.json"
   },
   "dependencies": {
-    "@types/node": "22.19.11"
+    "@types/node": "24.12.2"
   }
 }
