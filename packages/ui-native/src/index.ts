@@ -1,3 +1,5 @@
+import './uniwind-classname-props';
+
 export { AppButton } from './components/AppButton';
 export type { AppButtonProps } from './components/AppButton';
 export { AppBottomTabBar } from './components/AppBottomTabBar';

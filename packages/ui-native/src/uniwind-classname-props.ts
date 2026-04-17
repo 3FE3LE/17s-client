@@ -13,10 +13,6 @@ declare module 'react-native' {
     className?: string;
   }
 
-  interface ModalProps {
-    className?: string;
-  }
-
   interface PressableProps {
     className?: string;
   }
