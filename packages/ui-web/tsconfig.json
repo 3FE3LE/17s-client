@@ -2,7 +2,7 @@
   "extends": "@17suit/typescript-config/nextjs",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": "..",
     "jsx": "react-jsx",
     "types": ["react", "react-dom"],
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
