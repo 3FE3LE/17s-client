@@ -1420,6 +1420,9 @@ importers:
       '@types/react':
         specifier: 19.1.10
         version: 19.1.10
+      expo-router:
+        specifier: ~6.0.23
+        version: 6.0.23(aff6da2f2d8043a0e570636d7f67a79c)
       typescript:
         specifier: ^5.8.2
         version: 5.9.3

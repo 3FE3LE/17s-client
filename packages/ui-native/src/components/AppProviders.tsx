@@ -33,8 +33,21 @@ export function AppProviders({ children, themeMode, onThemeModeChange }: AppProv
     return null;
   }
 
+  const themeProviderProps: {
+    mode?: ThemeModePreference;
+    onModeChange?: (mode: ThemeModePreference) => void;
+  } = {};
+
+  if (themeMode !== undefined) {
+    themeProviderProps.mode = themeMode;
+  }
+
+  if (onThemeModeChange !== undefined) {
+    themeProviderProps.onModeChange = onThemeModeChange;
+  }
+
   return (
-    <ThemeProvider mode={themeMode} onModeChange={onThemeModeChange}>
+    <ThemeProvider {...themeProviderProps}>
       <SafeAreaProvider>
         <ThemeSafeArea>{children}</ThemeSafeArea>
       </SafeAreaProvider>

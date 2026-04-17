@@ -8,13 +8,14 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme, GapView } from '@17suit/ui';
 import type { PublicVenue } from '../lib/seven-rc-api';
 import { usePlayerVenuePitchesQuery } from '../lib/player-queries';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import logo from '../assets/icon-17suit.png';
 
 interface PlayerVenueCardProps {
   venue: PublicVenue;
@@ -25,7 +26,6 @@ export function PlayerVenueCard({ venue }: PlayerVenueCardProps) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
   const overlay = useRef(new Animated.Value(0)).current;
-  const image = useMemo(() => require('../assets/icon-17suit.png'), []);
 
   const pitchesQuery = usePlayerVenuePitchesQuery(expanded ? venue.id : null);
 
@@ -55,7 +55,7 @@ export function PlayerVenueCard({ venue }: PlayerVenueCardProps) {
         }}
       >
         <ImageBackground
-          source={image}
+          source={logo}
           resizeMode="cover"
           style={{
             width: '100%',

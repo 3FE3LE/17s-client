@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { useAppTheme } from '@17suit/ui';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { Animated, Image, View } from 'react-native';
+import logo from '../assets/icon-17suit.png';
 
 export default function IndexScreen() {
   const router = useRouter();
@@ -16,7 +17,6 @@ export default function IndexScreen() {
   });
   const { theme } = useAppTheme();
   const pulse = useRef(new Animated.Value(0)).current;
-  const logo = useMemo(() => require('../assets/icon-17suit.png'), []);
 
   useEffect(() => {
     if (!rootNavigationState?.key || !isLoaded) {

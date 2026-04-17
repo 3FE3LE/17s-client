@@ -3,5 +3,5 @@
   "compilerOptions": {
     "strict": true
   },
-  "include": ["app", "**/*.ts", "**/*.tsx", "uniwind-types.d.ts"]
+  "include": ["app", "**/*.ts", "**/*.tsx", "**/*.d.ts", "uniwind-types.d.ts"]
 }

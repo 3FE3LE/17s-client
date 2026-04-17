@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Image, Text, View, type ViewStyle } from 'react-native';
+import { Image, Text, View, type ImageStyle, type ViewStyle } from 'react-native';
 import { useAppTheme } from '../theme/theme-context';
 
 export interface AppAvatarProps {
@@ -8,7 +8,7 @@ export interface AppAvatarProps {
   name?: string;
   size?: number;
   shape?: 'circle' | 'rounded';
-  style?: ViewStyle;
+  style?: ViewStyle | ImageStyle;
 }
 
 function initialsFromName(name: string): string {
@@ -35,7 +35,7 @@ export function AppAvatar({ src, alt, name, size = 40, shape = 'circle', style }
             borderWidth: 1,
             borderColor: theme.grayscale[3],
           },
-          style,
+          style as ImageStyle | undefined,
         ]}
       />
     );

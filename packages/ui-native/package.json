@@ -32,6 +32,7 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
     "@types/react": "~19.1.10",
+    "expo-router": "~6.0.23",
     "typescript": "^5.8.2"
   }
 }

@@ -119,7 +119,7 @@ export default function ProfileScreen() {
                 return (
                   <Pressable
                     key={item.key}
-                    onPress={() => setMode(item.key as 'system' | 'dark' | 'light')}
+                    onPress={() => setMode(item.key)}
                     style={{
                       flex: 1,
                       paddingVertical: theme.spacing.sm,
@@ -129,7 +129,7 @@ export default function ProfileScreen() {
                     }}
                   >
                     <Feather
-                      name={item.icon as 'smartphone' | 'moon' | 'sun'}
+                      name={item.icon}
                       size={18}
                       color={isActive ? theme.colors.brandDark : theme.colors.muted}
                     />
