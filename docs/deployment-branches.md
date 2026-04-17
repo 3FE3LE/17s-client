@@ -6,6 +6,8 @@ Control pre-production deployments per product so one change does not fan out in
 
 This repository now uses a product-level preview branch convention plus a Vercel ignore script.
 
+The branch gating logic is versioned in code through `vercel.mjs` files inside each deployed app, all importing a shared helper from `tooling/vercel/shared.mjs`.
+
 ## Preview Branches
 
 - `preview-landing`
@@ -43,6 +45,8 @@ For each Vercel project:
 2. Enable Vercel monorepo skipping for unaffected projects.
 3. Configure the Ignored Build Step with the matching app key.
 
+If your project uses file-based Vercel config, the repo-level `vercel.mjs` now sets `ignoreCommand` for each deployed app automatically.
+
 Examples:
 
 ```bash
@@ -50,6 +54,15 @@ node ../../tooling/scripts/vercel-ignored-build.mjs --app landing
 node ../../tooling/scripts/vercel-ignored-build.mjs --app admin
 node ../../tooling/scripts/vercel-ignored-build.mjs --app seven-rc-web
 node ../../tooling/scripts/vercel-ignored-build.mjs --app seven-rc-mobile
+```
+
+Equivalent shared file-based config:
+
+```js
+// apps/seven-rc-web/vercel.mjs
+import { createAppVercelConfig } from '../../tooling/vercel/shared.mjs';
+
+export const config = createAppVercelConfig('seven-rc-web');
 ```
 
 Behavior:

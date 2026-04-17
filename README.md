@@ -195,6 +195,7 @@ pnpm --filter @17suit/tooling product:new <product-slug> <subdomain>
 - Product preview branches are documented in [docs/deployment-branches.md](./docs/deployment-branches.md).
 - Create them locally with `pnpm preview:branches:create`.
 - For Vercel monorepo projects, configure the Ignored Build Step with `tooling/scripts/vercel-ignored-build.mjs` so each app only builds on its own preview branch or `main`, and only when relevant files changed.
+- Deployed web apps also expose this from code through per-app `vercel.mjs` wrappers that import shared logic from `tooling/vercel/shared.mjs`.
 
 ## Notes for Productionization
 
