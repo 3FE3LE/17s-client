@@ -16,7 +16,8 @@
     "clean": "turbo run clean && rm -rf node_modules",
     "prepare": "husky",
     "dev:product": "pnpm --filter @17suit/tooling run dev:product",
-    "product": "pnpm --filter @17suit/tooling run dev:product"
+    "product": "pnpm --filter @17suit/tooling run dev:product",
+    "preview:branches:create": "node tooling/scripts/create-preview-branches.mjs"
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",

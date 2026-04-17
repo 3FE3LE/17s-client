@@ -190,6 +190,12 @@ pnpm --filter @17suit/tooling product:new <product-slug> <subdomain>
 
 4. Deploy only affected packages/apps via Turborepo in CI.
 
+## Deployment Control
+
+- Product preview branches are documented in [docs/deployment-branches.md](./docs/deployment-branches.md).
+- Create them locally with `pnpm preview:branches:create`.
+- For Vercel monorepo projects, configure the Ignored Build Step with `tooling/scripts/vercel-ignored-build.mjs` so each app only builds on its own preview branch or `main`, and only when relevant files changed.
+
 ## Notes for Productionization
 
 This scaffold is intentionally enterprise-oriented and ready for further hardening:

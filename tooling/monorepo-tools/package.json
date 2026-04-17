@@ -10,6 +10,7 @@
     "typecheck": "echo 'tooling package typecheck not required'",
     "clean": "echo 'tooling package clean not required'",
     "dev:product": "node ../../tooling/scripts/run-product-dev.mjs",
-    "product": "node ../../tooling/scripts/run-product-dev.mjs"
+    "product": "node ../../tooling/scripts/run-product-dev.mjs",
+    "preview:branches:create": "node ../../tooling/scripts/create-preview-branches.mjs"
   }
 }
