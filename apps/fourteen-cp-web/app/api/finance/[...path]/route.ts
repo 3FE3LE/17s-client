@@ -3,7 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 interface ProxyContext {
-  params: { path: string[] } | Promise<{ path: string[] }>;
+  params: Promise<{ path: string[] }>;
 }
 
 function normalizeApiBaseUrl(baseUrl: string): string {
