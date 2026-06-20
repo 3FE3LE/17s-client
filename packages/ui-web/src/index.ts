@@ -42,10 +42,29 @@ export { GapView } from './components/GapView';
 export type { GapViewProps, GapToken } from './components/GapView';
 export { AppTitle } from './components/AppTitle';
 export type { AppTitleProps } from './components/AppTitle';
+export { AppWorkspaceShell } from './components/AppWorkspaceShell';
+export type { AppWorkspaceNavItem, AppWorkspaceShellProps } from './components/AppWorkspaceShell';
 export { AppProviders } from './components/AppProviders';
 export { ProductShell } from './components/ProductShell';
 export { AppProductFooter } from './components/AppProductFooter';
 export type { AppProductFooterProps, AppProductFooterLink } from './components/AppProductFooter';
+export {
+  Banknote,
+  CalendarClock,
+  CheckCircle2,
+  CreditCard,
+  Gauge,
+  Inbox,
+  Link2,
+  ListChecks,
+  PauseCircle,
+  ReceiptText,
+  RefreshCcw,
+  Repeat2,
+  Search,
+  Trash2,
+} from 'lucide-react';
+export type { LucideIcon } from 'lucide-react';
 export { suitTheme } from '@17suit/design-system';
 export type { SuitTheme } from '@17suit/design-system';
 export { ThemeProvider, useAppTheme } from './theme/theme-context';

@@ -415,6 +415,128 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  apps/fourteen-cp-mobile:
+    dependencies:
+      '@17suit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@17suit/module-fourteen-cash-pulse':
+        specifier: workspace:*
+        version: link:../../packages/modules/fourteen-cash-pulse
+      '@17suit/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@clerk/clerk-expo':
+        specifier: ^2.19.24
+        version: 2.19.24(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(@types/react@19.1.10)(bs58@5.0.0)(bufferutil@4.1.0)(expo-auth-session@7.0.10(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0))(expo-crypto@15.0.8(expo@54.0.33))(expo-secure-store@14.2.4(expo@54.0.33))(expo-web-browser@14.2.0(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10)))(fastestsmallesttextencoderdecoder@1.0.22)(react-dom@19.1.0(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.1.0))(utf-8-validate@5.0.10)(zod@3.25.76)
+      '@expo-google-fonts/amaranth':
+        specifier: latest
+        version: 0.4.1
+      '@expo-google-fonts/arvo':
+        specifier: latest
+        version: 0.4.1
+      '@expo-google-fonts/zilla-slab':
+        specifier: latest
+        version: 0.4.1
+      expo:
+        specifier: ^54.0.0
+        version: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@5.0.5(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10)))(bufferutil@4.1.0)(expo-router@6.0.23)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0)(utf-8-validate@5.0.10)
+      expo-font:
+        specifier: ~14.0.11
+        version: 14.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0)
+      expo-router:
+        specifier: ~6.0.23
+        version: 6.0.23(aff6da2f2d8043a0e570636d7f67a79c)
+      expo-secure-store:
+        specifier: ~14.2.3
+        version: 14.2.4(expo@54.0.33)
+      expo-web-browser:
+        specifier: ~14.2.0
+        version: 14.2.0(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      react-native:
+        specifier: 0.81.5
+        version: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10)
+      react-native-safe-area-context:
+        specifier: ^5.6.2
+        version: 5.6.2(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.10)(bufferutil@4.1.0)(react@19.1.0)(utf-8-validate@5.0.10))(react@19.1.0)
+      react-native-web:
+        specifier: 0.21.2
+        version: 0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+    devDependencies:
+      '@17suit/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@17suit/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@types/react':
+        specifier: 19.1.10
+        version: 19.1.10
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  apps/fourteen-cp-web:
+    dependencies:
+      '@17suit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@17suit/module-fourteen-cash-pulse':
+        specifier: workspace:*
+        version: link:../../packages/modules/fourteen-cash-pulse
+      '@17suit/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@clerk/nextjs':
+        specifier: ^6.30.5
+        version: 6.37.5(next@16.1.6(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      next:
+        specifier: ^16.0.0
+        version: 16.1.6(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@17suit/eslint-config':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config
+      '@17suit/tailwind-config':
+        specifier: workspace:*
+        version: link:../../packages/tailwind-config
+      '@17suit/typescript-config':
+        specifier: workspace:*
+        version: link:../../packages/typescript-config
+      '@tailwindcss/postcss':
+        specifier: ^4.1.12
+        version: 4.2.1
+      '@types/node':
+        specifier: 24.12.2
+        version: 24.12.2
+      '@types/react':
+        specifier: 19.1.10
+        version: 19.1.10
+      '@types/react-dom':
+        specifier: 19.1.7
+        version: 19.1.7(@types/react@19.1.10)
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^4.1.12
+        version: 4.2.1
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
   apps/landing:
     dependencies:
       '@17suit/ui':
@@ -1180,6 +1302,25 @@ importers:
         version: 5.9.3
 
   packages/modules/four-you-closet:
+    dependencies:
+      '@17suit/core':
+        specifier: workspace:*
+        version: link:../../core
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      '@17suit/eslint-config':
+        specifier: workspace:*
+        version: link:../../eslint-config
+      '@17suit/typescript-config':
+        specifier: workspace:*
+        version: link:../../typescript-config
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  packages/modules/fourteen-cash-pulse:
     dependencies:
       '@17suit/core':
         specifier: workspace:*
@@ -10464,6 +10605,7 @@ packages:
       {
         integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==,
       }
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   validate-npm-package-name@5.0.1:

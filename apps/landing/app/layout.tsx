@@ -25,8 +25,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ClerkProvider
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
-          signInForceRedirectUrl="/"
-          signUpForceRedirectUrl="/"
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/"
         >
           <AppProviders>
             {children}
@@ -46,6 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 { label: 'One Plan Trip', href: '/one-plan-trip' },
                 { label: 'Four You Closet', href: '/four-you-closet' },
                 { label: 'Eight Dream Dishes', href: '/eight-dream-dishes' },
+                { label: 'Fourteen Cash Pulse', href: '/fourteen-cash-pulse' },
               ]}
             />
           </AppProviders>
