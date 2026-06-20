@@ -539,6 +539,9 @@ importers:
 
   apps/landing:
     dependencies:
+      '@17suit/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@17suit/ui':
         specifier: workspace:*
         version: link:../../packages/ui

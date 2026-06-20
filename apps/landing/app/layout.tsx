@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
+import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProductFooter } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { ClerkProvider } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 import './globals.css';
 
@@ -22,11 +22,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body>
-        <ClerkProvider
+        <WebAuthProvider
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
-          signInFallbackRedirectUrl="/"
-          signUpFallbackRedirectUrl="/"
+          signInForceRedirectUrl="/"
+          signUpForceRedirectUrl="/"
         >
           <AppProviders>
             {children}
@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               ]}
             />
           </AppProviders>
-        </ClerkProvider>
+        </WebAuthProvider>
       </body>
     </html>
   );

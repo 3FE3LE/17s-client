@@ -12,6 +12,7 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
+    "@17suit/core": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@clerk/nextjs": "^6.30.5",
     "next": "^16.0.0",
