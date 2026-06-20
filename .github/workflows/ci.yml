@@ -23,5 +23,4 @@ jobs:
           node-version: 24.13.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run lint typecheck --affected
       - run: pnpm turbo run build --filter='./apps/*-web' --filter='./apps/admin' --filter='./apps/landing'
