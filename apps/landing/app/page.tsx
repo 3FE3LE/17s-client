@@ -23,6 +23,11 @@ const products = [
     tagline: 'Gestión de turnos y seguimiento clínico',
   },
   {
+    slug: 'fourteen-cash-pulse',
+    name: 'Fourteen Cash Pulse',
+    tagline: 'Cockpit financiero personal con evidencia',
+  },
+  {
     slug: 'two-split-bill',
     name: 'Two Split Bill',
     tagline: 'Pagos compartidos sin fricción',

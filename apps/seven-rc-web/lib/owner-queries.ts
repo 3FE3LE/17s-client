@@ -23,7 +23,7 @@ function useOwnerApi() {
     () =>
       createSevenRcOwnerApi({
         apiBaseUrls: ['/api'],
-        getAccessToken: async () => 'web-bff',
+        getAccessToken: () => Promise.resolve('web-bff'),
       }),
     [],
   );

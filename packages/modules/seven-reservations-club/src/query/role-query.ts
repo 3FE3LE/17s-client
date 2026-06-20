@@ -8,12 +8,12 @@ import type {
 import { useSevenReservationsClubRoleDataSource } from './RoleDataSourceProvider';
 
 export const sevenReservationsClubQueryKeys = {
-  currentRole: (userId?: string | null | undefined) =>
+  currentRole: (userId?: string | null | void) =>
     ['seven-reservations-club', 'current-role', userId ?? 'anonymous'] as const,
 };
 
 export function useCurrentUserRoleQuery(options?: {
-  userId?: string | null | undefined;
+  userId?: string | null | void;
   enabled?: boolean;
 }) {
   const dataSource = useSevenReservationsClubRoleDataSource();

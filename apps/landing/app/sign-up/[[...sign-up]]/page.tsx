@@ -1,211 +1,47 @@
-'use client';
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { SignUpClient } from './sign-up-client';
 
-import { useSignUp } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
-import { AuthShell } from '../../components/AuthShell';
-
-function getClerkErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
-  }
-  return 'No fue posible crear la cuenta.';
+interface PageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function resolveRedirectTarget(rawValue: string | null): string {
-  if (!rawValue || rawValue.trim().length === 0) {
+function resolveRedirectTarget(rawValue: string | string[] | undefined): string {
+  const value = Array.isArray(rawValue) ? rawValue[0] : rawValue;
+  if (!value || value.trim().length === 0) {
     return '/';
   }
-  if (rawValue.startsWith('/')) {
-    return rawValue;
+  if (value.startsWith('/') && !value.startsWith('//')) {
+    return value;
   }
-  if (rawValue.startsWith('http://') || rawValue.startsWith('https://')) {
-    return rawValue;
+  const allowedOrigins = [
+    process.env.NEXT_PUBLIC_FOURTEEN_CP_WEB_URL,
+    process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
+  ]
+    .flatMap((entry) => entry?.split(',') ?? [])
+    .map((entry) => entry.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+  try {
+    const url = new URL(value);
+    if (allowedOrigins.includes(url.origin)) {
+      return url.toString();
+    }
+  } catch {
+    return '/';
   }
+
   return '/';
 }
 
-function SignUpPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { isLoaded, signUp, setActive } = useSignUp();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [code, setCode] = useState('');
-  const [needsVerification, setNeedsVerification] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+export default async function SignUpPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const redirectTarget = resolveRedirectTarget(params.redirect_url);
+  const { userId } = await auth();
 
-  const redirectTarget = useMemo(() => {
-    return resolveRedirectTarget(searchParams.get('redirect_url'));
-  }, [searchParams]);
+  if (userId) {
+    redirect(redirectTarget);
+  }
 
-  const handleCreateAccount = async () => {
-    if (!isLoaded) return;
-
-    if (password !== confirmPassword) {
-      setError('Las contrasenas no coinciden.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const result = await signUp.create({
-        emailAddress: email.trim(),
-        password,
-      });
-
-      if (result.status === 'complete' && result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
-        return;
-      }
-
-      if (result.status === 'missing_requirements') {
-        await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-        setNeedsVerification(true);
-        return;
-      }
-
-      setError('No se pudo iniciar el registro. Intenta de nuevo.');
-    } catch (err) {
-      setError(getClerkErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleVerifyEmail = async () => {
-    if (!isLoaded) return;
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
-      if (result.status === 'complete' && result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
-        return;
-      }
-
-      setError('No se pudo completar la verificacion.');
-    } catch (err) {
-      setError(getClerkErrorMessage(err));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <AuthShell
-      pageLabel="Registro"
-      title="Crea tu cuenta en minutos"
-      description="Completa tu registro una vez y usa la suite completa con la misma identidad."
-    >
-      <div className="mx-auto grid w-full max-w-form gap-sm">
-        {!needsVerification ? (
-          <div className="grid gap-sm">
-            <AppInput
-              type="email"
-              value={email}
-              onChangeText={setEmail}
-              label=""
-              placeholder="tu@empresa.com"
-              autoComplete="email"
-              required
-              compact
-              error={Boolean(error)}
-            />
-            <AppInput
-              type="password"
-              value={password}
-              onChangeText={setPassword}
-              label=""
-              placeholder="Contrasena"
-              autoComplete="new-password"
-              required
-              compact
-              error={Boolean(error)}
-            />
-            <AppInput
-              type="password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              label=""
-              placeholder="Confirmar contrasena"
-              autoComplete="new-password"
-              required
-              compact
-              error={Boolean(error)}
-            />
-            <AppButton onPress={handleCreateAccount} compact>
-              {isSubmitting ? 'Creando...' : 'Crear cuenta'}
-            </AppButton>
-            <div id="clerk-captcha" />
-          </div>
-        ) : (
-          <div className="grid gap-sm">
-            <AppTypography variant="overline" color={suitTheme.colors.muted}>
-              Verificacion de correo
-            </AppTypography>
-            <AppTypography variant="body" color={suitTheme.colors.muted}>
-              Ingresa el codigo que recibiste para activar tu cuenta.
-            </AppTypography>
-          </div>
-        )}
-
-        {needsVerification ? (
-          <div className="grid gap-sm">
-            <AppInput
-              type="text"
-              value={code}
-              onChangeText={setCode}
-              label=""
-              placeholder="Codigo de verificacion"
-              autoComplete="one-time-code"
-              required
-              compact
-              error={Boolean(error)}
-            />
-            <AppButton onPress={handleVerifyEmail} compact>
-              {isSubmitting ? 'Verificando...' : 'Verificar correo'}
-            </AppButton>
-          </div>
-        ) : null}
-
-        <AppLinkAction
-          onPress={() => router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`)}
-        >
-          Ya tengo una cuenta
-        </AppLinkAction>
-
-        {error ? (
-          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
-            {error}
-          </AppTypography>
-        ) : null}
-      </div>
-    </AuthShell>
-  );
-}
-
-export default function SignUpPage() {
-  return (
-    <Suspense fallback={null}>
-      <SignUpPageContent />
-    </Suspense>
-  );
+  return <SignUpClient redirectTarget={redirectTarget} />;
 }

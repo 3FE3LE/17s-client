@@ -25,12 +25,27 @@ function resolveRedirectTarget(rawValue: string | null): string {
   if (!rawValue || rawValue.trim().length === 0) {
     return '/';
   }
-  if (rawValue.startsWith('/')) {
+  if (rawValue.startsWith('/') && !rawValue.startsWith('//')) {
     return rawValue;
   }
-  if (rawValue.startsWith('http://') || rawValue.startsWith('https://')) {
-    return rawValue;
+  const allowedOrigins = [
+    process.env.NEXT_PUBLIC_FOURTEEN_CP_WEB_URL,
+    process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
+    typeof window === 'undefined' ? undefined : window.location.origin,
+  ]
+    .flatMap((entry) => entry?.split(',') ?? [])
+    .map((entry) => entry.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+  try {
+    const url = new URL(rawValue);
+    if (allowedOrigins.includes(url.origin)) {
+      return url.toString();
+    }
+  } catch {
+    return '/';
   }
+
   return '/';
 }
 
@@ -120,6 +135,7 @@ function ForgotPasswordPageContent() {
             <AppButton onPress={sendResetCode} compact>
               {isSubmitting ? 'Enviando...' : 'Enviar codigo'}
             </AppButton>
+            <div id="clerk-captcha" />
           </div>
         ) : (
           <div className="grid gap-sm">

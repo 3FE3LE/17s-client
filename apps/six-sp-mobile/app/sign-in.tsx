@@ -1,16 +1,8 @@
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
-import {
-  AppButton,
-  AppDivider,
-  AppFrame,
-  AppInput,
-  AppLinkAction,
-  suitTheme,
-  GapView,
-} from '@17suit/ui';
+import { AppButton, AppDivider, AppFrame, AppInput, AppLinkAction, GapView } from '@17suit/ui';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { Alert, View } from 'react-native';
+import { Alert } from 'react-native';
 import { useState } from 'react';
 
 WebBrowser.maybeCompleteAuthSession();

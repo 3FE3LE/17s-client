@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  TURBO_SCM_BASE: origin/main
 
 jobs:
   quality:
@@ -15,11 +16,11 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+      - run: git fetch origin main:refs/remotes/origin/main
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version: 24.13.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run lint typecheck --affected
-      - run: pnpm turbo run build --affected
+      - run: node tooling/scripts/ci-build-affected-web.mjs

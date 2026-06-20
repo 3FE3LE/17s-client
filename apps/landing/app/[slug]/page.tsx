@@ -47,6 +47,17 @@ const products = {
       'Panel operativo para decisiones rapidas',
     ],
   },
+  'fourteen-cash-pulse': {
+    name: 'Fourteen Cash Pulse',
+    tagline: 'Cockpit financiero personal con evidencia, revision y fechas reales de pago.',
+    summary:
+      'Centraliza ingresos, gastos, tarjetas, obligaciones e ingestion inicial desde Outlook/Hotmail sin mezclar datos crudos con el ledger confirmado.',
+    highlights: [
+      'Transacciones candidatas separadas del ledger confirmado',
+      'Evidencia multiple para pagos PSE, tarjetas y recibos',
+      'Ciclos de tarjeta, FX, fees y cola de revision',
+    ],
+  },
   'two-split-bill': {
     name: 'Two Split Bill',
     tagline: 'Pagos compartidos claros y sin friccion.',
@@ -93,6 +104,14 @@ const products = {
 
 type ProductSlug = keyof typeof products;
 
+function getProductAppHref(slug: ProductSlug): string {
+  if (slug === 'fourteen-cash-pulse') {
+    return process.env.NEXT_PUBLIC_FOURTEEN_CP_WEB_URL ?? 'http://localhost:3003/';
+  }
+
+  return `/${slug}`;
+}
+
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
@@ -124,7 +143,7 @@ export default async function ProductLandingPage({ params }: PageProps) {
     notFound();
   }
 
-  const redirectTarget = `/${slug}`;
+  const redirectTarget = getProductAppHref(slug as ProductSlug);
 
   return (
     <main className="relative min-h-screen overflow-clip bg-[radial-gradient(circle_at_10%_0%,rgba(53,167,255,0.22),transparent_36%),radial-gradient(circle_at_96%_8%,rgba(255,73,92,0.18),transparent_34%),linear-gradient(155deg,#fbfcff_0%,#f7f8fa_52%,#eef4f8_100%)] text-text">

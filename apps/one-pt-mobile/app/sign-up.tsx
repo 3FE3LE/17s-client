@@ -1,7 +1,7 @@
 import { useSignUp } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppInput, AppLinkAction, suitTheme, GapView } from '@17suit/ui';
+import { AppButton, AppFrame, AppInput, AppLinkAction, GapView } from '@17suit/ui';
 import { useRouter } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { Alert } from 'react-native';
 import { useState } from 'react';
 
 function getClerkErrorMessage(error: unknown): string {

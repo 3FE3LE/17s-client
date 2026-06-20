@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
+import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProductFooter } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { ClerkProvider } from '@clerk/nextjs';
 import type { ReactNode } from 'react';
 import './globals.css';
 
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es">
       <body>
-        <ClerkProvider
+        <WebAuthProvider
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
           signInForceRedirectUrl="/"
@@ -46,10 +46,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 { label: 'One Plan Trip', href: '/one-plan-trip' },
                 { label: 'Four You Closet', href: '/four-you-closet' },
                 { label: 'Eight Dream Dishes', href: '/eight-dream-dishes' },
+                { label: 'Fourteen Cash Pulse', href: '/fourteen-cash-pulse' },
               ]}
             />
           </AppProviders>
-        </ClerkProvider>
+        </WebAuthProvider>
       </body>
     </html>
   );

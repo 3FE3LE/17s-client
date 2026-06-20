@@ -1,0 +1,27 @@
+@import url('https://fonts.googleapis.com/css2?family=Amaranth:wght@400;700&family=Arvo:wght@400;700&family=Zilla+Slab:wght@300;400;500;700&display=swap');
+
+@import 'tailwindcss';
+@import '@17suit/tailwind-config/theme.css';
+
+@source '../../../packages/ui-web/src';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: theme(colors.background);
+    color: theme(colors.text);
+    font-family: theme(fontFamily.zilla);
+  }
+
+  a {
+    color: inherit;
+  }
+}
