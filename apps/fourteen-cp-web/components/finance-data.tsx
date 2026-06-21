@@ -588,197 +588,243 @@ export async function SimpleCollectionScreen({
 }
 
 export async function AccountsScreen() {
-  const accounts = await fetchFinanceJson<FinanceAccount[]>('/accounts');
+  try {
+    const accounts = await fetchFinanceJson<FinanceAccount[]>('/accounts');
 
-  return (
-    <FinanceShell title="Accounts" eyebrow="Cash, banks, and wallets">
-      <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
-        <FormPanel title="Add account" action={createAccountAction}>
-          <TextField name="name" label="Name" placeholder="Main checking" required />
-          <TextField name="institutionName" label="Institution" placeholder="Bank or wallet" />
-          <SelectField name="type" label="Type" options={accountTypeOptions} />
-          <CurrencyField />
-          <SubmitButton label="Save account" />
-        </FormPanel>
-        <RecordGrid emptyLabel="No accounts yet.">
-          {accounts.map((account) => (
-            <RecordCard
-              key={account.id}
-              title={account.name}
-              meta={`${account.type} · ${account.currencyCode}`}
-            >
-              {account.institutionName ? (
-                <p className="m-0 text-muted">{account.institutionName}</p>
-              ) : null}
-            </RecordCard>
-          ))}
-        </RecordGrid>
-      </div>
-    </FinanceShell>
-  );
+    return (
+      <FinanceShell title="Accounts" eyebrow="Cash, banks, and wallets">
+        <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
+          <FormPanel title="Add account" action={createAccountAction}>
+            <TextField name="name" label="Name" placeholder="Main checking" required />
+            <TextField name="institutionName" label="Institution" placeholder="Bank or wallet" />
+            <SelectField name="type" label="Type" options={accountTypeOptions} />
+            <CurrencyField />
+            <SubmitButton label="Save account" />
+          </FormPanel>
+          <RecordGrid emptyLabel="No accounts yet.">
+            {accounts.map((account) => (
+              <RecordCard
+                key={account.id}
+                title={account.name}
+                meta={`${account.type} · ${account.currencyCode}`}
+              >
+                {account.institutionName ? (
+                  <p className="m-0 text-muted">{account.institutionName}</p>
+                ) : null}
+              </RecordCard>
+            ))}
+          </RecordGrid>
+        </div>
+      </FinanceShell>
+    );
+  } catch (error) {
+    return financeErrorShell('Accounts', 'Cash, banks, and wallets', error);
+  }
 }
 
 export async function CardsScreen() {
-  const cards = await fetchFinanceJson<FinanceCreditCard[]>('/credit-cards');
+  try {
+    const cards = await fetchFinanceJson<FinanceCreditCard[]>('/credit-cards');
 
-  return (
-    <FinanceShell title="Cards" eyebrow="Credit limits, cut dates, and due dates">
-      <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
-        <FormPanel title="Add credit card" action={createCreditCardAction}>
-          <TextField name="name" label="Name" placeholder="Visa Black" required />
-          <TextField name="issuer" label="Issuer" placeholder="Bank/entity" required />
-          <TextField name="last4" label="Last 4 digits" placeholder="1234" maxLength={4} required />
-          <NumberField name="creditLimit" label="Credit limit" min="0" step="0.01" required />
-          <CurrencyField />
-          <NumberField name="cutDay" label="Cut day" min="1" max="31" step="1" required />
-          <NumberField
-            name="paymentDueDay"
-            label="Payment due day"
-            min="1"
-            max="31"
-            step="1"
-            required
-          />
-          <NumberField
-            name="interestRateMonthly"
-            label="Monthly interest rate"
-            min="0"
-            step="0.0001"
-          />
-          <SubmitButton label="Save card" />
-        </FormPanel>
-        <RecordGrid emptyLabel="No cards yet.">
-          {cards.map((card) => (
-            <RecordCard
-              key={card.id}
-              title={`${card.name} *${card.last4}`}
-              meta={`${card.issuer} · ${formatMoney(card.creditLimit, card.currencyCode)}`}
-            >
-              <p className="m-0 text-muted">
-                Cut day {card.cutDay} · Due day {card.paymentDueDay}
-                {card.interestRateMonthly ? ` · Rate ${card.interestRateMonthly}%` : ''}
-              </p>
-            </RecordCard>
-          ))}
-        </RecordGrid>
-      </div>
-    </FinanceShell>
-  );
+    return (
+      <FinanceShell title="Cards" eyebrow="Credit limits, cut dates, and due dates">
+        <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
+          <FormPanel title="Add credit card" action={createCreditCardAction}>
+            <TextField name="name" label="Name" placeholder="Visa Black" required />
+            <TextField name="issuer" label="Issuer" placeholder="Bank/entity" required />
+            <TextField
+              name="last4"
+              label="Last 4 digits"
+              placeholder="1234"
+              maxLength={4}
+              required
+            />
+            <NumberField name="creditLimit" label="Credit limit" min="0" step="0.01" required />
+            <CurrencyField />
+            <NumberField name="cutDay" label="Cut day" min="1" max="31" step="1" required />
+            <NumberField
+              name="paymentDueDay"
+              label="Payment due day"
+              min="1"
+              max="31"
+              step="1"
+              required
+            />
+            <NumberField
+              name="interestRateMonthly"
+              label="Monthly interest rate"
+              min="0"
+              step="0.0001"
+            />
+            <SubmitButton label="Save card" />
+          </FormPanel>
+          <RecordGrid emptyLabel="No cards yet.">
+            {cards.map((card) => (
+              <RecordCard
+                key={card.id}
+                title={`${card.name} *${card.last4}`}
+                meta={`${card.issuer} · ${formatMoney(card.creditLimit, card.currencyCode)}`}
+              >
+                <p className="m-0 text-muted">
+                  Cut day {card.cutDay} · Due day {card.paymentDueDay}
+                  {card.interestRateMonthly ? ` · Rate ${card.interestRateMonthly}%` : ''}
+                </p>
+              </RecordCard>
+            ))}
+          </RecordGrid>
+        </div>
+      </FinanceShell>
+    );
+  } catch (error) {
+    return financeErrorShell('Cards', 'Credit limits, cut dates, and due dates', error);
+  }
 }
 
 export async function IncomeScreen() {
-  const incomeSources = await fetchFinanceJson<FinanceIncomeSource[]>('/income-sources');
+  try {
+    const incomeSources = await fetchFinanceJson<FinanceIncomeSource[]>('/income-sources');
 
-  return (
-    <FinanceShell title="Income" eyebrow="Expected income sources">
-      <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
-        <FormPanel title="Add income source" action={createIncomeSourceAction}>
-          <TextField name="name" label="Name" placeholder="Salary, client, business" required />
-          <SelectField name="type" label="Type" options={incomeTypeOptions} />
-          <NumberField name="expectedAmount" label="Expected amount" min="0" step="0.01" required />
-          <CurrencyField />
-          <SelectField name="frequency" label="Frequency" options={frequencyOptions} />
-          <NumberField
-            name="expectedPaymentDay"
-            label="Expected payment day"
-            min="1"
-            max="31"
-            step="1"
-          />
-          <SubmitButton label="Save income source" />
-        </FormPanel>
-        <RecordGrid emptyLabel="No income sources yet.">
-          {incomeSources.map((source) => (
-            <RecordCard
-              key={source.id}
-              title={source.name}
-              meta={`${source.type} · ${formatMoney(source.expectedAmount, source.currencyCode)}`}
-            >
-              <p className="m-0 text-muted">
-                {source.frequency}
-                {source.expectedPaymentDay ? ` · expected day ${source.expectedPaymentDay}` : ''}
-              </p>
-            </RecordCard>
-          ))}
-        </RecordGrid>
-      </div>
-    </FinanceShell>
-  );
+    return (
+      <FinanceShell title="Income" eyebrow="Expected income sources">
+        <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
+          <FormPanel title="Add income source" action={createIncomeSourceAction}>
+            <TextField name="name" label="Name" placeholder="Salary, client, business" required />
+            <SelectField name="type" label="Type" options={incomeTypeOptions} />
+            <NumberField
+              name="expectedAmount"
+              label="Expected amount"
+              min="0"
+              step="0.01"
+              required
+            />
+            <CurrencyField />
+            <SelectField name="frequency" label="Frequency" options={frequencyOptions} />
+            <NumberField
+              name="expectedPaymentDay"
+              label="Expected payment day"
+              min="1"
+              max="31"
+              step="1"
+            />
+            <SubmitButton label="Save income source" />
+          </FormPanel>
+          <RecordGrid emptyLabel="No income sources yet.">
+            {incomeSources.map((source) => (
+              <RecordCard
+                key={source.id}
+                title={source.name}
+                meta={`${source.type} · ${formatMoney(source.expectedAmount, source.currencyCode)}`}
+              >
+                <p className="m-0 text-muted">
+                  {source.frequency}
+                  {source.expectedPaymentDay ? ` · expected day ${source.expectedPaymentDay}` : ''}
+                </p>
+              </RecordCard>
+            ))}
+          </RecordGrid>
+        </div>
+      </FinanceShell>
+    );
+  } catch (error) {
+    return financeErrorShell('Income', 'Expected income sources', error);
+  }
 }
 
 export async function FixedObligationsScreen() {
-  const [items, accounts, cards, categories] = await Promise.all([
-    fetchFinanceJson<FinanceRecurring[]>('/fixed-obligations'),
-    fetchFinanceJson<FinanceAccount[]>('/accounts'),
-    fetchFinanceJson<FinanceCreditCard[]>('/credit-cards'),
-    fetchFinanceJson<FinanceCategory[]>('/categories'),
-  ]);
+  try {
+    const [items, accounts, cards, categories] = await Promise.all([
+      fetchFinanceJson<FinanceRecurring[]>('/fixed-obligations'),
+      fetchFinanceJson<FinanceAccount[]>('/accounts'),
+      fetchFinanceJson<FinanceCreditCard[]>('/credit-cards'),
+      fetchFinanceJson<FinanceCategory[]>('/categories'),
+    ]);
 
-  return (
-    <FinanceShell title="Fixed obligations" eyebrow="Recurring payments with due dates">
-      <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
-        <FormPanel title="Add fixed expense" action={createFixedObligationAction}>
-          <TextField name="name" label="Name" placeholder="Rent, insurance, loan" required />
-          <NumberField name="amount" label="Amount" min="0" step="0.01" required />
-          <CurrencyField />
-          <SelectField name="frequency" label="Frequency" options={frequencyOptions} />
-          <NumberField name="dueDay" label="Due day" min="1" max="31" step="1" />
-          <PaymentFields accounts={accounts} cards={cards} categories={categories} />
-          <SubmitButton label="Save obligation" />
-        </FormPanel>
-        <RecurringList items={items} emptyLabel="No fixed obligations yet." editableFixed />
-      </div>
-    </FinanceShell>
-  );
+    return (
+      <FinanceShell title="Fixed obligations" eyebrow="Recurring payments with due dates">
+        <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
+          <FormPanel title="Add fixed expense" action={createFixedObligationAction}>
+            <TextField name="name" label="Name" placeholder="Rent, insurance, loan" required />
+            <NumberField name="amount" label="Amount" min="0" step="0.01" required />
+            <CurrencyField />
+            <SelectField name="frequency" label="Frequency" options={frequencyOptions} />
+            <NumberField name="dueDay" label="Due day" min="1" max="31" step="1" />
+            <PaymentFields accounts={accounts} cards={cards} categories={categories} />
+            <SubmitButton label="Save obligation" />
+          </FormPanel>
+          <RecurringList items={items} emptyLabel="No fixed obligations yet." editableFixed />
+        </div>
+      </FinanceShell>
+    );
+  } catch (error) {
+    return financeErrorShell('Fixed obligations', 'Recurring payments with due dates', error);
+  }
 }
 
 export async function SubscriptionsScreen() {
-  const [items, accounts, cards, categories] = await Promise.all([
-    fetchFinanceJson<FinanceRecurring[]>('/subscriptions'),
-    fetchFinanceJson<FinanceAccount[]>('/accounts'),
-    fetchFinanceJson<FinanceCreditCard[]>('/credit-cards'),
-    fetchFinanceJson<FinanceCategory[]>('/categories'),
-  ]);
+  try {
+    const [items, accounts, cards, categories] = await Promise.all([
+      fetchFinanceJson<FinanceRecurring[]>('/subscriptions'),
+      fetchFinanceJson<FinanceAccount[]>('/accounts'),
+      fetchFinanceJson<FinanceCreditCard[]>('/credit-cards'),
+      fetchFinanceJson<FinanceCategory[]>('/categories'),
+    ]);
 
-  return (
-    <FinanceShell title="Subscriptions" eyebrow="Recurring merchant charges">
-      <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
-        <FormPanel title="Add subscription" action={createSubscriptionAction}>
-          <TextField
-            name="name"
-            label="Name"
-            placeholder="Streaming, software, membership"
-            required
-          />
-          <NumberField name="amount" label="Amount" min="0" step="0.01" required />
-          <CurrencyField />
-          <SelectField name="frequency" label="Frequency" options={frequencyOptions} />
-          <TextField name="nextBillingDate" label="Next billing date" type="date" />
-          <PaymentFields accounts={accounts} cards={cards} categories={categories} />
-          <SubmitButton label="Save subscription" />
-        </FormPanel>
-        <RecurringList items={items} emptyLabel="No subscriptions yet." />
-      </div>
-    </FinanceShell>
-  );
+    return (
+      <FinanceShell title="Subscriptions" eyebrow="Recurring merchant charges">
+        <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
+          <FormPanel title="Add subscription" action={createSubscriptionAction}>
+            <TextField
+              name="name"
+              label="Name"
+              placeholder="Streaming, software, membership"
+              required
+            />
+            <NumberField name="amount" label="Amount" min="0" step="0.01" required />
+            <CurrencyField />
+            <SelectField name="frequency" label="Frequency" options={frequencyOptions} />
+            <TextField name="nextBillingDate" label="Next billing date" type="date" />
+            <PaymentFields accounts={accounts} cards={cards} categories={categories} />
+            <SubmitButton label="Save subscription" />
+          </FormPanel>
+          <RecurringList items={items} emptyLabel="No subscriptions yet." />
+        </div>
+      </FinanceShell>
+    );
+  } catch (error) {
+    return financeErrorShell('Subscriptions', 'Recurring merchant charges', error);
+  }
 }
 
 export async function CategoriesScreen() {
-  const categories = await fetchFinanceJson<FinanceCategory[]>('/categories');
+  try {
+    const categories = await fetchFinanceJson<FinanceCategory[]>('/categories');
 
+    return (
+      <FinanceShell title="Categories" eyebrow="Reporting and review classification">
+        <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
+          <FormPanel title="Add category" action={createCategoryAction}>
+            <TextField name="name" label="Name" placeholder="Groceries, housing, health" required />
+            <SubmitButton label="Save category" />
+          </FormPanel>
+          <RecordGrid emptyLabel="No categories yet.">
+            {categories.map((category) => (
+              <RecordCard key={category.id} title={category.name} meta="Category" />
+            ))}
+          </RecordGrid>
+        </div>
+      </FinanceShell>
+    );
+  } catch (error) {
+    return financeErrorShell('Categories', 'Reporting and review classification', error);
+  }
+}
+
+function financeErrorShell(title: string, eyebrow: string, error: unknown) {
   return (
-    <FinanceShell title="Categories" eyebrow="Reporting and review classification">
-      <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
-        <FormPanel title="Add category" action={createCategoryAction}>
-          <TextField name="name" label="Name" placeholder="Groceries, housing, health" required />
-          <SubmitButton label="Save category" />
-        </FormPanel>
-        <RecordGrid emptyLabel="No categories yet.">
-          {categories.map((category) => (
-            <RecordCard key={category.id} title={category.name} meta="Category" />
-          ))}
-        </RecordGrid>
-      </div>
+    <FinanceShell title={title} eyebrow={eyebrow}>
+      <ErrorBlock
+        message={error instanceof Error ? error.message : 'Unable to load finance data'}
+      />
     </FinanceShell>
   );
 }

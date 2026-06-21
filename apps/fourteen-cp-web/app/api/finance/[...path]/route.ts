@@ -1,14 +1,9 @@
-import { loadEnv } from '@17suit/core';
+import { getApiErrorDisplayMessage, loadEnv, normalizeApiBaseUrl } from '@17suit/core';
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 interface ProxyContext {
   params: Promise<{ path: string[] }>;
-}
-
-function normalizeApiBaseUrl(baseUrl: string): string {
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  return trimmed.replace(/\/api$/, '');
 }
 
 async function proxyToBackend(request: Request, context: ProxyContext): Promise<NextResponse> {
@@ -25,7 +20,7 @@ async function proxyToBackend(request: Request, context: ProxyContext): Promise<
 
   const resolvedParams = await context.params;
   const path = Array.isArray(resolvedParams.path) ? resolvedParams.path : [];
-  const apiBaseUrl = normalizeApiBaseUrl(loadEnv().API_BASE_URL);
+  const apiBaseUrl = normalizeApiBaseUrl(loadEnv().API_BASE_URL).replace(/\/api$/, '');
   const incomingUrl = new URL(request.url);
   const targetUrl = `${apiBaseUrl}/api/finance/${path.join('/')}${incomingUrl.search}`;
 
@@ -52,7 +47,14 @@ async function proxyToBackend(request: Request, context: ProxyContext): Promise<
     }
   }
 
-  const response = await fetch(targetUrl, init);
+  let response: Response;
+
+  try {
+    response = await fetch(targetUrl, init);
+  } catch (error) {
+    return NextResponse.json({ message: getApiErrorDisplayMessage(error) }, { status: 503 });
+  }
+
   const payload = await response.text();
 
   return new NextResponse(payload, {
