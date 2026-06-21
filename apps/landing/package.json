@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack --port 3000",
     "dev:product": "pnpm run dev",
-    "build": "next build --webpack",
+    "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
