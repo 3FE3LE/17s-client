@@ -1,5 +1,6 @@
 'use client';
 
+import { cx, inputRecipe } from '@17suit/design-system';
 import { Eye, EyeOff } from 'lucide-react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useState } from 'react';
@@ -56,25 +57,17 @@ export function AppInput({
       : type;
   const resolvedLabel = label ?? placeholder;
   const hasRightAction = Boolean(shouldShowPasswordToggle || rightIcon);
-  const inputClassName = [
-    'h-11 w-full rounded-md border bg-surface px-3 font-zilla text-md leading-[1.5] tracking-normal text-text outline-none transition-colors',
-    'placeholder:text-muted',
-    compact ? 'h-10' : 'h-11',
-    leftIcon ? 'pl-10' : 'pl-3',
-    hasRightAction ? 'pr-10' : 'pr-3',
-    error ? 'border-destructive' : 'border-black/20',
-    disabled ? 'cursor-not-allowed opacity-75' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const inputClasses = inputRecipe({
+    state: error ? 'error' : disabled ? 'disabled' : 'default',
+    compact,
+    hasLeftAccessory: Boolean(leftIcon),
+    hasRightAccessory: hasRightAction,
+    platform: 'web',
+  });
 
   return (
-    <div className="grid w-full gap-xs">
-      {resolvedLabel ? (
-        <label className="font-zilla text-sm leading-[1.5] tracking-normal text-muted">
-          {resolvedLabel}
-        </label>
-      ) : null}
+    <div className={inputClasses.root}>
+      {resolvedLabel ? <label className={inputClasses.fieldLabel}>{resolvedLabel}</label> : null}
       <div className="relative w-full">
         {leftIcon ? (
           <span className="absolute left-3 top-1/2 inline-flex -translate-y-1/2 items-center text-muted">
@@ -88,7 +81,7 @@ export function AppInput({
           disabled={disabled}
           aria-invalid={error}
           type={resolvedType}
-          className={inputClassName}
+          className={cx(inputClasses.control, disabled && 'cursor-not-allowed')}
           onChange={(event) =>
             onChangeText(
               (

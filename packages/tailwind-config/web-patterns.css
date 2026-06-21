@@ -1,0 +1,60 @@
+@utility bg-suit-canvas {
+  background:
+    radial-gradient(circle at 8% 1%, rgb(53 167 255 / 0.22), transparent 40%),
+    radial-gradient(circle at 96% 4%, rgb(255 73 92 / 0.14), transparent 34%),
+    linear-gradient(
+      155deg,
+      var(--color-background-canvas-top) 0%,
+      var(--color-background-canvas) 46%,
+      var(--color-background-canvas-cool) 100%
+    );
+}
+
+@utility bg-suit-landing-canvas {
+  background:
+    radial-gradient(circle at 0% 0%, rgb(53 167 255 / 0.2), transparent 33%),
+    radial-gradient(circle at 100% 2%, rgb(255 73 92 / 0.18), transparent 34%),
+    linear-gradient(
+      152deg,
+      var(--color-background-canvas-top) 0%,
+      var(--color-background-canvas) 54%,
+      #eef3f7 100%
+    );
+}
+
+@utility bg-action-primary {
+  background: linear-gradient(
+    95deg,
+    var(--color-action-primary),
+    var(--color-action-primary-hover)
+  );
+}
+
+@utility bg-ambient-cyan-line {
+  background: linear-gradient(90deg, rgb(53 167 255 / 0.2), rgb(0 145 110 / 0));
+}
+
+@utility bg-ambient-green-line {
+  background: linear-gradient(90deg, rgb(0 145 110 / 0.18), rgb(0 145 110 / 0));
+}
+
+@utility bg-ambient-brand-conic {
+  background: conic-gradient(
+    from 180deg,
+    rgb(0 145 110 / 0.18),
+    rgb(53 167 255 / 0.15),
+    rgb(255 73 92 / 0.14)
+  );
+}
+
+@utility bg-ambient-landing-conic {
+  background: conic-gradient(from 180deg, rgb(0 145 110 / 0.2), rgb(53 167 255 / 0.16));
+}
+
+@utility bg-ambient-cyan-orb {
+  background: radial-gradient(circle, rgb(53 167 255 / 0.24), rgb(53 167 255 / 0));
+}
+
+@utility bg-ambient-coral-orb {
+  background: radial-gradient(circle, rgb(255 73 92 / 0.24), rgb(255 73 92 / 0));
+}

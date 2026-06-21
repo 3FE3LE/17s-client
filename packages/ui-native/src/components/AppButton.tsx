@@ -1,3 +1,4 @@
+import { buttonLabelRecipe, buttonRecipe, cx, type ButtonIntent } from '@17suit/design-system';
 import type { PropsWithChildren } from 'react';
 import { Pressable, Text } from 'react-native';
 
@@ -17,28 +18,28 @@ export function AppButton({
 }: AppButtonProps) {
   const variantClasses: Record<AppButtonVariant, { container: string; label: string }> = {
     primary: {
-      container: 'bg-brand-primary',
-      label: 'text-brand-dark',
+      container: 'primary',
+      label: 'primary',
     },
     success: {
-      container: 'bg-success',
-      label: 'text-brand-dark',
+      container: 'success',
+      label: 'success',
     },
     destructive: {
-      container: 'bg-destructive',
-      label: 'text-brand-light',
+      container: 'danger',
+      label: 'danger',
     },
     warning: {
-      container: 'bg-warning',
-      label: 'text-background',
+      container: 'warning',
+      label: 'warning',
     },
     info: {
-      container: 'bg-info',
-      label: 'text-brand-light',
+      container: 'info',
+      label: 'info',
     },
     neutral: {
-      container: 'bg-brand-light',
-      label: 'text-brand-dark',
+      container: 'neutral',
+      label: 'neutral',
     },
   };
   const colors = variantClasses[variant];
@@ -47,11 +48,14 @@ export function AppButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className={`w-full min-h-11 items-center justify-center rounded-md border border-black/10 px-lg py-sm ${colors.container} ${disabled ? 'opacity-75' : ''}`}
+      className={buttonRecipe({
+        intent: colors.container as ButtonIntent,
+        shape: 'md',
+        platform: 'native',
+        disabled,
+      })}
     >
-      <Text
-        className={`text-center font-zilla text-md font-bold leading-[22px] tracking-plus1_25 ${colors.label}`}
-      >
+      <Text className={cx(buttonLabelRecipe({ intent: colors.label as ButtonIntent }))}>
         {children}
       </Text>
     </Pressable>

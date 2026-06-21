@@ -1,5 +1,6 @@
 'use client';
 
+import { buttonRecipe, cardRecipe, cx, pageContainerRecipe } from '@17suit/design-system';
 import { LogOut } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { ElementType, PropsWithChildren, ReactNode } from 'react';
@@ -38,18 +39,18 @@ export function AppWorkspaceShell({
   children,
 }: AppWorkspaceShellProps) {
   return (
-    <main className="relative min-h-screen overflow-clip bg-[radial-gradient(circle_at_8%_1%,rgba(53,167,255,0.22),transparent_40%),radial-gradient(circle_at_96%_4%,rgba(255,73,92,0.14),transparent_34%),linear-gradient(155deg,#fbfcff_0%,#f7f8fa_46%,#eef4f8_100%)] text-text">
+    <main className="relative min-h-screen overflow-clip bg-suit-canvas text-text">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-[24vw] -top-[24vw] z-0 h-[min(58vw,690px)] w-[min(58vw,690px)] rotate-[-15deg] rounded-[var(--radius-xl)] bg-[conic-gradient(from_180deg,rgba(0,145,110,0.18),rgba(53,167,255,0.15),rgba(255,73,92,0.14))]"
+        className="pointer-events-none absolute -right-[24vw] -top-[24vw] z-0 h-[min(58vw,690px)] w-[min(58vw,690px)] rotate-[-15deg] rounded-[var(--radius-xl)] bg-ambient-brand-conic"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-[-52px] left-[6vw] z-0 h-[140px] w-[min(64vw,720px)] skew-x-[-24deg] bg-[linear-gradient(90deg,rgba(53,167,255,0.2),rgba(0,145,110,0))]"
+        className="pointer-events-none absolute bottom-[-52px] left-[6vw] z-0 h-[140px] w-[min(64vw,720px)] skew-x-[-24deg] bg-ambient-cyan-line"
       />
 
-      <div className="relative z-10 mx-auto grid min-h-screen max-w-[1440px] lg:grid-cols-[286px_1fr]">
-        <aside className="border-b border-[rgba(0,23,31,0.12)] bg-white/82 px-[var(--spacing-md)] py-[var(--spacing-md)] backdrop-blur-sm lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:px-[var(--spacing-lg)] lg:py-[var(--spacing-lg)]">
+      <div className={pageContainerRecipe({ kind: 'workspace' })}>
+        <aside className="border-b border-border-default bg-surface-panel px-[var(--spacing-md)] py-[var(--spacing-md)] backdrop-blur-sm lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:px-[var(--spacing-lg)] lg:py-[var(--spacing-lg)]">
           <div className="flex items-center justify-between gap-[var(--spacing-md)] lg:block">
             <LinkComponent href={homeHref} className="inline-flex flex-col no-underline">
               <span className="text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
@@ -63,7 +64,15 @@ export function AppWorkspaceShell({
               <button
                 type="button"
                 onClick={onSignOut}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgba(0,23,31,0.12)] bg-white/90 px-3 py-2 text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px lg:hidden"
+                className={cx(
+                  buttonRecipe({
+                    intent: 'secondary',
+                    size: 'sm',
+                    platform: 'web',
+                    fullWidth: false,
+                  }),
+                  'gap-2 lg:hidden',
+                )}
               >
                 <LogOut size={16} strokeWidth={2.2} aria-hidden />
                 {signOutLabel}
@@ -80,11 +89,12 @@ export function AppWorkspaceShell({
                 <LinkComponent
                   key={item.href}
                   href={item.href}
-                  className={`grid min-w-[156px] grid-cols-[32px_1fr] items-center gap-2 rounded-[var(--radius-lg)] border px-3 py-[10px] text-sm font-bold no-underline transition-transform duration-200 hover:-translate-y-px lg:min-w-0 ${
+                  className={cx(
+                    'grid min-w-[156px] grid-cols-[32px_1fr] items-center gap-2 rounded-[var(--radius-lg)] border px-3 py-[10px] text-sm font-bold no-underline transition-transform duration-200 hover:-translate-y-px lg:min-w-0',
                     isActive
-                      ? 'border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)]'
-                      : 'border-[rgba(0,23,31,0.12)] bg-white/74 text-brand-dark'
-                  }`}
+                      ? 'border-action-primary-border bg-action-primary text-white shadow-action-primary-soft'
+                      : 'border-border-default bg-surface-navigation text-brand-dark',
+                  )}
                 >
                   <span
                     className={`inline-flex h-8 w-8 items-center justify-center rounded-full ${
@@ -107,7 +117,10 @@ export function AppWorkspaceShell({
             <button
               type="button"
               onClick={onSignOut}
-              className="mt-[var(--spacing-md)] hidden w-full items-center justify-center gap-2 rounded-full border border-[rgba(0,23,31,0.12)] bg-white/90 px-3 py-2 text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px lg:flex"
+              className={cx(
+                buttonRecipe({ intent: 'secondary', size: 'sm', platform: 'web' }),
+                'mt-[var(--spacing-md)] hidden gap-2 lg:flex',
+              )}
             >
               <LogOut size={16} strokeWidth={2.2} aria-hidden />
               {signOutLabel}
@@ -116,7 +129,7 @@ export function AppWorkspaceShell({
         </aside>
 
         <section className="grid content-start gap-[var(--spacing-lg)] px-[var(--spacing-md)] py-[var(--spacing-lg)] md:px-[var(--spacing-xl)] lg:px-[var(--spacing-x2l)]">
-          <header className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/80 p-[clamp(20px,3vw,36px)] backdrop-blur-sm">
+          <header className={cardRecipe({ variant: 'workspaceHeader' })}>
             <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
               {eyebrow}
             </p>

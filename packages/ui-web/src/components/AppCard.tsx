@@ -1,5 +1,5 @@
+import { cardRecipe, cx } from '@17suit/design-system';
 import type { CSSProperties, HTMLAttributes, PropsWithChildren, ReactNode } from 'react';
-import { useAppTheme } from '../theme/theme-context';
 
 type AppCardTone = 'default' | 'accent';
 
@@ -23,73 +23,31 @@ export function AppCard({
   style,
   ...rest
 }: AppCardProps) {
-  const { theme } = useAppTheme();
-  const subtitleType = theme.typography.styles.subtitle2;
-  const bodyType = theme.typography.styles.body;
-  const borderColor = tone === 'accent' ? theme.colors.brandPrimary : theme.grayscale[3];
-
   return (
     <div
       {...rest}
       onClick={onPress}
       role={onPress ? 'button' : undefined}
       tabIndex={onPress ? 0 : undefined}
-      style={{
-        width: '100%',
-        borderRadius: theme.borderRadius.lg,
-        border: `1px solid ${borderColor}`,
-        backgroundColor: theme.colors.surface,
-        boxShadow: '0 10px 24px rgba(0, 0, 0, 0.12)',
-        padding: theme.spacing.md,
-        display: 'grid',
-        gap: theme.spacing.sm,
-        cursor: onPress ? 'pointer' : 'default',
-        transition: 'transform 140ms ease, box-shadow 140ms ease',
-        ...style,
-      }}
+      className={cx(
+        cardRecipe({ variant: 'feature', shadow: 'panel' }),
+        'grid w-full gap-sm',
+        tone === 'accent' && 'border-brand-primary',
+        onPress
+          ? 'cursor-pointer transition-transform duration-150 hover:-translate-y-px'
+          : 'cursor-default',
+        typeof rest.className === 'string' ? rest.className : '',
+      )}
+      style={style}
     >
       {title ? (
-        <p
-          style={{
-            margin: 0,
-            color: theme.colors.text,
-            fontFamily: subtitleType.webFamily,
-            fontWeight: subtitleType.fontWeight,
-            fontSize: subtitleType.fontSize,
-            lineHeight: subtitleType.fontSize * subtitleType.lineHeightRecommended,
-            letterSpacing: subtitleType.letterSpacingEm,
-          }}
-        >
-          {title}
-        </p>
+        <p className="m-0 font-arvo text-lg font-bold leading-[1.25] text-text">{title}</p>
       ) : null}
       {subtitle ? (
-        <p
-          style={{
-            margin: 0,
-            color: theme.colors.muted,
-            fontFamily: bodyType.webFamily,
-            fontWeight: bodyType.fontWeight,
-            fontSize: bodyType.fontSize,
-            lineHeight: bodyType.fontSize * bodyType.lineHeightRecommended,
-            letterSpacing: bodyType.letterSpacingEm,
-          }}
-        >
-          {subtitle}
-        </p>
+        <p className="m-0 font-zilla text-md leading-[1.5] text-muted">{subtitle}</p>
       ) : null}
       {children}
-      {footer ? (
-        <div
-          style={{
-            marginTop: theme.spacing.xs,
-            paddingTop: theme.spacing.sm,
-            borderTop: `1px solid ${theme.grayscale[3]}`,
-          }}
-        >
-          {footer}
-        </div>
-      ) : null}
+      {footer ? <div className="mt-xs border-t border-border-default pt-sm">{footer}</div> : null}
     </div>
   );
 }

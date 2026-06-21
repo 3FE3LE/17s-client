@@ -1,5 +1,8 @@
 :root {
   --suit-color-background: #f7f8fa;
+  --suit-color-background-canvas: #f7f8fa;
+  --suit-color-background-canvas-top: #fbfcff;
+  --suit-color-background-canvas-cool: #eef4f8;
   --suit-color-surface: #ffffff;
   --suit-color-accent: #35a7ff;
   --suit-color-text: #00151c;
@@ -61,6 +64,9 @@
 
 .dark {
   --suit-color-background: #00151c;
+  --suit-color-background-canvas: #00151c;
+  --suit-color-background-canvas-top: #092025;
+  --suit-color-background-canvas-cool: #00171f;
   --suit-color-surface: #394448;
   --suit-color-accent: #35a7ff;
   --suit-color-text: #f0f0f0;
