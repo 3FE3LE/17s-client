@@ -1216,6 +1216,9 @@ importers:
       '@clerk/nextjs':
         specifier: ^6.30.5
         version: 6.37.5(next@16.1.6(@babel/core@7.29.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@tanstack/react-query':
+        specifier: ^5.90.3
+        version: 5.90.21(react@19.1.0)
       expo-secure-store:
         specifier: ~14.2.3
         version: 14.2.4(expo@54.0.33)

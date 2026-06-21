@@ -1,9 +1,6 @@
+import { ApiClient, getApiErrorDisplayMessage, normalizeApiBaseUrl } from '@17suit/core';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
-
-function normalizeApiBaseUrl(value: string): string {
-  return value.replace(/\/+$/, '');
-}
 
 export async function fetchFinanceJson<T>(path: string): Promise<T> {
   return requestFinanceJson<T>(path, { method: 'GET' });
@@ -40,39 +37,26 @@ async function requestFinanceJson<T>(
   }
 
   const apiBaseUrl = normalizeApiBaseUrl(process.env.API_BASE_URL ?? 'http://localhost:4000/api');
-  const requestInit: RequestInit = {
-    method: init.method,
-    headers: {
-      Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      Authorization: `Bearer ${token}`,
-    },
-    cache: 'no-store',
-  };
-  if (init.body) {
-    requestInit.body = init.body;
-  }
-
-  const response = await fetch(`${apiBaseUrl}/finance${path}`, requestInit);
-
-  if (!response.ok) {
-    throw new Error(await getFinanceErrorMessage(response));
-  }
-
-  return (await response.json()) as T;
-}
-
-async function getFinanceErrorMessage(response: Response): Promise<string> {
   try {
-    const payload = (await response.json()) as unknown;
-    if (payload && typeof payload === 'object' && 'message' in payload) {
-      const message = payload.message;
-      if (Array.isArray(message)) return message.join(', ');
-      if (typeof message === 'string') return message;
-    }
-  } catch {
-    return `Finance request failed (${response.status})`;
-  }
+    const client = new ApiClient({
+      baseUrl: `${apiBaseUrl}/finance`,
+      getAccessToken: () => token,
+      timeoutMs: 8_000,
+    });
 
-  return `Finance request failed (${response.status})`;
+    return await client.request<T>(path, {
+      method: init.method,
+      ...(init.body === undefined ? {} : { body: init.body }),
+      headers: {
+        Accept: 'application/json',
+      },
+      cache: 'no-store',
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === 'NEXT_REDIRECT') {
+      throw error;
+    }
+
+    throw new Error(getApiErrorDisplayMessage(error));
+  }
 }
