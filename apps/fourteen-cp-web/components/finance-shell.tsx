@@ -11,6 +11,8 @@ import {
   ListChecks,
   ReceiptText,
   Repeat2,
+  cardRecipe,
+  cx,
 } from '@17suit/ui';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -66,14 +68,14 @@ export function DataCard({
   tone?: 'neutral' | 'good' | 'warn' | 'hot';
 }) {
   const toneClass = {
-    neutral: 'border-[rgba(0,23,31,0.12)] bg-white/82',
-    good: 'border-[#00916e]/35 bg-[#00916e]/10',
-    warn: 'border-[#f3863d]/35 bg-[#f3863d]/10',
-    hot: 'border-[#ff495c]/35 bg-[#ff495c]/10',
+    neutral: '',
+    good: 'border-action-primary/35 bg-action-primary-soft',
+    warn: 'border-warning/35 bg-feedback-warning-soft',
+    hot: 'border-brand-accent/35 bg-feedback-hot-soft',
   }[tone];
 
   return (
-    <article className={`rounded-[var(--radius-md)] border p-[var(--spacing-md)] ${toneClass}`}>
+    <article className={cx(cardRecipe({ variant: 'panel' }), toneClass)}>
       <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">{label}</p>
       <p className="m-0 mt-[var(--spacing-sm)] font-amaranth text-[clamp(28px,4vw,40px)] leading-[1.1] text-brand-dark">
         {value}
@@ -83,16 +85,17 @@ export function DataCard({
 }
 
 export function LoadingBlock() {
-  return (
-    <div className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/80 p-[var(--spacing-lg)]">
-      Loading finance data...
-    </div>
-  );
+  return <div className={cardRecipe({ variant: 'feature' })}>Loading finance data...</div>;
 }
 
 export function ErrorBlock({ message }: { message: string }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-[#f8333c]/40 bg-[#f8333c]/10 p-[var(--spacing-lg)] text-brand-dark">
+    <div
+      className={cx(
+        cardRecipe({ variant: 'feature' }),
+        'border-destructive/40 bg-feedback-error-soft text-brand-dark',
+      )}
+    >
       {message}
     </div>
   );

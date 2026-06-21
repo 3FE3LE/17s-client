@@ -3,6 +3,7 @@ import type {
   FinanceReviewItem,
   FinanceTransaction,
 } from '@17suit/module-fourteen-cash-pulse';
+import { cardRecipe, cx, inputRecipe } from '@17suit/ui';
 import { redirect } from 'next/navigation';
 import { DataCard, ErrorBlock, FinanceShell } from './finance-shell';
 import { fetchFinanceJson, patchFinanceJson, postFinanceJson } from '@/lib/finance-server';
@@ -89,6 +90,14 @@ type FinanceRecurring = {
   };
 };
 
+const panelClassName = cardRecipe({ variant: 'panel' });
+const insetClassName = cardRecipe({ variant: 'inset' });
+const fieldClasses = inputRecipe();
+const darkSubmitButtonClassName =
+  'rounded-[var(--radius-sm)] bg-brand-dark px-4 py-2 text-sm font-bold text-white';
+const outlineButtonClassName =
+  'rounded-[var(--radius-sm)] border border-border-strong px-4 py-2 text-sm font-bold text-brand-dark';
+
 export async function DashboardScreen() {
   try {
     const data = await fetchFinanceJson<FinanceDashboardOverview>('/dashboard/overview');
@@ -127,13 +136,13 @@ export async function DashboardScreen() {
             />
           </section>
 
-          <section className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)]">
+          <section className={panelClassName}>
             <h2 className="m-0 font-amaranth text-xl text-brand-dark">Credit cards</h2>
             <div className="mt-[var(--spacing-sm)] grid gap-[var(--spacing-sm)] md:grid-cols-2">
               {data.creditCards.map((card) => (
                 <article
                   key={card.id}
-                  className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.12)] p-[var(--spacing-md)]"
+                  className="rounded-[var(--radius-sm)] border border-border-default p-[var(--spacing-md)]"
                 >
                   <p className="m-0 font-bold">
                     {card.name} *{card.last4}
@@ -166,11 +175,11 @@ export async function TransactionsScreen() {
 
     return (
       <FinanceShell title="Transactions" eyebrow="Confirmed ledger">
-        <div className="overflow-hidden rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82">
+        <div className={cardRecipe({ variant: 'list' })}>
           {items.map((item) => (
             <div
               key={item.id}
-              className="grid gap-2 border-b border-[rgba(0,23,31,0.08)] p-[var(--spacing-md)] md:grid-cols-[1fr_auto] md:items-center"
+              className="grid gap-2 border-b border-border-hairline p-[var(--spacing-md)] md:grid-cols-[1fr_auto] md:items-center"
             >
               <div>
                 <p className="m-0 font-bold text-brand-dark">
@@ -214,14 +223,15 @@ export async function ReviewScreen() {
           <section className="grid gap-[var(--spacing-sm)]">
             <h2 className="m-0 font-amaranth text-xl text-brand-dark">Parsed candidates</h2>
             {pendingCandidates.length === 0 ? (
-              <div className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)] text-muted">
-                No pending candidates yet.
-              </div>
+              <div className={cx(panelClassName, 'text-muted')}>No pending candidates yet.</div>
             ) : (
               pendingCandidates.map((candidate) => (
                 <article
                   key={candidate.id}
-                  className="grid gap-[var(--spacing-md)] rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)] lg:grid-cols-[minmax(0,1fr)_340px]"
+                  className={cx(
+                    panelClassName,
+                    'grid gap-[var(--spacing-md)] lg:grid-cols-[minmax(0,1fr)_340px]',
+                  )}
                 >
                   <div>
                     <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
@@ -239,7 +249,7 @@ export async function ReviewScreen() {
                       {candidate.cardLast4 ? ` · card *${candidate.cardLast4}` : ''}
                     </p>
                     {candidate.rawEmail ? (
-                      <div className="mt-[var(--spacing-sm)] grid gap-1 rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.08)] bg-white/60 p-[var(--spacing-sm)]">
+                      <div className={cx(insetClassName, 'mt-[var(--spacing-sm)] grid gap-1')}>
                         <p className="m-0 text-sm font-bold text-brand-dark">
                           {candidate.rawEmail.subject}
                         </p>
@@ -264,7 +274,7 @@ export async function ReviewScreen() {
                         <select
                           name="candidateType"
                           defaultValue={candidate.candidateType}
-                          className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                          className={fieldClasses.control}
                         >
                           {candidateTypeOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -278,7 +288,7 @@ export async function ReviewScreen() {
                         <input
                           name="merchantNameRaw"
                           defaultValue={candidate.merchantNameRaw ?? ''}
-                          className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                          className={fieldClasses.control}
                         />
                       </label>
                       <div className="grid grid-cols-2 gap-2">
@@ -290,7 +300,7 @@ export async function ReviewScreen() {
                             min="0"
                             step="0.01"
                             defaultValue={String(candidate.amount)}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                            className={fieldClasses.control}
                           />
                         </label>
                         <label className="grid gap-1 text-sm font-bold text-brand-dark">
@@ -299,7 +309,7 @@ export async function ReviewScreen() {
                             name="currencyCode"
                             maxLength={3}
                             defaultValue={candidate.currencyCode}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal uppercase text-brand-dark"
+                            className={cx(fieldClasses.control, 'uppercase')}
                           />
                         </label>
                       </div>
@@ -310,7 +320,7 @@ export async function ReviewScreen() {
                             name="cardLast4"
                             maxLength={4}
                             defaultValue={candidate.cardLast4 ?? ''}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                            className={fieldClasses.control}
                           />
                         </label>
                         <label className="grid gap-1 text-sm font-bold text-brand-dark">
@@ -318,25 +328,19 @@ export async function ReviewScreen() {
                           <input
                             name="referenceCode"
                             defaultValue={candidate.referenceCode ?? ''}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                            className={fieldClasses.control}
                           />
                         </label>
                       </div>
-                      <button className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] px-4 py-2 text-sm font-bold text-brand-dark">
-                        Save classification
-                      </button>
+                      <button className={outlineButtonClassName}>Save classification</button>
                     </form>
                     <form action={acceptCandidateAction}>
                       <input type="hidden" name="candidateId" value={candidate.id} />
-                      <button className="w-full rounded-[var(--radius-sm)] bg-brand-dark px-4 py-2 text-sm font-bold text-white">
-                        Accept
-                      </button>
+                      <button className={cx(darkSubmitButtonClassName, 'w-full')}>Accept</button>
                     </form>
                     <form action={rejectCandidateAction}>
                       <input type="hidden" name="candidateId" value={candidate.id} />
-                      <button className="w-full rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] px-4 py-2 text-sm font-bold text-brand-dark">
-                        Reject
-                      </button>
+                      <button className={cx(outlineButtonClassName, 'w-full')}>Reject</button>
                     </form>
                   </div>
                 </article>
@@ -351,7 +355,10 @@ export async function ReviewScreen() {
               return (
                 <article
                   key={item.id}
-                  className="grid gap-[var(--spacing-md)] rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)] lg:grid-cols-[minmax(0,1fr)_340px]"
+                  className={cx(
+                    panelClassName,
+                    'grid gap-[var(--spacing-md)] lg:grid-cols-[minmax(0,1fr)_340px]',
+                  )}
                 >
                   <div>
                     <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
@@ -366,7 +373,7 @@ export async function ReviewScreen() {
                       {payload.financialImpactType ? ` · ${payload.financialImpactType}` : ''}
                     </p>
                     {payload.rawEmail ? (
-                      <div className="mt-[var(--spacing-sm)] grid gap-1 rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.08)] bg-white/60 p-[var(--spacing-sm)]">
+                      <div className={cx(insetClassName, 'mt-[var(--spacing-sm)] grid gap-1')}>
                         <p className="m-0 text-sm font-bold text-brand-dark">
                           {payload.rawEmail.subject}
                         </p>
@@ -393,7 +400,7 @@ export async function ReviewScreen() {
                         <select
                           name="candidateType"
                           defaultValue={payload.suggestedCandidateType ?? 'PURCHASE'}
-                          className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                          className={fieldClasses.control}
                         >
                           {candidateTypeOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -407,7 +414,7 @@ export async function ReviewScreen() {
                         <input
                           name="merchantNameRaw"
                           defaultValue={payload.merchantNameRaw ?? payload.rawEmail?.fromName ?? ''}
-                          className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                          className={fieldClasses.control}
                         />
                       </label>
                       <div className="grid grid-cols-2 gap-2">
@@ -419,7 +426,7 @@ export async function ReviewScreen() {
                             min="0"
                             step="0.01"
                             defaultValue={payload.amount ?? ''}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                            className={fieldClasses.control}
                           />
                         </label>
                         <label className="grid gap-1 text-sm font-bold text-brand-dark">
@@ -428,7 +435,7 @@ export async function ReviewScreen() {
                             name="currencyCode"
                             maxLength={3}
                             defaultValue={payload.currencyCode ?? 'COP'}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal uppercase text-brand-dark"
+                            className={cx(fieldClasses.control, 'uppercase')}
                           />
                         </label>
                       </div>
@@ -439,7 +446,7 @@ export async function ReviewScreen() {
                             name="cardLast4"
                             maxLength={4}
                             defaultValue={payload.cardLast4 ?? ''}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                            className={fieldClasses.control}
                           />
                         </label>
                         <label className="grid gap-1 text-sm font-bold text-brand-dark">
@@ -447,13 +454,11 @@ export async function ReviewScreen() {
                           <input
                             name="referenceCode"
                             defaultValue={payload.referenceCode ?? ''}
-                            className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                            className={fieldClasses.control}
                           />
                         </label>
                       </div>
-                      <button className="rounded-[var(--radius-sm)] bg-brand-dark px-4 py-2 text-sm font-bold text-white">
-                        Create candidate
-                      </button>
+                      <button className={darkSubmitButtonClassName}>Create candidate</button>
                     </form>
                   ) : null}
                 </article>
@@ -563,10 +568,7 @@ export async function SimpleCollectionScreen({
       <FinanceShell title={title} eyebrow={eyebrow}>
         <div className="grid gap-[var(--spacing-sm)] md:grid-cols-2">
           {items.map((item, index) => (
-            <article
-              key={extractId(item, index)}
-              className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)]"
-            >
+            <article key={extractId(item, index)} className={panelClassName}>
               <p className="m-0 font-bold text-brand-dark">{extractName(item)}</p>
               <pre className="m-0 mt-[var(--spacing-sm)] max-h-[180px] overflow-auto text-xs text-muted">
                 {JSON.stringify(item, null, 2)}
@@ -791,7 +793,7 @@ function Breakdown({
   currencyCode: string;
 }) {
   return (
-    <article className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)]">
+    <article className={panelClassName}>
       <h2 className="m-0 font-amaranth text-xl text-brand-dark">{title}</h2>
       <div className="mt-[var(--spacing-sm)] grid gap-[var(--spacing-sm)]">
         {items.map((item) => (
@@ -1011,10 +1013,7 @@ function FormPanel({
   children: React.ReactNode;
 }) {
   return (
-    <form
-      action={action}
-      className="grid content-start gap-3 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)]"
-    >
+    <form action={action} className={cx(panelClassName, 'grid content-start gap-3')}>
       <h2 className="m-0 font-amaranth text-xl text-brand-dark">{title}</h2>
       {children}
     </form>
@@ -1037,7 +1036,7 @@ function TextField({
   maxLength?: number;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-bold text-brand-dark">
+    <label className={fieldClasses.label}>
       {label}
       <input
         name={name}
@@ -1045,7 +1044,7 @@ function TextField({
         placeholder={placeholder}
         required={required}
         maxLength={maxLength}
-        className="min-h-10 rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+        className={fieldClasses.control}
       />
     </label>
   );
@@ -1060,7 +1059,7 @@ function NumberField(props: {
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-bold text-brand-dark">
+    <label className={fieldClasses.label}>
       {props.label}
       <input
         name={props.name}
@@ -1069,7 +1068,7 @@ function NumberField(props: {
         max={props.max}
         step={props.step}
         required={props.required}
-        className="min-h-10 rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+        className={fieldClasses.control}
       />
     </label>
   );
@@ -1085,12 +1084,9 @@ function SelectField({
   options: Array<{ value: string; label: string }>;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-bold text-brand-dark">
+    <label className={fieldClasses.label}>
       {label}
-      <select
-        name={name}
-        className="min-h-10 rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
-      >
+      <select name={name} className={fieldClasses.control}>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -1148,12 +1144,9 @@ function SelectWithEmpty({
   options: Array<{ value: string; label: string }>;
 }) {
   return (
-    <label className="grid gap-1 text-sm font-bold text-brand-dark">
+    <label className={fieldClasses.label}>
       {label}
-      <select
-        name={name}
-        className="min-h-10 rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
-      >
+      <select name={name} className={fieldClasses.control}>
         <option value="">None</option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -1166,11 +1159,7 @@ function SelectWithEmpty({
 }
 
 function SubmitButton({ label }: { label: string }) {
-  return (
-    <button className="rounded-[var(--radius-sm)] bg-brand-dark px-4 py-2 text-sm font-bold text-white">
-      {label}
-    </button>
-  );
+  return <button className={darkSubmitButtonClassName}>{label}</button>;
 }
 
 function RecordGrid({ children, emptyLabel }: { children: React.ReactNode; emptyLabel: string }) {
@@ -1178,9 +1167,7 @@ function RecordGrid({ children, emptyLabel }: { children: React.ReactNode; empty
   return hasChildren ? (
     <div className="grid content-start gap-[var(--spacing-sm)] md:grid-cols-2">{children}</div>
   ) : (
-    <div className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)] text-muted">
-      {emptyLabel}
-    </div>
+    <div className={cx(panelClassName, 'text-muted')}>{emptyLabel}</div>
   );
 }
 
@@ -1194,7 +1181,7 @@ function RecordCard({
   children?: React.ReactNode;
 }) {
   return (
-    <article className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/82 p-[var(--spacing-md)]">
+    <article className={panelClassName}>
       <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">{meta}</p>
       <h3 className="m-0 mt-1 font-amaranth text-lg text-brand-dark">{title}</h3>
       {children}
@@ -1233,7 +1220,7 @@ function RecurringList({
             {item.creditCard?.name ? ` · ${item.creditCard.name} *${item.creditCard.last4}` : ''}
           </p>
           {item.billingStatus ? (
-            <div className="mt-[var(--spacing-sm)] rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.1)] bg-white/70 p-[var(--spacing-sm)]">
+            <div className={cx(insetClassName, 'mt-[var(--spacing-sm)] bg-surface-inset-strong')}>
               <p className="m-0 text-sm font-bold text-brand-dark">
                 {item.billingStatus.status === 'paid' ? 'Paid this cycle' : 'Pending this cycle'}
               </p>
@@ -1261,7 +1248,7 @@ function RecurringList({
               className="mt-[var(--spacing-sm)] grid gap-2"
             >
               <input type="hidden" name="id" value={item.id} />
-              <label className="grid gap-1 text-sm font-bold text-brand-dark">
+              <label className={fieldClasses.label}>
                 Expected amount
                 <input
                   name="amount"
@@ -1269,18 +1256,14 @@ function RecurringList({
                   min="0"
                   step="0.01"
                   defaultValue={String(item.amount)}
-                  className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                  className={fieldClasses.control}
                 />
               </label>
-              <label className="grid gap-1 text-sm font-bold text-brand-dark">
+              <label className={fieldClasses.label}>
                 Name
-                <input
-                  name="name"
-                  defaultValue={item.name}
-                  className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
-                />
+                <input name="name" defaultValue={item.name} className={fieldClasses.control} />
               </label>
-              <label className="grid gap-1 text-sm font-bold text-brand-dark">
+              <label className={fieldClasses.label}>
                 Due day
                 <input
                   name="dueDay"
@@ -1289,12 +1272,10 @@ function RecurringList({
                   max="31"
                   step="1"
                   defaultValue={item.dueDay ?? ''}
-                  className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+                  className={fieldClasses.control}
                 />
               </label>
-              <button className="rounded-[var(--radius-sm)] border border-[rgba(0,23,31,0.18)] px-4 py-2 text-sm font-bold text-brand-dark">
-                Save expected bill
-              </button>
+              <button className={outlineButtonClassName}>Save expected bill</button>
             </form>
           ) : null}
         </RecordCard>

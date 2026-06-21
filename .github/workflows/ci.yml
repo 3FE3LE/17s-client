@@ -8,6 +8,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   TURBO_SCM_BASE: origin/main
+  CI_ACTIVE_WEB_APPS: '@17suit/admin,@17suit/landing,@17suit/seven-rc-web,@17suit/fourteen-cp-web'
 
 jobs:
   quality:
@@ -23,4 +24,5 @@ jobs:
           node-version: 24.13.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: node tooling/scripts/ci-build-affected-web.mjs
+      - name: Build affected active web apps
+        run: node tooling/scripts/ci-build-affected-web.mjs

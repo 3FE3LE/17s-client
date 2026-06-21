@@ -1,6 +1,6 @@
+import { cardRecipe, cx } from '@17suit/design-system';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Pressable, Text, View, type ViewStyle } from 'react-native';
-import { useAppTheme } from '../theme/theme-context';
 
 type AppCardTone = 'default' | 'accent';
 
@@ -22,67 +22,27 @@ export function AppCard({
   onPress,
   style,
 }: AppCardProps) {
-  const { theme } = useAppTheme();
-  const subtitleType = theme.typography.styles.subtitle2;
-  const bodyType = theme.typography.styles.body;
-  const borderColor = tone === 'accent' ? theme.colors.brandPrimary : theme.grayscale[3];
   const Container = onPress ? Pressable : View;
 
   return (
     <Container
       onPress={onPress}
-      style={[
-        {
-          width: '100%',
-          borderRadius: theme.borderRadius.lg,
-          borderWidth: 1,
-          borderColor,
-          backgroundColor: theme.colors.surface,
-          padding: theme.spacing.md,
-          gap: theme.spacing.sm,
-        },
-        style,
-      ]}
+      className={cx(
+        cardRecipe({ variant: 'feature' }),
+        'w-full gap-sm',
+        tone === 'accent' && 'border-brand-primary',
+        onPress && 'active:opacity-85',
+      )}
+      style={style}
     >
       {title ? (
-        <Text
-          style={{
-            color: theme.colors.text,
-            fontFamily: subtitleType.nativeFamily,
-            fontSize: subtitleType.fontSize,
-            lineHeight: Math.round(subtitleType.fontSize * subtitleType.lineHeightRecommended),
-            letterSpacing: subtitleType.letterSpacingPx,
-          }}
-        >
-          {title}
-        </Text>
+        <Text className="font-arvo text-lg font-bold leading-[30px] text-text">{title}</Text>
       ) : null}
       {subtitle ? (
-        <Text
-          style={{
-            color: theme.colors.muted,
-            fontFamily: bodyType.nativeFamily,
-            fontSize: bodyType.fontSize,
-            lineHeight: Math.round(bodyType.fontSize * bodyType.lineHeightRecommended),
-            letterSpacing: bodyType.letterSpacingPx,
-          }}
-        >
-          {subtitle}
-        </Text>
+        <Text className="font-zilla text-md leading-[24px] text-muted">{subtitle}</Text>
       ) : null}
       {children}
-      {footer ? (
-        <View
-          style={{
-            marginTop: theme.spacing.xs,
-            paddingTop: theme.spacing.sm,
-            borderTopWidth: 1,
-            borderTopColor: theme.grayscale[3],
-          }}
-        >
-          {footer}
-        </View>
-      ) : null}
+      {footer ? <View className="mt-xs border-t border-border-default pt-sm">{footer}</View> : null}
     </Container>
   );
 }

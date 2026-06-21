@@ -5,8 +5,10 @@
   "type": "module",
   "exports": {
     "./native-theme.css": "./native-theme.css",
+    "./semantic.css": "./semantic.css",
     "./theme.css": "./theme.css",
     "./variables.css": "./variables.css",
+    "./web-patterns.css": "./web-patterns.css",
     "./native-theme": "./native-theme.cjs"
   },
   "dependencies": {

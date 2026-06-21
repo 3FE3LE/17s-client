@@ -5,6 +5,18 @@ import path from 'node:path';
 const root = process.cwd();
 const baseRef = process.env.TURBO_SCM_BASE || 'origin/main';
 const packageRoots = ['apps', 'packages', 'packages/modules', 'tooling'];
+const defaultActiveWebApps = [
+  '@17suit/admin',
+  '@17suit/landing',
+  '@17suit/seven-rc-web',
+  '@17suit/fourteen-cp-web',
+];
+const activeWebApps = new Set(
+  (process.env.CI_ACTIVE_WEB_APPS ?? defaultActiveWebApps.join(','))
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean),
+);
 const dependencyFields = [
   'dependencies',
   'devDependencies',
@@ -61,6 +73,10 @@ function isWebBuildTarget(pkg) {
   );
 }
 
+function isActiveWebBuildTarget(pkg) {
+  return isWebBuildTarget(pkg) && activeWebApps.has(pkg.name);
+}
+
 const packages = workspacePackageDirs().map((dir) => {
   const manifest = readJson(path.join(root, dir, 'package.json'));
   return { dir, name: manifest.name, manifest };
@@ -69,6 +85,13 @@ const packages = workspacePackageDirs().map((dir) => {
 const packagesByName = new Map(packages.map((pkg) => [pkg.name, pkg]));
 const packagesByDir = [...packages].sort((left, right) => right.dir.length - left.dir.length);
 const dependentsByName = new Map(packages.map((pkg) => [pkg.name, new Set()]));
+const missingActiveApps = [...activeWebApps].filter(
+  (packageName) => !packagesByName.has(packageName),
+);
+
+if (missingActiveApps.length > 0) {
+  throw new Error(`Active CI app packages not found: ${missingActiveApps.join(', ')}`);
+}
 
 for (const pkg of packages) {
   for (const field of dependencyFields) {
@@ -105,16 +128,30 @@ while (pending.length > 0) {
 }
 
 const affectedTargets = packages
-  .filter((pkg) => isWebBuildTarget(pkg) && affectedPackages.has(pkg.name))
+  .filter((pkg) => isActiveWebBuildTarget(pkg) && affectedPackages.has(pkg.name))
   .map((pkg) => pkg.name)
   .sort();
 
+const skippedBoilerplateTargets = packages
+  .filter(
+    (pkg) =>
+      isWebBuildTarget(pkg) && !activeWebApps.has(pkg.name) && affectedPackages.has(pkg.name),
+  )
+  .map((pkg) => pkg.name)
+  .sort();
+
+console.log(`Active web apps: ${[...activeWebApps].sort().join(', ')}`);
+
+if (skippedBoilerplateTargets.length > 0) {
+  console.log(`Skipping affected boilerplate web apps: ${skippedBoilerplateTargets.join(', ')}`);
+}
+
 if (affectedTargets.length === 0) {
-  console.log('No affected web apps found. Skipping build.');
+  console.log('No affected active web apps found. Skipping build.');
   process.exit(0);
 }
 
-console.log(`Building affected web apps: ${affectedTargets.join(', ')}`);
+console.log(`Building affected active web apps: ${affectedTargets.join(', ')}`);
 
 const turboArgs = [
   'turbo',

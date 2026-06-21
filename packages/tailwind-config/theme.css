@@ -1,2 +1,4 @@
 @import './variables.css';
 @import './theme-core.css';
+@import './semantic.css';
+@import './web-patterns.css';

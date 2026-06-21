@@ -46,6 +46,24 @@ export type { AppTitleProps } from './components/AppTitle';
 export { AppProviders } from './components/AppProviders';
 export { ProductShell } from './components/ProductShell';
 export { suitTheme } from '@17suit/design-system';
-export type { SuitTheme } from '@17suit/design-system';
+export {
+  buttonLabelRecipe,
+  buttonRecipe,
+  cardRecipe,
+  cx,
+  inputRecipe,
+  pageContainerRecipe,
+} from '@17suit/design-system';
+export type {
+  ButtonIntent,
+  ButtonShape,
+  ButtonSize,
+  CardShadow,
+  CardVariant,
+  InputState,
+  PageContainerKind,
+  SuitTheme,
+  SuitPlatform,
+} from '@17suit/design-system';
 export { ThemeProvider, useAppTheme } from './theme/theme-context';
 export type { ThemeModePreference } from './theme/theme-context';
