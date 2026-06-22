@@ -76,11 +76,6 @@ export default async function Page({
       return true;
     });
     const gmailConnection = connections.find((connection) => connection.provider === 'GMAIL');
-    const approvedDomains = new Set(channels.map((channel) => channel.senderDomain));
-    const emailsFromApprovedChannels = rawEmails.filter((email) => {
-      const domain = email.fromEmail.split('@')[1] ?? email.fromEmail;
-      return approvedDomains.has(domain);
-    }).length;
     const classifiedEmails = rawEmails.filter(
       (email) => email.eventType && email.eventType !== 'UNKNOWN',
     );
@@ -138,12 +133,7 @@ export default async function Page({
               </div>
 
               <Separator />
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3">
-                <Metric
-                  label="Approved channels"
-                  value={`${channels.length}`}
-                  detail={`${emailsFromApprovedChannels} stored emails match`}
-                />
+              <div className="grid sm:grid-cols-2">
                 <Metric
                   label="Raw emails"
                   value={`${rawEmails.length}`}
@@ -176,7 +166,7 @@ export default async function Page({
                       : 'Connect Gmail to discover fifteenAc emails and approve senders.'}
                   </p>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+                <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[320px]">
                   {isGmailConnected ? (
                     <form action={disableGmailAction}>
                       <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px">
@@ -192,14 +182,6 @@ export default async function Page({
                       </button>
                     </form>
                   )}
-                  <SyncButton
-                    mode="approved"
-                    body={{ maxResults: 100 }}
-                    disabled={!isGmailConnected || channels.length === 0}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:border-[rgba(0,23,31,0.12)] disabled:bg-none disabled:bg-brand-light disabled:text-muted disabled:shadow-none"
-                  >
-                    Re-sync
-                  </SyncButton>
                   <form action={deleteGmailAction}>
                     <button
                       disabled={!gmailConnection}
@@ -218,7 +200,7 @@ export default async function Page({
                   Reset detected data
                 </button>
                 <span className="text-sm text-muted">
-                  Keeps approved channels and Gmail connection. Run Re-sync after reset.
+                  Keeps approved channels and Gmail connection. Run Sync approved after reset.
                 </span>
               </form>
             </section>
@@ -508,7 +490,7 @@ function getActionToast(
     return {
       type: 'success',
       message:
-        'Detected email data reset. Approved channels were preserved; run Re-sync to rebuild candidates.',
+        'Detected email data reset. Approved channels were preserved; run Sync approved to rebuild candidates.',
       clearHref,
     };
   }
