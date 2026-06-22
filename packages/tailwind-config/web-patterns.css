@@ -59,20 +59,20 @@
   background: radial-gradient(circle, rgb(255 73 92 / 0.24), rgb(255 73 92 / 0));
 }
 
-/* Sticky workspace header that shrinks (container + title) on scroll.
-   Pure CSS scroll-driven animation — no JS/useEffect. Falls back to a
-   plain sticky header where scroll timelines are unsupported. */
-@keyframes app-workspace-header-shrink {
-  to {
-    padding-top: 12px;
-    padding-bottom: 12px;
-    box-shadow: 0 10px 28px rgb(0 23 31 / 0.1);
-  }
+/* Sticky workspace header that shrinks (container + title) and hides its
+   eyebrow on scroll. Pure CSS scroll-driven animation — no JS/useEffect.
+   A registered custom property (--app-hdr: 0 -> 1) is animated along the
+   root scroll; padding/title/eyebrow derive from it via calc(), which
+   avoids interpolating between clamp() values directly. */
+@property --app-hdr {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
 }
 
-@keyframes app-workspace-header-title-shrink {
+@keyframes app-workspace-header-progress {
   to {
-    font-size: clamp(22px, 2.6vw, 30px);
+    --app-hdr: 1;
   }
 }
 
@@ -86,21 +86,29 @@
 
 @supports (animation-timeline: scroll()) {
   .app-workspace-header-sticky {
-    animation: app-workspace-header-shrink both linear;
+    animation: app-workspace-header-progress auto linear both;
     animation-timeline: scroll(root);
-    animation-range: 0 160px;
+    animation-range: 0 180px;
+    padding-top: calc(clamp(18px, 3vw, 36px) - (clamp(18px, 3vw, 36px) - 12px) * var(--app-hdr));
+    padding-bottom: calc(clamp(18px, 3vw, 36px) - (clamp(18px, 3vw, 36px) - 12px) * var(--app-hdr));
+    box-shadow: 0 10px 28px rgb(0 23 31 / calc(0.12 * var(--app-hdr)));
   }
 
   .app-workspace-header-sticky > h1 {
-    animation: app-workspace-header-title-shrink both linear;
-    animation-timeline: scroll(root);
-    animation-range: 0 160px;
+    font-size: calc(clamp(30px, 5vw, 64px) - clamp(6px, 2.4vw, 34px) * var(--app-hdr));
+    line-height: 1.05;
+  }
+
+  .app-workspace-header-sticky > p {
+    overflow: hidden;
+    max-height: calc(1.6em * (1 - var(--app-hdr)));
+    opacity: calc(1 - var(--app-hdr));
+    transform: translateY(calc(-2px * var(--app-hdr)));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-workspace-header-sticky,
-  .app-workspace-header-sticky > h1 {
+  .app-workspace-header-sticky {
     animation: none;
   }
 }
