@@ -1,8 +1,0 @@
-{
-  "extends": "@17suit/typescript-config/node",
-  "compilerOptions": {
-    "outDir": "dist",
-    "rootDir": "src"
-  },
-  "include": ["src/**/*.ts"]
-}

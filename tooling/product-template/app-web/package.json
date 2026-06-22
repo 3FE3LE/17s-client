@@ -1,9 +1,9 @@
 {
-  "name": "@17suit/admin",
+  "name": "@17suit/__SLUG__-web",
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "dev": "next dev --turbopack --port 3018",
+    "dev": "next dev --turbopack --port __PORT__",
     "dev:product": "pnpm run dev",
     "build": "next build --turbopack",
     "start": "next start",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
+    "@17suit/__MODULE__": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@clerk/nextjs": "^6.30.5",
     "next": "^16.0.0",
