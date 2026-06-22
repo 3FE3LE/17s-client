@@ -58,3 +58,49 @@
 @utility bg-ambient-coral-orb {
   background: radial-gradient(circle, rgb(255 73 92 / 0.24), rgb(255 73 92 / 0));
 }
+
+/* Sticky workspace header that shrinks (container + title) on scroll.
+   Pure CSS scroll-driven animation — no JS/useEffect. Falls back to a
+   plain sticky header where scroll timelines are unsupported. */
+@keyframes app-workspace-header-shrink {
+  to {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    box-shadow: 0 10px 28px rgb(0 23 31 / 0.1);
+  }
+}
+
+@keyframes app-workspace-header-title-shrink {
+  to {
+    font-size: clamp(22px, 2.6vw, 30px);
+  }
+}
+
+.app-workspace-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgb(255 255 255 / 0.82);
+  backdrop-filter: blur(6px);
+}
+
+@supports (animation-timeline: scroll()) {
+  .app-workspace-header-sticky {
+    animation: app-workspace-header-shrink both linear;
+    animation-timeline: scroll(root);
+    animation-range: 0 160px;
+  }
+
+  .app-workspace-header-sticky > h1 {
+    animation: app-workspace-header-title-shrink both linear;
+    animation-timeline: scroll(root);
+    animation-range: 0 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-workspace-header-sticky,
+  .app-workspace-header-sticky > h1 {
+    animation: none;
+  }
+}

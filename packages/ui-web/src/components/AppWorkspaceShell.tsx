@@ -129,7 +129,12 @@ export function AppWorkspaceShell({
         </aside>
 
         <section className="grid content-start gap-[var(--spacing-lg)] px-[var(--spacing-md)] py-[var(--spacing-lg)] md:px-[var(--spacing-xl)] lg:px-[var(--spacing-x2l)]">
-          <header className={cardRecipe({ variant: 'workspaceHeader' })}>
+          <header
+            className={cx(
+              cardRecipe({ variant: 'workspaceHeader' }),
+              'app-workspace-header-sticky',
+            )}
+          >
             <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
               {eyebrow}
             </p>
