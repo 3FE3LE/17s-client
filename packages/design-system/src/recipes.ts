@@ -48,7 +48,7 @@ export function buttonRecipe({
     lg: 'min-h-[52px] px-5 py-[13px] text-md',
   };
   const shapeClass: Record<ButtonShape, string> = {
-    md: 'rounded-[var(--radius-md)]',
+    md: 'rounded-[var(--radius-control)]',
     pill: 'rounded-full',
   };
 
@@ -138,7 +138,7 @@ export function inputRecipe({
         ? 'font-zilla text-sm leading-[1.5] tracking-normal text-muted'
         : 'mb-xs font-zilla text-sm leading-[21px] text-muted',
     control: cx(
-      'w-full rounded-[var(--radius-sm)] border bg-surface font-zilla text-md text-text',
+      'w-full rounded-[var(--radius-control)] border bg-surface font-zilla text-md text-text',
       platform === 'web'
         ? 'outline-none transition-colors placeholder:text-muted'
         : 'leading-[24px]',
