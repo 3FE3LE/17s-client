@@ -19,6 +19,7 @@ export function AppButton({
   disabled = false,
   fullWidth = true,
   compact = false,
+  type = 'button',
   style,
   ...rest
 }: AppButtonProps) {
@@ -46,7 +47,7 @@ export function AppButton({
   return (
     <button
       {...rest}
-      type="button"
+      type={type}
       onClick={onPress}
       disabled={disabled}
       className={buttonClassName}

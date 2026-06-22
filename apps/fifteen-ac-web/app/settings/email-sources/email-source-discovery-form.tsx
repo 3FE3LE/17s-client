@@ -1,0 +1,128 @@
+'use client';
+
+import { useTransition } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Search } from '@17suit/ui';
+import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
+const discoveryFormSchema = z.object({
+  days: z.coerce
+    .number()
+    .int('Days must be a whole number.')
+    .min(1, 'Days must be at least 1.')
+    .max(365, 'Days must be 365 or less.'),
+  maxResults: z.coerce
+    .number()
+    .int('Limit must be a whole number.')
+    .min(1, 'Limit must be at least 1.')
+    .max(100, 'Limit must be 100 or less.'),
+  keywords: z.string().trim().max(500, 'Keywords must be 500 characters or less.').optional(),
+});
+
+const discoveryQueryParsers = {
+  days: parseAsInteger.withDefault(90),
+  maxResults: parseAsInteger.withDefault(100),
+  keywords: parseAsString.withDefault(''),
+};
+
+type DiscoveryFormValues = z.infer<typeof discoveryFormSchema>;
+
+type EmailSourceDiscoveryFormProps = {
+  action: (formData: FormData) => Promise<void>;
+};
+
+export function EmailSourceDiscoveryForm({ action }: EmailSourceDiscoveryFormProps) {
+  const [queryValues, setQueryValues] = useQueryStates(discoveryQueryParsers, {
+    history: 'replace',
+    shallow: true,
+  });
+  const [isPending, startTransition] = useTransition();
+  const {
+    formState: { errors, isSubmitting },
+    handleSubmit,
+    register,
+  } = useForm<DiscoveryFormValues>({
+    resolver: zodResolver(discoveryFormSchema),
+    defaultValues: queryValues,
+    mode: 'onSubmit',
+  });
+
+  const submit = handleSubmit((values) => {
+    startTransition(() => {
+      void (async () => {
+        const keywords = values.keywords?.trim() ?? '';
+        await setQueryValues({
+          days: values.days,
+          maxResults: values.maxResults,
+          keywords: keywords || null,
+        });
+
+        const formData = new FormData();
+        formData.set('days', String(values.days));
+        formData.set('maxResults', String(values.maxResults));
+        formData.set('keywords', keywords);
+        await action(formData);
+      })();
+    });
+  });
+
+  const disabled = isPending || isSubmitting;
+
+  return (
+    <form
+      onSubmit={submit}
+      className="relative mt-[var(--spacing-lg)] grid gap-3 md:grid-cols-[110px_110px_1fr_auto] md:items-start"
+    >
+      <label className="grid gap-1 text-sm font-bold text-brand-dark">
+        Days
+        <input
+          {...register('days', { valueAsNumber: true })}
+          type="number"
+          min="1"
+          max="365"
+          className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+        />
+        {errors.days ? <FieldError message={errors.days.message} /> : null}
+      </label>
+      <label className="grid gap-1 text-sm font-bold text-brand-dark">
+        Limit
+        <input
+          {...register('maxResults', { valueAsNumber: true })}
+          type="number"
+          min="1"
+          max="100"
+          className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+        />
+        {errors.maxResults ? <FieldError message={errors.maxResults.message} /> : null}
+      </label>
+      <label className="grid gap-1 text-sm font-bold text-brand-dark">
+        Keywords
+        <input
+          {...register('keywords')}
+          className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
+          placeholder="Optional keywords"
+        />
+        {errors.keywords ? <FieldError message={errors.keywords.message} /> : null}
+      </label>
+      <button
+        type="submit"
+        disabled={disabled}
+        className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70 md:mt-[22px]"
+      >
+        <Search size={16} strokeWidth={2.2} aria-hidden />
+        {disabled ? 'Discovering' : 'Discover'}
+      </button>
+    </form>
+  );
+}
+
+function FieldError({ message }: { message: string | undefined }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="m-0 text-xs font-medium leading-[1.25] text-[#b42318]">
+      {message}
+    </p>
+  );
+}

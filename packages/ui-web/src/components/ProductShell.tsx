@@ -40,7 +40,7 @@ export function ProductShell({ productName, subtitle, children }: ProductShellPr
             color: theme.colors.brandSecondary,
             fontFamily: overlineType.webFamily,
             fontSize: overlineType.fontSize,
-            lineHeight: overlineType.fontSize * overlineType.lineHeightRecommended,
+            lineHeight: overlineType.lineHeightRecommended,
             fontWeight: overlineType.fontWeight,
             letterSpacing: overlineType.letterSpacingEm,
           }}
@@ -53,7 +53,7 @@ export function ProductShell({ productName, subtitle, children }: ProductShellPr
             color: theme.colors.text,
             fontFamily: titleType.webFamily,
             fontSize: titleType.fontSize,
-            lineHeight: titleType.fontSize * titleType.lineHeightRecommended,
+            lineHeight: titleType.lineHeightRecommended,
             fontWeight: titleType.fontWeight,
             letterSpacing: titleType.letterSpacingEm,
           }}
@@ -67,7 +67,7 @@ export function ProductShell({ productName, subtitle, children }: ProductShellPr
             maxWidth: theme.sizes.layout.bodyNarrow,
             fontFamily: bodyType.webFamily,
             fontSize: bodyType.fontSize,
-            lineHeight: bodyType.fontSize * bodyType.lineHeightRecommended,
+            lineHeight: bodyType.lineHeightRecommended,
             fontWeight: bodyType.fontWeight,
             letterSpacing: bodyType.letterSpacingEm,
           }}

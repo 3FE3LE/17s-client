@@ -14,11 +14,15 @@
     "./app-providers": {
       "react-native": "./src/app-providers.native.ts",
       "default": "./src/app-providers.ts"
+    },
+    "./feedback/toast": {
+      "react-native": "./src/feedback/toast.native.ts",
+      "default": "./src/feedback/toast.ts"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src/index.ts src/index.native.ts src/app-providers.ts src/app-providers.native.ts src/theme.ts src/hooks --max-warnings=0",
+    "lint": "eslint src/index.ts src/index.native.ts src/app-providers.ts src/app-providers.native.ts src/theme.ts src/hooks src/feedback --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf dist"
   },

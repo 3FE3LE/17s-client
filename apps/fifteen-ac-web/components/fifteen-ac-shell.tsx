@@ -2,6 +2,7 @@
 
 import { useClerk } from '@clerk/nextjs';
 import {
+  AppProductFooter,
   AppWorkspaceShell,
   Banknote,
   CalendarClock,
@@ -11,6 +12,8 @@ import {
   ListChecks,
   ReceiptText,
   Repeat2,
+  appProductFooterButtonStyle,
+  appProductFooterTextLinkStyle,
   cardRecipe,
   cx,
 } from '@17suit/ui';
@@ -28,6 +31,11 @@ const navItems = [
   { href: '/fixed-obligations', label: 'Obligations', mark: '07', icon: CalendarClock },
   { href: '/subscriptions', label: 'Subscriptions', mark: '08', icon: Repeat2 },
 ];
+
+const footerLinks = navItems.slice(0, 4).map((item) => ({
+  href: item.href,
+  label: item.label,
+}));
 
 export function FifteenAcShell({
   title,
@@ -54,6 +62,37 @@ export function FifteenAcShell({
       linkComponent={Link}
     >
       {children}
+      <AppProductFooter
+        productName="Fifteen All Check"
+        productSlug="fifteen-all-check"
+        productTagline="Cockpit financiero personal con evidencia y revision."
+        suiteName="17Suit"
+        actionControls={
+          <>
+            <Link
+              href="/"
+              style={{
+                ...appProductFooterButtonStyle,
+                color: 'var(--color-brand-dark, #00171f)',
+              }}
+            >
+              Ir al inicio
+            </Link>
+            <button
+              type="button"
+              onClick={() => signOut({ redirectUrl: '/sign-in?redirect_url=/' })}
+              style={appProductFooterButtonStyle}
+            >
+              Cerrar sesion
+            </button>
+          </>
+        }
+        productLinkControls={footerLinks.map((link) => (
+          <Link key={link.href} href={link.href} style={appProductFooterTextLinkStyle}>
+            {link.label}
+          </Link>
+        ))}
+      />
     </AppWorkspaceShell>
   );
 }
