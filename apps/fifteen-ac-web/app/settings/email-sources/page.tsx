@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { CheckCircle2, Link2, PauseCircle, RefreshCcw, Separator, Trash2 } from '@17suit/ui';
+import { CheckCircle2, Link2, PauseCircle, Separator, Trash2 } from '@17suit/ui';
 
 import { ErrorBlock, FifteenAcShell } from '@/components/fifteen-ac-shell';
 import {
@@ -14,6 +14,7 @@ import {
   type EmailSourceActionToastPayload,
 } from './email-source-action-toast';
 import { EmailSourceDiscoveryForm } from './email-source-discovery-form';
+import { GmailSyncProvider, RawEmailsSyncOverlay, SyncButton } from './gmail-sync-controls';
 
 type EmailConnection = {
   id: string;
@@ -29,14 +30,6 @@ type ConnectResponse = {
   authorizationUrl?: string;
   status: 'configured' | 'missing_configuration' | 'placeholder';
   message: string;
-};
-
-type SyncResponse = {
-  status: string;
-  fetchedMessages: number;
-  parsedCandidates: number;
-  searchQuery: string;
-  note: string;
 };
 
 type RawEmail = {
@@ -109,297 +102,319 @@ export default async function Page({
         title="Email ingestion"
         eyebrow="Candidate discovery and approved sender sync"
       >
-        <div className="grid gap-[var(--spacing-lg)]">
-          {actionToast ? <EmailSourceActionToast payload={actionToast} /> : null}
+        <GmailSyncProvider>
+          <div className="grid gap-[var(--spacing-lg)]">
+            {actionToast ? <EmailSourceActionToast payload={actionToast} /> : null}
 
-          <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 shadow-[0_12px_30px_rgba(0,23,31,0.08)] backdrop-blur-sm">
-            <div className="relative p-[clamp(20px,3vw,36px)]">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#00916e,#35a7ff,#092025)]" />
-              <div className="grid gap-[var(--spacing-md)] md:grid-cols-[1fr_auto] md:items-start">
-                <div className="relative">
+            <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 shadow-[0_12px_30px_rgba(0,23,31,0.08)] backdrop-blur-sm">
+              <div className="relative p-[clamp(20px,3vw,36px)]">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#00916e,#35a7ff,#092025)]" />
+                <div className="grid gap-[var(--spacing-md)] md:grid-cols-[1fr_auto] md:items-start">
+                  <div className="relative">
+                    <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+                      Gmail pipeline
+                    </p>
+                    <h2 className="m-0 mt-2 max-w-[15ch] font-arvo text-[clamp(34px,5vw,56px)] font-bold leading-[1.06] tracking-minus1_5 text-text">
+                      Discover, approve, then auto-detect.
+                    </h2>
+                    <p className="m-0 mt-3 max-w-[720px] text-md leading-[1.5] text-muted">
+                      Recent emails stay as evidence first. Approved senders become trusted channels
+                      for candidate parsing.
+                    </p>
+                  </div>
+                  <div className="relative grid gap-2 text-sm">
+                    {isGmailConnected ? (
+                      <div className="rounded-[var(--radius-md)] border border-[#00916e]/25 bg-[#00916e]/10 px-4 py-3">
+                        <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+                          Account connected
+                        </p>
+                        <p className="m-0 mt-1 inline-flex items-center gap-2 text-sm font-bold text-brand-dark">
+                          <CheckCircle2 size={16} strokeWidth={2.2} aria-hidden />
+                          Gmail active
+                        </p>
+                      </div>
+                    ) : (
+                      <form action={connectGmailAction}>
+                        <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px">
+                          <Link2 size={16} strokeWidth={2.2} aria-hidden />
+                          Connect Google
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+
+                <EmailSourceDiscoveryForm />
+              </div>
+
+              <Separator />
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4">
+                <Metric
+                  label="Connection"
+                  value={gmailConnection?.status ?? 'Not connected'}
+                  detail={
+                    gmailConnection?.lastSyncAt
+                      ? `Last sync ${formatDate(gmailConnection.lastSyncAt)}`
+                      : 'No sync yet'
+                  }
+                />
+                <Metric
+                  label="Approved channels"
+                  value={`${channels.length}`}
+                  detail={`${emailsFromApprovedChannels} stored emails match`}
+                />
+                <Metric
+                  label="Raw emails"
+                  value={`${rawEmails.length}`}
+                  detail={`${visibleRawEmails.length} visible with filters`}
+                />
+                <Metric
+                  label="Classifier"
+                  value={averageConfidence > 0 ? `${averageConfidence}%` : 'Pending'}
+                  detail={`${classifiedEmails.length} classified emails`}
+                />
+              </div>
+            </section>
+
+            <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
+              <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[1fr_auto] lg:items-center">
+                <div>
                   <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-                    Gmail pipeline
+                    Email account
                   </p>
-                  <h2 className="m-0 mt-2 max-w-[15ch] font-arvo text-[clamp(34px,5vw,56px)] font-bold leading-[1.06] tracking-minus1_5 text-text">
-                    Discover, approve, then auto-detect.
+                  <h2 className="m-0 mt-1 font-amaranth text-2xl text-brand-dark">
+                    {isGmailConnected ? 'Account connected' : 'Account not connected'}
                   </h2>
-                  <p className="m-0 mt-3 max-w-[720px] text-md leading-[1.5] text-muted">
-                    Recent emails stay as evidence first. Approved senders become trusted channels
-                    for candidate parsing.
+                  <p className="m-0 mt-1 text-md leading-[1.5] text-muted">
+                    {gmailConnection
+                      ? `Gmail is ${gmailConnection.status}. ${
+                          gmailConnection.lastSyncAt
+                            ? `Last sync ${formatDate(gmailConnection.lastSyncAt)}.`
+                            : 'No sync yet.'
+                        }`
+                      : 'Connect Gmail to discover fifteenAc emails and approve senders.'}
                   </p>
                 </div>
-                <div className="relative grid gap-2 text-sm">
+                <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
                   {isGmailConnected ? (
-                    <div className="rounded-[var(--radius-md)] border border-[#00916e]/25 bg-[#00916e]/10 px-4 py-3">
-                      <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-                        Account connected
-                      </p>
-                      <p className="m-0 mt-1 inline-flex items-center gap-2 text-sm font-bold text-brand-dark">
-                        <CheckCircle2 size={16} strokeWidth={2.2} aria-hidden />
-                        Gmail active
-                      </p>
-                    </div>
+                    <form action={disableGmailAction}>
+                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px">
+                        <PauseCircle size={16} strokeWidth={2.2} aria-hidden />
+                        Disable
+                      </button>
+                    </form>
                   ) : (
                     <form action={connectGmailAction}>
-                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px">
+                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px">
                         <Link2 size={16} strokeWidth={2.2} aria-hidden />
-                        Connect Google
+                        Reconnect
                       </button>
                     </form>
                   )}
-                  <form action={syncApprovedChannelsAction}>
-                    <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white/90 px-4 py-[10px] font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px">
-                      <RefreshCcw size={16} strokeWidth={2.2} aria-hidden />
-                      Sync approved
+                  <SyncButton
+                    mode="approved"
+                    body={{ maxResults: 100 }}
+                    disabled={!isGmailConnected || channels.length === 0}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:border-[rgba(0,23,31,0.12)] disabled:bg-none disabled:bg-brand-light disabled:text-muted disabled:shadow-none"
+                  >
+                    Re-sync
+                  </SyncButton>
+                  <form action={deleteGmailAction}>
+                    <button
+                      disabled={!gmailConnection}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#f8333c]/35 bg-[#f8333c]/10 px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 size={16} strokeWidth={2.2} aria-hidden />
+                      Delete
                     </button>
                   </form>
                 </div>
               </div>
-
-              <EmailSourceDiscoveryForm action={syncGmailAction} />
-            </div>
-
-            <Separator />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4">
-              <Metric
-                label="Connection"
-                value={gmailConnection?.status ?? 'Not connected'}
-                detail={
-                  gmailConnection?.lastSyncAt
-                    ? `Last sync ${formatDate(gmailConnection.lastSyncAt)}`
-                    : 'No sync yet'
-                }
-              />
-              <Metric
-                label="Approved channels"
-                value={`${channels.length}`}
-                detail={`${emailsFromApprovedChannels} stored emails match`}
-              />
-              <Metric
-                label="Raw emails"
-                value={`${rawEmails.length}`}
-                detail={`${visibleRawEmails.length} visible with filters`}
-              />
-              <Metric
-                label="Classifier"
-                value={averageConfidence > 0 ? `${averageConfidence}%` : 'Pending'}
-                detail={`${classifiedEmails.length} classified emails`}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
-            <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-                  Email account
-                </p>
-                <h2 className="m-0 mt-1 font-amaranth text-2xl text-brand-dark">
-                  {isGmailConnected ? 'Account connected' : 'Account not connected'}
-                </h2>
-                <p className="m-0 mt-1 text-md leading-[1.5] text-muted">
-                  {gmailConnection
-                    ? `Gmail is ${gmailConnection.status}. ${
-                        gmailConnection.lastSyncAt
-                          ? `Last sync ${formatDate(gmailConnection.lastSyncAt)}.`
-                          : 'No sync yet.'
-                      }`
-                    : 'Connect Gmail to discover fifteenAc emails and approve senders.'}
-                </p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
-                {isGmailConnected ? (
-                  <form action={disableGmailAction}>
-                    <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px">
-                      <PauseCircle size={16} strokeWidth={2.2} aria-hidden />
-                      Disable
-                    </button>
-                  </form>
-                ) : (
-                  <form action={connectGmailAction}>
-                    <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px">
-                      <Link2 size={16} strokeWidth={2.2} aria-hidden />
-                      Reconnect
-                    </button>
-                  </form>
-                )}
-                <form action={syncApprovedChannelsAction}>
-                  <button
-                    disabled={!isGmailConnected}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:border-[rgba(0,23,31,0.12)] disabled:bg-none disabled:bg-brand-light disabled:text-muted disabled:shadow-none"
-                  >
-                    <RefreshCcw size={16} strokeWidth={2.2} aria-hidden />
-                    Re-sync
-                  </button>
-                </form>
-                <form action={deleteGmailAction}>
-                  <button
-                    disabled={!gmailConnection}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#f8333c]/35 bg-[#f8333c]/10 px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Trash2 size={16} strokeWidth={2.2} aria-hidden />
-                    Delete
-                  </button>
-                </form>
-              </div>
-            </div>
-            <Separator className="my-[var(--spacing-md)]" />
-            <form action={resetDetectedDataAction} className="flex flex-wrap items-center gap-3">
-              <button className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#f8333c]/35 bg-[#f8333c]/10 px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px">
-                <Trash2 size={16} strokeWidth={2.2} aria-hidden />
-                Reset detected data
-              </button>
-              <span className="text-sm text-muted">
-                Keeps approved channels and Gmail connection. Run Re-sync after reset.
-              </span>
-            </form>
-          </section>
-
-          <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-                  Approved senders
-                </p>
-                <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Trusted channels</h2>
-              </div>
-              <span className="rounded-[var(--radius-md)] bg-[#092025] px-3 py-2 text-sm font-bold text-white">
-                {channels.length}
-              </span>
-            </div>
-            <Separator className="my-[var(--spacing-md)]" />
-            <div className="grid gap-[var(--spacing-sm)] md:grid-cols-2 xl:grid-cols-3">
-              {channels.length === 0 ? (
-                <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
-                  No notification channels yet.
-                </p>
-              ) : (
-                channels.map((channel) => (
-                  <article
-                    key={channel.id}
-                    className="rounded-[var(--radius-md)] bg-white/60 p-[var(--spacing-md)]"
-                  >
-                    <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
-                      Approved sender
-                    </p>
-                    <p className="m-0 mt-1 font-bold text-brand-dark">{channel.name}</p>
-                    <p className="m-0 mt-1 break-all text-sm text-muted">
-                      {channel.senderEmail ?? channel.senderDomain}
-                    </p>
-                  </article>
-                ))
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
-            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
-              <div>
-                <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-                  Discovery inbox
-                </p>
-                <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Recent synced emails</h2>
-              </div>
-              <form className="grid gap-2 md:grid-cols-[220px_220px_auto]">
-                <select
-                  name="event_type"
-                  defaultValue={eventFilter ?? ''}
-                  className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm text-brand-dark"
-                >
-                  <option value="">All event types</option>
-                  {eventTypeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  name="impact_type"
-                  defaultValue={impactFilter ?? ''}
-                  className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm text-brand-dark"
-                >
-                  <option value="">All impacts</option>
-                  {impactTypeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <button className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] px-4 py-2 text-sm font-bold text-brand-dark">
-                  Filter
+              <Separator className="my-[var(--spacing-md)]" />
+              <form action={resetDetectedDataAction} className="flex flex-wrap items-center gap-3">
+                <button className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#f8333c]/35 bg-[#f8333c]/10 px-4 py-[10px] text-sm font-bold text-brand-dark transition-transform duration-200 hover:-translate-y-px">
+                  <Trash2 size={16} strokeWidth={2.2} aria-hidden />
+                  Reset detected data
                 </button>
+                <span className="text-sm text-muted">
+                  Keeps approved channels and Gmail connection. Run Re-sync after reset.
+                </span>
               </form>
-            </div>
-            <Separator className="my-[var(--spacing-md)]" />
-            <div className="max-h-[560px] overflow-y-auto pr-1">
-              {visibleRawEmails.length === 0 ? (
-                <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
-                  No synced emails yet.
-                </p>
-              ) : (
-                visibleRawEmails.map((email, index) => (
-                  <div key={email.id}>
-                    {index > 0 ? <Separator /> : null}
-                    <article className="grid gap-3 py-2.5 lg:grid-cols-[minmax(170px,0.72fr)_minmax(220px,1.45fr)_120px_220px] lg:items-center">
-                      <div className="min-w-0">
-                        <p className="m-0 truncate text-sm font-bold text-brand-dark">
-                          {email.fromName || email.fromEmail}
-                        </p>
-                        <p className="m-0 truncate text-xs text-muted">{email.fromEmail}</p>
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="m-0 truncate text-sm font-bold text-brand-dark">
-                          {email.subject}
-                        </h3>
-                        {email.snippet ? (
-                          <p className="m-0 mt-0.5 truncate text-xs text-muted">{email.snippet}</p>
-                        ) : null}
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-                          {email.financialImpactType && email.financialImpactType !== 'UNKNOWN' ? (
-                            <span className="font-bold text-brand-secondary">
-                              {email.financialImpactType}
-                            </span>
-                          ) : null}
-                          {email.eventType && email.eventType !== 'UNKNOWN' ? (
-                            <span>{email.eventType}</span>
-                          ) : null}
-                          {email.classificationConfidence ? (
-                            <span>{Math.round(Number(email.classificationConfidence) * 100)}%</span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <time
-                        dateTime={email.receivedAt}
-                        className="text-xs font-light uppercase tracking-plus1_5 text-muted lg:text-right"
-                      >
-                        {formatDate(email.receivedAt)}
-                      </time>
-                      <form
-                        action={createNotificationChannelAction}
-                        className="grid grid-cols-[minmax(0,1fr)_36px] items-center gap-2"
-                      >
-                        <input type="hidden" name="rawEmailId" value={email.id} />
-                        <input
-                          name="name"
-                          defaultValue={email.fromName ?? email.fromEmail}
-                          className="min-w-0 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-2.5 py-1.5 text-xs text-brand-dark"
-                        />
-                        <button
-                          type="submit"
-                          aria-label={`Approve sender ${email.fromEmail}`}
-                          title="Approve sender"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-dark text-white transition-transform duration-200 hover:-translate-y-px"
-                        >
-                          <CheckCircle2 size={17} strokeWidth={2.4} aria-hidden />
-                        </button>
-                      </form>
+            </section>
+
+            <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+                    Approved senders
+                  </p>
+                  <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Trusted channels</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <SyncButton
+                    mode="approved"
+                    body={{ maxResults: 100 }}
+                    disabled={!isGmailConnected || channels.length === 0}
+                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:border-[rgba(0,23,31,0.12)] disabled:bg-none disabled:bg-brand-light disabled:text-muted disabled:shadow-none"
+                  >
+                    Sync approved
+                  </SyncButton>
+                  <span className="rounded-[var(--radius-md)] bg-[#092025] px-3 py-2 text-sm font-bold text-white">
+                    {channels.length}
+                  </span>
+                </div>
+              </div>
+              <Separator className="my-[var(--spacing-md)]" />
+              <div className="grid gap-[var(--spacing-sm)] md:grid-cols-2 xl:grid-cols-3">
+                {channels.length === 0 ? (
+                  <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
+                    No notification channels yet.
+                  </p>
+                ) : (
+                  channels.map((channel) => (
+                    <article
+                      key={channel.id}
+                      className="rounded-[var(--radius-md)] bg-white/60 p-[var(--spacing-md)]"
+                    >
+                      <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
+                        Approved sender
+                      </p>
+                      <p className="m-0 mt-1 font-bold text-brand-dark">{channel.name}</p>
+                      <p className="m-0 mt-1 break-all text-sm text-muted">
+                        {channel.senderEmail ?? channel.senderDomain}
+                      </p>
                     </article>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
+              <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+                <div>
+                  <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+                    Discovery inbox
+                  </p>
+                  <h2 className="m-0 font-amaranth text-2xl text-brand-dark">
+                    Recent synced emails
+                  </h2>
+                </div>
+                {rawEmails.length > 0 ? (
+                  <form className="grid gap-2 md:grid-cols-[220px_220px_auto]">
+                    <select
+                      name="event_type"
+                      defaultValue={eventFilter ?? ''}
+                      className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm text-brand-dark"
+                    >
+                      <option value="">All event types</option>
+                      {eventTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="impact_type"
+                      defaultValue={impactFilter ?? ''}
+                      className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm text-brand-dark"
+                    >
+                      <option value="">All impacts</option>
+                      {impactTypeOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <button className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] px-4 py-2 text-sm font-bold text-brand-dark">
+                      Filter
+                    </button>
+                  </form>
+                ) : null}
+              </div>
+              <Separator className="my-[var(--spacing-md)]" />
+              <RawEmailsSyncOverlay>
+                {rawEmails.length === 0 ? (
+                  <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
+                    No emails fetched yet. Connect Gmail and run a sync to populate this inbox.
+                  </p>
+                ) : (
+                  <div className="max-h-[560px] overflow-y-auto pr-1">
+                    {visibleRawEmails.length === 0 ? (
+                      <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
+                        No emails match the current filters.
+                      </p>
+                    ) : (
+                      visibleRawEmails.map((email, index) => (
+                        <div key={email.id}>
+                          {index > 0 ? <Separator /> : null}
+                          <article className="grid gap-3 py-2.5 lg:grid-cols-[minmax(170px,0.72fr)_minmax(220px,1.45fr)_120px_220px] lg:items-center">
+                            <div className="min-w-0">
+                              <p className="m-0 truncate text-sm font-bold text-brand-dark">
+                                {email.fromName || email.fromEmail}
+                              </p>
+                              <p className="m-0 truncate text-xs text-muted">{email.fromEmail}</p>
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="m-0 truncate text-sm font-bold text-brand-dark">
+                                {email.subject}
+                              </h3>
+                              {email.snippet ? (
+                                <p className="m-0 mt-0.5 truncate text-xs text-muted">
+                                  {email.snippet}
+                                </p>
+                              ) : null}
+                              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                                {email.financialImpactType &&
+                                email.financialImpactType !== 'UNKNOWN' ? (
+                                  <span className="font-bold text-brand-secondary">
+                                    {email.financialImpactType}
+                                  </span>
+                                ) : null}
+                                {email.eventType && email.eventType !== 'UNKNOWN' ? (
+                                  <span>{email.eventType}</span>
+                                ) : null}
+                                {email.classificationConfidence ? (
+                                  <span>
+                                    {Math.round(Number(email.classificationConfidence) * 100)}%
+                                  </span>
+                                ) : null}
+                              </div>
+                            </div>
+                            <time
+                              dateTime={email.receivedAt}
+                              className="text-xs font-light uppercase tracking-plus1_5 text-muted lg:text-right"
+                            >
+                              {formatDate(email.receivedAt)}
+                            </time>
+                            <form
+                              action={createNotificationChannelAction}
+                              className="grid grid-cols-[minmax(0,1fr)_36px] items-center gap-2"
+                            >
+                              <input type="hidden" name="rawEmailId" value={email.id} />
+                              <input
+                                name="name"
+                                defaultValue={email.fromName ?? email.fromEmail}
+                                className="min-w-0 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-2.5 py-1.5 text-xs text-brand-dark"
+                              />
+                              <button
+                                type="submit"
+                                aria-label={`Approve sender ${email.fromEmail}`}
+                                title="Approve sender"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-dark text-white transition-transform duration-200 hover:-translate-y-px"
+                              >
+                                <CheckCircle2 size={17} strokeWidth={2.4} aria-hidden />
+                              </button>
+                            </form>
+                          </article>
+                        </div>
+                      ))
+                    )}
                   </div>
-                ))
-              )}
-            </div>
-          </section>
-        </div>
+                )}
+              </RawEmailsSyncOverlay>
+            </section>
+          </div>
+        </GmailSyncProvider>
       </FifteenAcShell>
     );
   } catch (error) {
@@ -427,52 +442,6 @@ async function connectGmailAction() {
 
   redirect(
     `/settings/email-sources?gmail_error=${encodeURIComponent(response.message || response.status)}`,
-  );
-}
-
-async function syncGmailAction(formData?: FormData) {
-  'use server';
-
-  const syncFormValues = getSyncFormValues(formData);
-  const searchQuery = buildGmailSearchQuery(syncFormValues);
-  const { maxResults } = syncFormValues;
-  let response: SyncResponse;
-  try {
-    response = await postFifteenAcJson<SyncResponse>('/email-sources/gmail/sync-recent', {
-      searchQuery,
-      maxResults,
-    });
-  } catch (error) {
-    redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
-  }
-  const params = new URLSearchParams({
-    gmail_synced: String(response.fetchedMessages),
-    gmail_candidates: String(response.parsedCandidates),
-    gmail_query: response.searchQuery,
-    days: String(syncFormValues.days),
-    maxResults: String(syncFormValues.maxResults),
-  });
-  if (syncFormValues.keywords) params.set('keywords', syncFormValues.keywords);
-  redirect(`/settings/email-sources?${params.toString()}`);
-}
-
-async function syncApprovedChannelsAction(formData?: FormData) {
-  'use server';
-
-  const maxResults = getPositiveInteger(formData?.get('maxResults'), 100);
-  let response: SyncResponse;
-  try {
-    response = await postFifteenAcJson<SyncResponse>(
-      '/email-sources/gmail/sync-approved-channels',
-      {
-        maxResults,
-      },
-    );
-  } catch (error) {
-    redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
-  }
-  redirect(
-    `/settings/email-sources?gmail_synced=${response.fetchedMessages}&gmail_candidates=${response.parsedCandidates}&gmail_query=${encodeURIComponent(response.searchQuery)}`,
   );
 }
 
@@ -528,9 +497,6 @@ function getActionToast(
 ): EmailSourceActionToastPayload | null {
   const connected = firstParam(params.gmail);
   const error = firstParam(params.gmail_error);
-  const synced = firstParam(params.gmail_synced);
-  const candidates = firstParam(params.gmail_candidates);
-  const query = firstParam(params.gmail_query);
   const disabled = firstParam(params.gmail_disabled);
   const deleted = firstParam(params.gmail_deleted);
   const detectedReset = firstParam(params.detected_reset);
@@ -539,16 +505,10 @@ function getActionToast(
   if (connected === 'connected') {
     return {
       type: 'success',
-      message: 'Google connected. Run Sync recent to import raw messages.',
+      message: 'Google connected. Importing your recent emails in the background…',
       clearHref,
     };
   }
-  if (synced)
-    return {
-      type: 'success',
-      message: `Gmail sync completed. ${synced} recent messages were stored and ${candidates ?? '0'} approved-channel candidates were added to review.${query ? ` Filter: ${query}` : ''}`,
-      clearHref,
-    };
   if (disabled) {
     return {
       type: 'info',
@@ -585,9 +545,6 @@ function getEmailSourceCleanHref(params: Record<string, string | string[] | unde
   const feedbackParams = new Set([
     'gmail',
     'gmail_error',
-    'gmail_synced',
-    'gmail_candidates',
-    'gmail_query',
     'gmail_disabled',
     'gmail_deleted',
     'detected_reset',
@@ -621,43 +578,6 @@ function firstParam(value: string | string[] | undefined): string | undefined {
 
 function encodeError(error: unknown): string {
   return encodeURIComponent(error instanceof Error ? error.message : 'Unknown Gmail sync error');
-}
-
-function buildGmailSearchQuery({ days, keywords }: SyncFormValues): string {
-  if (!keywords) return `newer_than:${days}d`;
-  const keywordQuery = `{${keywords
-    .split(/\s+/)
-    .map((keyword) => keyword.trim())
-    .filter(Boolean)
-    .join(' ')}}`;
-  return `newer_than:${days}d ${keywordQuery}`;
-}
-
-type SyncFormValues = {
-  days: number;
-  maxResults: number;
-  keywords: string;
-};
-
-function getSyncFormValues(formData?: FormData): SyncFormValues {
-  return {
-    days: getPositiveInteger(formData?.get('days'), 90),
-    maxResults: getPositiveInteger(formData?.get('maxResults'), 100),
-    keywords: getTrimmedString(formData?.get('keywords')),
-  };
-}
-
-function getPositiveInteger(
-  value: FormDataEntryValue | null | undefined,
-  fallback: number,
-): number {
-  if (typeof value !== 'string') return fallback;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : fallback;
-}
-
-function getTrimmedString(value: FormDataEntryValue | null | undefined): string {
-  return typeof value === 'string' ? value.trim() : '';
 }
 
 const eventTypeOptions = [

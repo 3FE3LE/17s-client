@@ -1,11 +1,23 @@
 'use client';
 
-import { useTransition } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Search } from '@17suit/ui';
 import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+
+import { useGmailSync } from './gmail-sync-controls';
+
+function buildGmailSearchQuery(days: number, keywords: string): string {
+  const trimmed = keywords.trim();
+  if (!trimmed) return `newer_than:${days}d`;
+  const keywordQuery = `{${trimmed
+    .split(/\s+/)
+    .map((keyword) => keyword.trim())
+    .filter(Boolean)
+    .join(' ')}}`;
+  return `newer_than:${days}d ${keywordQuery}`;
+}
 
 const discoveryFormSchema = z.object({
   days: z.coerce
@@ -29,18 +41,14 @@ const discoveryQueryParsers = {
 
 type DiscoveryFormValues = z.infer<typeof discoveryFormSchema>;
 
-type EmailSourceDiscoveryFormProps = {
-  action: (formData: FormData) => Promise<void>;
-};
-
-export function EmailSourceDiscoveryForm({ action }: EmailSourceDiscoveryFormProps) {
+export function EmailSourceDiscoveryForm() {
   const [queryValues, setQueryValues] = useQueryStates(discoveryQueryParsers, {
     history: 'replace',
     shallow: true,
   });
-  const [isPending, startTransition] = useTransition();
+  const { isSyncing, runSync } = useGmailSync();
   const {
-    formState: { errors, isSubmitting },
+    formState: { errors },
     handleSubmit,
     register,
   } = useForm<DiscoveryFormValues>({
@@ -50,25 +58,19 @@ export function EmailSourceDiscoveryForm({ action }: EmailSourceDiscoveryFormPro
   });
 
   const submit = handleSubmit((values) => {
-    startTransition(() => {
-      void (async () => {
-        const keywords = values.keywords?.trim() ?? '';
-        await setQueryValues({
-          days: values.days,
-          maxResults: values.maxResults,
-          keywords: keywords || null,
-        });
-
-        const formData = new FormData();
-        formData.set('days', String(values.days));
-        formData.set('maxResults', String(values.maxResults));
-        formData.set('keywords', keywords);
-        await action(formData);
-      })();
+    const keywords = values.keywords?.trim() ?? '';
+    void setQueryValues({
+      days: values.days,
+      maxResults: values.maxResults,
+      keywords: keywords || null,
+    });
+    runSync('recent', {
+      searchQuery: buildGmailSearchQuery(values.days, keywords),
+      maxResults: values.maxResults,
     });
   });
 
-  const disabled = isPending || isSubmitting;
+  const disabled = isSyncing;
 
   return (
     <form
