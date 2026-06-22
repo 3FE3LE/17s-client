@@ -3,7 +3,8 @@
 import { useSignUp } from '@clerk/nextjs';
 import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
@@ -32,7 +33,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCreateAccount = async () => {
+  const handleCreateAccount = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!isLoaded) return;
 
     if (password !== confirmPassword) {
@@ -69,7 +71,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
     }
   };
 
-  const handleVerifyEmail = async () => {
+  const handleVerifyEmail = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!isLoaded) return;
 
     setIsSubmitting(true);
@@ -99,45 +102,47 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
         {!needsVerification ? (
-          <div className="grid gap-sm">
+          <form className="grid gap-sm" onSubmit={handleCreateAccount}>
             <AppInput
               type="email"
+              name="email"
               value={email}
               onChangeText={setEmail}
-              label=""
+              label="Correo electronico"
               placeholder="tu@empresa.com"
               autoComplete="email"
+              spellCheck={false}
               required
-              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
+              name="password"
               value={password}
               onChangeText={setPassword}
-              label=""
-              placeholder="Contrasena"
+              label="Contrasena"
+              placeholder="Ingresa tu contrasena"
               autoComplete="new-password"
               required
-              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
+              name="confirmPassword"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              label=""
-              placeholder="Confirmar contrasena"
+              label="Confirmar contrasena"
+              placeholder="Repite tu contrasena"
               autoComplete="new-password"
               required
-              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={handleCreateAccount} compact>
+            <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Creando...' : 'Crear cuenta'}
             </AppButton>
             <div id="clerk-captcha" />
-          </div>
+            <AuthFormError message={error} />
+          </form>
         ) : (
           <div className="grid gap-sm">
             <AppTypography variant="overline" color={suitTheme.colors.muted}>
@@ -150,22 +155,24 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
         )}
 
         {needsVerification ? (
-          <div className="grid gap-sm">
+          <form className="grid gap-sm" onSubmit={handleVerifyEmail}>
             <AppInput
               type="text"
+              name="code"
               value={code}
               onChangeText={setCode}
-              label=""
+              label="Codigo de verificacion"
               placeholder="Codigo de verificacion"
               autoComplete="one-time-code"
+              spellCheck={false}
               required
-              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={handleVerifyEmail} compact>
+            <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Verificando...' : 'Verificar correo'}
             </AppButton>
-          </div>
+            <AuthFormError message={error} />
+          </form>
         ) : null}
 
         <AppLinkAction
@@ -173,12 +180,6 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
         >
           Ya tengo una cuenta
         </AppLinkAction>
-
-        {error ? (
-          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
-            {error}
-          </AppTypography>
-        ) : null}
       </div>
     </AuthShell>
   );

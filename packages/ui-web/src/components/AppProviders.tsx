@@ -1,6 +1,7 @@
 'use client';
 
 import type { PropsWithChildren } from 'react';
+import { ToastProvider } from '../feedback/toast';
 import { ThemeProvider, useAppTheme } from '../theme/theme-context';
 import type { ThemeModePreference } from '../theme/theme-context';
 
@@ -26,6 +27,7 @@ export function AppProviders({ children, themeMode, onThemeModeChange }: AppProv
   return (
     <ThemeProvider {...themeProviderProps}>
       <ThemeStyles>{children}</ThemeStyles>
+      <ToastProvider />
     </ThemeProvider>
   );
 }
