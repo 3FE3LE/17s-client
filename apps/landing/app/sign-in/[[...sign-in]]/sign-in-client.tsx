@@ -1,9 +1,9 @@
 'use client';
 
-import { useSignIn } from '@clerk/nextjs';
+import { useAuth, useSignIn } from '@clerk/nextjs';
 import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthShell } from '../../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
@@ -24,10 +24,19 @@ function getClerkErrorMessage(error: unknown): string {
 export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Already authenticated (e.g. returning user or Clerk "already signed in"):
+  // skip the form and continue to the product that initiated the sign-in.
+  useEffect(() => {
+    if (authLoaded && isSignedIn) {
+      router.replace(redirectTarget);
+    }
+  }, [authLoaded, isSignedIn, redirectTarget, router]);
 
   const handlePasswordSignIn = async () => {
     if (!isLoaded) return;

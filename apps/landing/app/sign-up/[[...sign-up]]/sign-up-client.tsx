@@ -1,9 +1,9 @@
 'use client';
 
-import { useSignUp } from '@clerk/nextjs';
+import { useAuth, useSignUp } from '@clerk/nextjs';
 import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthShell } from '../../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
@@ -24,6 +24,7 @@ function getClerkErrorMessage(error: unknown): string {
 export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const router = useRouter();
   const { isLoaded, signUp, setActive } = useSignUp();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -31,6 +32,13 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Already authenticated: skip the form and continue to the initiating product.
+  useEffect(() => {
+    if (authLoaded && isSignedIn) {
+      router.replace(redirectTarget);
+    }
+  }, [authLoaded, isSignedIn, redirectTarget, router]);
 
   const handleCreateAccount = async () => {
     if (!isLoaded) return;
