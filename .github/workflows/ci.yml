@@ -7,7 +7,6 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   TURBO_SCM_BASE: origin/main
-  CI_ACTIVE_WEB_APPS: '@17suit/admin,@17suit/landing,@17suit/seven-rc-web,@17suit/fifteen-ac-web'
 
 jobs:
   quality:
@@ -23,5 +22,8 @@ jobs:
           node-version: 24.13.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build affected active web apps
-        run: node tooling/scripts/ci-build-affected-web.mjs
+      # No build here: Vercel builds on deploy, so building again in CI is
+      # redundant. CI only gates code quality (lint + types) on affected
+      # packages.
+      - name: Lint and typecheck affected packages
+        run: pnpm exec turbo run lint typecheck --affected
