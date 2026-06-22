@@ -2,29 +2,29 @@ import { ApiClient, getApiErrorDisplayMessage, normalizeApiBaseUrl } from '@17su
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
-export async function fetchAllCheckJson<T>(path: string): Promise<T> {
-  return requestAllCheckJson<T>(path, { method: 'GET' });
+export async function fetchFifteenAcJson<T>(path: string): Promise<T> {
+  return requestFifteenAcJson<T>(path, { method: 'GET' });
 }
 
-export async function postAllCheckJson<T>(path: string, body?: unknown): Promise<T> {
-  return requestAllCheckJson<T>(path, {
+export async function postFifteenAcJson<T>(path: string, body?: unknown): Promise<T> {
+  return requestFifteenAcJson<T>(path, {
     method: 'POST',
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
 
-export async function patchAllCheckJson<T>(path: string, body?: unknown): Promise<T> {
-  return requestAllCheckJson<T>(path, {
+export async function patchFifteenAcJson<T>(path: string, body?: unknown): Promise<T> {
+  return requestFifteenAcJson<T>(path, {
     method: 'PATCH',
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 }
 
-export async function deleteAllCheckJson<T>(path: string): Promise<T> {
-  return requestAllCheckJson<T>(path, { method: 'DELETE' });
+export async function deleteFifteenAcJson<T>(path: string): Promise<T> {
+  return requestFifteenAcJson<T>(path, { method: 'DELETE' });
 }
 
-async function requestAllCheckJson<T>(
+async function requestFifteenAcJson<T>(
   path: string,
   init: Pick<RequestInit, 'body'> & { method: string },
 ): Promise<T> {

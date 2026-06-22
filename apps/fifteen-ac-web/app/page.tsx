@@ -1,4 +1,4 @@
-import { DashboardScreen } from '@/components/all-check-data';
+import { DashboardScreen } from '@/components/fifteen-ac-data';
 
 export default function Page() {
   return <DashboardScreen />;

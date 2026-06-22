@@ -1,13 +1,13 @@
 import { redirect } from 'next/navigation';
 import { CheckCircle2, Link2, PauseCircle, RefreshCcw, Search, Trash2 } from '@17suit/ui';
 
-import { ErrorBlock, AllCheckShell } from '@/components/all-check-shell';
+import { ErrorBlock, FifteenAcShell } from '@/components/fifteen-ac-shell';
 import {
-  deleteAllCheckJson,
-  fetchAllCheckJson,
-  patchAllCheckJson,
-  postAllCheckJson,
-} from '@/lib/all-check-server';
+  deleteFifteenAcJson,
+  fetchFifteenAcJson,
+  patchFifteenAcJson,
+  postFifteenAcJson,
+} from '@/lib/fifteen-ac-server';
 import { formatDate } from '@/lib/format';
 
 type EmailConnection = {
@@ -72,9 +72,9 @@ export default async function Page({
 
   try {
     const [connections, rawEmails, channels] = await Promise.all([
-      fetchAllCheckJson<EmailConnection[]>('/email-sources'),
-      fetchAllCheckJson<RawEmail[]>('/email-sources/raw-emails'),
-      fetchAllCheckJson<NotificationChannel[]>('/email-sources/notification-channels'),
+      fetchFifteenAcJson<EmailConnection[]>('/email-sources'),
+      fetchFifteenAcJson<RawEmail[]>('/email-sources/raw-emails'),
+      fetchFifteenAcJson<NotificationChannel[]>('/email-sources/notification-channels'),
     ]);
     const visibleRawEmails = rawEmails.filter((email) => {
       if (eventFilter && email.eventType !== eventFilter) return false;
@@ -104,7 +104,10 @@ export default async function Page({
         : 0;
 
     return (
-      <AllCheckShell title="Email ingestion" eyebrow="Candidate discovery and approved sender sync">
+      <FifteenAcShell
+        title="Email ingestion"
+        eyebrow="Candidate discovery and approved sender sync"
+      >
         <div className="grid gap-[var(--spacing-lg)]">
           {banner ? (
             <div className="border-l-4 border-[#00916e] bg-white px-[var(--spacing-md)] py-3 text-sm font-bold text-brand-dark shadow-[0_10px_28px_rgba(0,23,31,0.08)]">
@@ -243,7 +246,7 @@ export default async function Page({
                             ? `Last sync ${formatDate(gmailConnection.lastSyncAt)}.`
                             : 'No sync yet.'
                         }`
-                      : 'Connect Gmail to discover allCheck emails and approve senders.'}
+                      : 'Connect Gmail to discover fifteenAc emails and approve senders.'}
                   </p>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3 lg:min-w-[420px]">
@@ -435,13 +438,13 @@ export default async function Page({
             </div>
           </section>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
     return (
-      <AllCheckShell title="Email sources" eyebrow="Google Gmail ingestion">
+      <FifteenAcShell title="Email sources" eyebrow="Google Gmail ingestion">
         <ErrorBlock message={error instanceof Error ? error.message : 'Unable to load records'} />
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   }
 }
@@ -451,7 +454,7 @@ async function connectGmailAction() {
 
   let response: ConnectResponse;
   try {
-    response = await postAllCheckJson<ConnectResponse>('/email-sources/gmail/connect');
+    response = await postFifteenAcJson<ConnectResponse>('/email-sources/gmail/connect');
   } catch (error) {
     redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
   }
@@ -472,7 +475,7 @@ async function syncGmailAction(formData?: FormData) {
   const maxResults = getPositiveInteger(formData?.get('maxResults'), 25);
   let response: SyncResponse;
   try {
-    response = await postAllCheckJson<SyncResponse>('/email-sources/gmail/sync-recent', {
+    response = await postFifteenAcJson<SyncResponse>('/email-sources/gmail/sync-recent', {
       searchQuery,
       maxResults,
     });
@@ -490,9 +493,12 @@ async function syncApprovedChannelsAction(formData?: FormData) {
   const maxResults = getPositiveInteger(formData?.get('maxResults'), 100);
   let response: SyncResponse;
   try {
-    response = await postAllCheckJson<SyncResponse>('/email-sources/gmail/sync-approved-channels', {
-      maxResults,
-    });
+    response = await postFifteenAcJson<SyncResponse>(
+      '/email-sources/gmail/sync-approved-channels',
+      {
+        maxResults,
+      },
+    );
   } catch (error) {
     redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
   }
@@ -505,7 +511,7 @@ async function disableGmailAction() {
   'use server';
 
   try {
-    await patchAllCheckJson('/email-sources/gmail/disable');
+    await patchFifteenAcJson('/email-sources/gmail/disable');
   } catch (error) {
     redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
   }
@@ -516,7 +522,7 @@ async function deleteGmailAction() {
   'use server';
 
   try {
-    await deleteAllCheckJson('/email-sources/gmail/connection');
+    await deleteFifteenAcJson('/email-sources/gmail/connection');
   } catch (error) {
     redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
   }
@@ -527,7 +533,7 @@ async function resetDetectedDataAction() {
   'use server';
 
   try {
-    await postAllCheckJson('/email-sources/reset-detected-data');
+    await postFifteenAcJson('/email-sources/reset-detected-data');
   } catch (error) {
     redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
   }
@@ -540,7 +546,7 @@ async function createNotificationChannelAction(formData: FormData) {
   const rawEmailId = formData.get('rawEmailId');
   const name = formData.get('name');
   if (typeof rawEmailId === 'string') {
-    await postAllCheckJson('/email-sources/notification-channels', {
+    await postFifteenAcJson('/email-sources/notification-channels', {
       rawEmailId,
       ...(typeof name === 'string' && name.trim().length > 0 ? { name: name.trim() } : {}),
     });

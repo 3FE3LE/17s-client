@@ -5,12 +5,12 @@ export const FifteenAllCheckFeatureFlags = {
   enableReviewQueue: 'fifteen-all-check.enable_review_queue',
 } as const;
 
-export const AllCheckMoneySchema = z.object({
+export const FifteenAcMoneySchema = z.object({
   amount: z.number(),
   currencyCode: z.string().min(3).max(3),
 });
 
-export const AllCheckDashboardOverviewSchema = z.object({
+export const FifteenAcDashboardOverviewSchema = z.object({
   month: z.string(),
   currencyCode: z.string(),
   incomeReceived: z.number(),
@@ -34,9 +34,9 @@ export const AllCheckDashboardOverviewSchema = z.object({
   ),
 });
 
-export type AllCheckDashboardOverview = z.infer<typeof AllCheckDashboardOverviewSchema>;
+export type FifteenAcDashboardOverview = z.infer<typeof FifteenAcDashboardOverviewSchema>;
 
-export interface AllCheckTransaction {
+export interface FifteenAcTransaction {
   id: string;
   type: 'income' | 'expense' | 'transfer' | 'refund' | 'fee' | 'adjustment';
   amount: string | number;
@@ -52,7 +52,7 @@ export interface AllCheckTransaction {
   evidence?: Array<{ id: string }>;
 }
 
-export interface AllCheckReviewItem {
+export interface FifteenAcReviewItem {
   id: string;
   type: string;
   status: string;
@@ -60,10 +60,10 @@ export interface AllCheckReviewItem {
   createdAt: string;
 }
 
-export interface AllCheckApi {
-  getOverview: () => Promise<AllCheckDashboardOverview>;
-  listTransactions: () => Promise<AllCheckTransaction[]>;
-  listReviewItems: () => Promise<AllCheckReviewItem[]>;
+export interface FifteenAcApi {
+  getOverview: () => Promise<FifteenAcDashboardOverview>;
+  listTransactions: () => Promise<FifteenAcTransaction[]>;
+  listReviewItems: () => Promise<FifteenAcReviewItem[]>;
   listCreditCards: () => Promise<unknown[]>;
   listAccounts: () => Promise<unknown[]>;
   listIncomeSources: () => Promise<unknown[]>;
@@ -73,7 +73,7 @@ export interface AllCheckApi {
   listCategories: () => Promise<unknown[]>;
 }
 
-export function createAllCheckApi(baseUrl = '/api/15ac'): AllCheckApi {
+export function createFifteenAcApi(baseUrl = '/api/15ac'): FifteenAcApi {
   async function request<T>(path: string): Promise<T> {
     const response = await fetch(`${baseUrl}${path}`, {
       headers: { Accept: 'application/json' },
@@ -81,7 +81,7 @@ export function createAllCheckApi(baseUrl = '/api/15ac'): AllCheckApi {
     });
 
     if (!response.ok) {
-      throw new Error(`AllCheck request failed (${response.status})`);
+      throw new Error(`FifteenAc request failed (${response.status})`);
     }
 
     return (await response.json()) as T;
@@ -89,7 +89,7 @@ export function createAllCheckApi(baseUrl = '/api/15ac'): AllCheckApi {
 
   return {
     async getOverview() {
-      return AllCheckDashboardOverviewSchema.parse(await request('/dashboard/overview'));
+      return FifteenAcDashboardOverviewSchema.parse(await request('/dashboard/overview'));
     },
     listTransactions: () => request('/transactions'),
     listReviewItems: () => request('/review-items'),
