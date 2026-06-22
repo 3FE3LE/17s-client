@@ -1,9 +1,10 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppLinkAction } from '@17suit/ui';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
 
 function getClerkErrorMessage(error: unknown): string {
@@ -29,7 +30,8 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handlePasswordSignIn = async () => {
+  const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!isLoaded) return;
 
     setIsSubmitting(true);
@@ -61,7 +63,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
     try {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
-        redirectUrl: '/sso-callback',
+        redirectUrl: `/sso-callback?redirect_url=${encodeURIComponent(redirectTarget)}`,
         redirectUrlComplete: redirectTarget,
       });
     } catch (err) {
@@ -76,42 +78,40 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
       description="Entra con Google o con tu correo para abrir tus herramientas sin pasos extra."
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
-        <AppButton
-          variant="neutral"
-          onPress={onGoogleSSO}
-          compact
-          fullWidth={false}
-          style={{ justifySelf: 'start' }}
-        >
+        <AppButton variant="neutral" onPress={onGoogleSSO} compact>
           Continuar con Google
         </AppButton>
 
-        <div className="grid gap-sm">
+        <form className="grid gap-sm" onSubmit={handlePasswordSignIn}>
           <AppInput
             type="email"
+            name="email"
             value={email}
             onChangeText={setEmail}
-            label=""
+            label="Correo electronico"
             placeholder="tu@empresa.com"
             autoComplete="email"
+            spellCheck={false}
             required
-            compact
+            error={Boolean(error)}
           />
           <AppInput
             type="password"
+            name="password"
             value={password}
             onChangeText={setPassword}
-            label=""
-            placeholder="Contrasena"
+            label="Contrasena"
+            placeholder="Ingresa tu contrasena"
             autoComplete="current-password"
             required
-            compact
+            error={Boolean(error)}
           />
-          <AppButton onPress={handlePasswordSignIn} compact>
+          <AppButton type="submit" compact disabled={isSubmitting}>
             {isSubmitting ? 'Iniciando sesion...' : 'Iniciar sesion'}
           </AppButton>
           <div id="clerk-captcha" />
-        </div>
+          <AuthFormError message={error} />
+        </form>
 
         <div className="flex flex-wrap gap-sm">
           <AppLinkAction
@@ -129,12 +129,6 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
             Olvide mi contrasena
           </AppLinkAction>
         </div>
-
-        {error ? (
-          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
-            {error}
-          </AppTypography>
-        ) : null}
       </div>
     </AuthShell>
   );

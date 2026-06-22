@@ -63,7 +63,7 @@ export function AppBadge({
         fontFamily: captionType.webFamily,
         fontWeight: captionType.fontWeight,
         fontSize: captionType.fontSize,
-        lineHeight: captionType.fontSize * captionType.lineHeightRecommended,
+        lineHeight: captionType.lineHeightRecommended,
         letterSpacing: captionType.letterSpacingEm,
         whiteSpace: 'nowrap',
         backgroundColor: variantStyles[variant].backgroundColor,

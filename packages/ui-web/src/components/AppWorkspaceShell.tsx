@@ -39,14 +39,14 @@ export function AppWorkspaceShell({
   children,
 }: AppWorkspaceShellProps) {
   return (
-    <main className="relative min-h-screen overflow-clip bg-suit-canvas text-text">
+    <main className="relative min-h-screen bg-suit-canvas text-text">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-[24vw] -top-[24vw] z-0 h-[min(58vw,690px)] w-[min(58vw,690px)] rotate-[-15deg] rounded-[var(--radius-xl)] bg-ambient-brand-conic"
+        className="pointer-events-none fixed -right-[24vw] -top-[24vw] z-0 h-[min(58vw,690px)] w-[min(58vw,690px)] rotate-[-15deg] rounded-[var(--radius-xl)] bg-ambient-brand-conic"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-[-52px] left-[6vw] z-0 h-[140px] w-[min(64vw,720px)] skew-x-[-24deg] bg-ambient-cyan-line"
+        className="pointer-events-none fixed bottom-[-52px] left-[6vw] z-0 h-[140px] w-[min(64vw,720px)] skew-x-[-24deg] bg-ambient-cyan-line"
       />
 
       <div className={pageContainerRecipe({ kind: 'workspace' })}>

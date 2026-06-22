@@ -16,6 +16,7 @@ function resolveRedirectTarget(rawValue: string | string[] | undefined): string 
   }
   const allowedOrigins = [
     process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL,
+    process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL,
     process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
   ]
     .flatMap((entry) => entry?.split(',') ?? [])

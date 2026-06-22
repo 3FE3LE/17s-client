@@ -109,7 +109,11 @@ function getProductAppHref(slug: ProductSlug): string {
     return process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL ?? 'http://localhost:3015/';
   }
 
-  return `/${slug}`;
+  if (slug === 'seven-reservations-club') {
+    return process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL ?? 'http://localhost:3007/';
+  }
+
+  return '/';
 }
 
 interface PageProps {

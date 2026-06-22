@@ -15,7 +15,7 @@ export function AppTitle({ text }: AppTitleProps) {
         marginBottom: theme.spacing.sm,
         fontSize: titleType.fontSize,
         fontFamily: titleType.webFamily,
-        lineHeight: titleType.fontSize * titleType.lineHeightRecommended,
+        lineHeight: titleType.lineHeightRecommended,
         letterSpacing: titleType.letterSpacingEm,
         fontWeight: titleType.fontWeight,
       }}

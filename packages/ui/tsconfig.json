@@ -17,6 +17,8 @@
     "src/index.native.ts",
     "src/app-providers.ts",
     "src/app-providers.native.ts",
+    "src/feedback/**/*.ts",
+    "src/feedback/**/*.tsx",
     "src/theme.ts",
     "src/hooks/**/*.ts",
     "src/hooks/**/*.tsx"

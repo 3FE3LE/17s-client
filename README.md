@@ -197,6 +197,19 @@ pnpm --filter @17suit/tooling product:new <product-slug> <subdomain>
 
 Finance cockpit product docs live in [docs/fifteen-all-check.md](./docs/fifteen-all-check.md).
 
+### Current Frontend Checkpoint (2026-06-22)
+
+- Auth landing forms now use consistent shared input/button styling, semantic form structure, compact inline errors, and fixed submit button behavior.
+- Shared UI typography no longer applies oversized base line-height values; affected web components now use unitless intended ratios.
+- Web apps load shared design-system Tailwind sources explicitly.
+- Product auth redirects preserve intended product destinations after Google login.
+- `AppProductFooter` is a UI shell: app-level implementations pass Next `Link` and auth controls, and footer actions now respond to session state.
+- Fifteen All Check email ingestion UI now uses RHF + Zod + nuqs for discovery params, compact inbox-style raw email rows, shared `Separator`, fixed workspace background, and content-scoped footer layout.
+- Web toast notifications use Sonner through shared abstraction:
+  - `@17suit/ui-web` owns `sonner`.
+  - `@17suit/ui/feedback/toast` exposes `ToastProvider` and `notify`.
+  - `AppProviders` mounts one global web toaster.
+
 ## Deployment Control
 
 - Product preview branches are documented in [docs/deployment-branches.md](./docs/deployment-branches.md).
