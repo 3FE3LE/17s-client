@@ -122,42 +122,23 @@ export default async function Page({
                       for candidate parsing.
                     </p>
                   </div>
-                  <div className="relative grid gap-2 text-sm">
-                    {isGmailConnected ? (
-                      <div className="rounded-[var(--radius-md)] border border-[#00916e]/25 bg-[#00916e]/10 px-4 py-3">
-                        <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-                          Account connected
-                        </p>
-                        <p className="m-0 mt-1 inline-flex items-center gap-2 text-sm font-bold text-brand-dark">
-                          <CheckCircle2 size={16} strokeWidth={2.2} aria-hidden />
-                          Gmail active
-                        </p>
-                      </div>
-                    ) : (
+                  {isGmailConnected ? null : (
+                    <div className="relative grid gap-2 text-sm">
                       <form action={connectGmailAction}>
                         <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px">
                           <Link2 size={16} strokeWidth={2.2} aria-hidden />
                           Connect Google
                         </button>
                       </form>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 <EmailSourceDiscoveryForm />
               </div>
 
               <Separator />
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4">
-                <Metric
-                  label="Connection"
-                  value={gmailConnection?.status ?? 'Not connected'}
-                  detail={
-                    gmailConnection?.lastSyncAt
-                      ? `Last sync ${formatDate(gmailConnection.lastSyncAt)}`
-                      : 'No sync yet'
-                  }
-                />
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3">
                 <Metric
                   label="Approved channels"
                   value={`${channels.length}`}
