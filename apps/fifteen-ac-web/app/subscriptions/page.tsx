@@ -1,4 +1,4 @@
-import { SubscriptionsScreen } from '@/components/all-check-data';
+import { SubscriptionsScreen } from '@/components/fifteen-ac-data';
 
 export default function Page() {
   return <SubscriptionsScreen />;

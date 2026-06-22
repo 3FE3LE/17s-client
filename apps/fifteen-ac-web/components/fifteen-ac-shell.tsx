@@ -29,7 +29,7 @@ const navItems = [
   { href: '/subscriptions', label: 'Subscriptions', mark: '08', icon: Repeat2 },
 ];
 
-export function AllCheckShell({
+export function FifteenAcShell({
   title,
   eyebrow,
   children,
@@ -45,7 +45,7 @@ export function AllCheckShell({
   return (
     <AppWorkspaceShell
       productName="Fifteen All Check"
-      productKicker="17Suit allCheck"
+      productKicker="17Suit fifteenAc"
       title={title}
       eyebrow={eyebrow}
       navItems={navItems}
@@ -85,7 +85,7 @@ export function DataCard({
 }
 
 export function LoadingBlock() {
-  return <div className={cardRecipe({ variant: 'feature' })}>Loading allCheck data...</div>;
+  return <div className={cardRecipe({ variant: 'feature' })}>Loading fifteenAc data...</div>;
 }
 
 export function ErrorBlock({ message }: { message: string }) {

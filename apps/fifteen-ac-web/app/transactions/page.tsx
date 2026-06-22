@@ -1,4 +1,4 @@
-import { TransactionsScreen } from '@/components/all-check-data';
+import { TransactionsScreen } from '@/components/fifteen-ac-data';
 
 export default function Page() {
   return <TransactionsScreen />;

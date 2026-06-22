@@ -1,15 +1,15 @@
 import type {
-  AllCheckDashboardOverview,
-  AllCheckReviewItem,
-  AllCheckTransaction,
+  FifteenAcDashboardOverview,
+  FifteenAcReviewItem,
+  FifteenAcTransaction,
 } from '@17suit/module-fifteen-all-check';
 import { cardRecipe, cx, inputRecipe } from '@17suit/ui';
 import { redirect } from 'next/navigation';
-import { DataCard, ErrorBlock, AllCheckShell } from './all-check-shell';
-import { fetchAllCheckJson, patchAllCheckJson, postAllCheckJson } from '@/lib/all-check-server';
+import { DataCard, ErrorBlock, FifteenAcShell } from './fifteen-ac-shell';
+import { fetchFifteenAcJson, patchFifteenAcJson, postFifteenAcJson } from '@/lib/fifteen-ac-server';
 import { formatDate, formatMoney } from '@/lib/format';
 
-type AllCheckTransactionCandidate = {
+type FifteenAcTransactionCandidate = {
   id: string;
   candidateType: string;
   amount: string | number;
@@ -30,7 +30,7 @@ type AllCheckTransactionCandidate = {
   } | null;
 };
 
-type AllCheckAccount = {
+type FifteenAcAccount = {
   id: string;
   name: string;
   type: string;
@@ -38,7 +38,7 @@ type AllCheckAccount = {
   currencyCode: string;
 };
 
-type AllCheckCreditCard = {
+type FifteenAcCreditCard = {
   id: string;
   name: string;
   issuer: string;
@@ -50,13 +50,13 @@ type AllCheckCreditCard = {
   interestRateMonthly?: string | number | null;
 };
 
-type AllCheckCategory = {
+type FifteenAcCategory = {
   id: string;
   name: string;
   color?: string | null;
 };
 
-type AllCheckIncomeSource = {
+type FifteenAcIncomeSource = {
   id: string;
   name: string;
   type: string;
@@ -66,7 +66,7 @@ type AllCheckIncomeSource = {
   expectedPaymentDay?: number | null;
 };
 
-type AllCheckRecurring = {
+type FifteenAcRecurring = {
   id: string;
   name: string;
   amount: string | number;
@@ -100,10 +100,10 @@ const outlineButtonClassName =
 
 export async function DashboardScreen() {
   try {
-    const data = await fetchAllCheckJson<AllCheckDashboardOverview>('/dashboard/overview');
+    const data = await fetchFifteenAcJson<FifteenAcDashboardOverview>('/dashboard/overview');
 
     return (
-      <AllCheckShell title="Fifteen All Check" eyebrow="Financial cockpit">
+      <FifteenAcShell title="Fifteen All Check" eyebrow="Financial cockpit">
         <div className="grid gap-[var(--spacing-lg)]">
           <section className="grid grid-cols-1 gap-[var(--spacing-sm)] md:grid-cols-4">
             <DataCard
@@ -156,25 +156,25 @@ export async function DashboardScreen() {
             </div>
           </section>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
     return (
-      <AllCheckShell title="Fifteen All Check" eyebrow="Financial cockpit">
+      <FifteenAcShell title="Fifteen All Check" eyebrow="Financial cockpit">
         <ErrorBlock
-          message={error instanceof Error ? error.message : 'Unable to load allCheck data'}
+          message={error instanceof Error ? error.message : 'Unable to load fifteenAc data'}
         />
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   }
 }
 
 export async function TransactionsScreen() {
   try {
-    const items = await fetchAllCheckJson<AllCheckTransaction[]>('/transactions');
+    const items = await fetchFifteenAcJson<FifteenAcTransaction[]>('/transactions');
 
     return (
-      <AllCheckShell title="Transactions" eyebrow="Confirmed ledger">
+      <FifteenAcShell title="Transactions" eyebrow="Confirmed ledger">
         <div className={cardRecipe({ variant: 'list' })}>
           {items.map((item) => (
             <div
@@ -194,15 +194,15 @@ export async function TransactionsScreen() {
             </div>
           ))}
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
     return (
-      <AllCheckShell title="Transactions" eyebrow="Confirmed ledger">
+      <FifteenAcShell title="Transactions" eyebrow="Confirmed ledger">
         <ErrorBlock
           message={error instanceof Error ? error.message : 'Unable to load transactions'}
         />
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   }
 }
@@ -210,15 +210,15 @@ export async function TransactionsScreen() {
 export async function ReviewScreen() {
   try {
     const [items, candidates] = await Promise.all([
-      fetchAllCheckJson<AllCheckReviewItem[]>('/review-items'),
-      fetchAllCheckJson<AllCheckTransactionCandidate[]>('/transaction-candidates'),
+      fetchFifteenAcJson<FifteenAcReviewItem[]>('/review-items'),
+      fetchFifteenAcJson<FifteenAcTransactionCandidate[]>('/transaction-candidates'),
     ]);
     const pendingCandidates = candidates.filter(
       (candidate) => candidate.status === 'PENDING_REVIEW',
     );
 
     return (
-      <AllCheckShell title="Review queue" eyebrow="Candidates and evidence">
+      <FifteenAcShell title="Review queue" eyebrow="Candidates and evidence">
         <div className="grid gap-[var(--spacing-md)]">
           <section className="grid gap-[var(--spacing-sm)]">
             <h2 className="m-0 font-amaranth text-xl text-brand-dark">Parsed candidates</h2>
@@ -466,15 +466,15 @@ export async function ReviewScreen() {
             })}
           </section>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
     return (
-      <AllCheckShell title="Review queue" eyebrow="Candidates and evidence">
+      <FifteenAcShell title="Review queue" eyebrow="Candidates and evidence">
         <ErrorBlock
           message={error instanceof Error ? error.message : 'Unable to load review queue'}
         />
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   }
 }
@@ -484,7 +484,7 @@ async function acceptCandidateAction(formData: FormData) {
 
   const candidateId = formData.get('candidateId');
   if (typeof candidateId === 'string' && candidateId.length > 0) {
-    await postAllCheckJson(`/transaction-candidates/${candidateId}/accept`);
+    await postFifteenAcJson(`/transaction-candidates/${candidateId}/accept`);
   }
   redirect('/review');
 }
@@ -494,7 +494,7 @@ async function updateCandidateAction(formData: FormData) {
 
   const candidateId = formData.get('candidateId');
   if (typeof candidateId === 'string' && candidateId.length > 0) {
-    await patchAllCheckJson(`/transaction-candidates/${candidateId}`, {
+    await patchFifteenAcJson(`/transaction-candidates/${candidateId}`, {
       candidateType: getString(formData.get('candidateType')),
       amount: getNumber(formData.get('amount')),
       currencyCode: getString(formData.get('currencyCode'))?.toUpperCase(),
@@ -509,7 +509,7 @@ async function updateCandidateAction(formData: FormData) {
 async function createCandidateFromReviewItemAction(formData: FormData) {
   'use server';
 
-  await postAllCheckJson('/transaction-candidates/from-raw-email', {
+  await postFifteenAcJson('/transaction-candidates/from-raw-email', {
     rawEmailId: getString(formData.get('rawEmailId')),
     candidateType: getString(formData.get('candidateType')),
     amount: getNumber(formData.get('amount')),
@@ -526,7 +526,7 @@ async function rejectCandidateAction(formData: FormData) {
 
   const candidateId = formData.get('candidateId');
   if (typeof candidateId === 'string' && candidateId.length > 0) {
-    await postAllCheckJson(`/transaction-candidates/${candidateId}/reject`);
+    await postFifteenAcJson(`/transaction-candidates/${candidateId}/reject`);
   }
   redirect('/review');
 }
@@ -562,10 +562,10 @@ export async function SimpleCollectionScreen({
   endpoint: string;
 }) {
   try {
-    const items = await fetchAllCheckJson<unknown[]>(endpoint);
+    const items = await fetchFifteenAcJson<unknown[]>(endpoint);
 
     return (
-      <AllCheckShell title={title} eyebrow={eyebrow}>
+      <FifteenAcShell title={title} eyebrow={eyebrow}>
         <div className="grid gap-[var(--spacing-sm)] md:grid-cols-2">
           {items.map((item, index) => (
             <article key={extractId(item, index)} className={panelClassName}>
@@ -576,23 +576,23 @@ export async function SimpleCollectionScreen({
             </article>
           ))}
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
     return (
-      <AllCheckShell title={title} eyebrow={eyebrow}>
+      <FifteenAcShell title={title} eyebrow={eyebrow}>
         <ErrorBlock message={error instanceof Error ? error.message : 'Unable to load records'} />
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   }
 }
 
 export async function AccountsScreen() {
   try {
-    const accounts = await fetchAllCheckJson<AllCheckAccount[]>('/accounts');
+    const accounts = await fetchFifteenAcJson<FifteenAcAccount[]>('/accounts');
 
     return (
-      <AllCheckShell title="Accounts" eyebrow="Cash, banks, and wallets">
+      <FifteenAcShell title="Accounts" eyebrow="Cash, banks, and wallets">
         <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
           <FormPanel title="Add account" action={createAccountAction}>
             <TextField name="name" label="Name" placeholder="Main checking" required />
@@ -615,19 +615,19 @@ export async function AccountsScreen() {
             ))}
           </RecordGrid>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
-    return allCheckErrorShell('Accounts', 'Cash, banks, and wallets', error);
+    return fifteenAcErrorShell('Accounts', 'Cash, banks, and wallets', error);
   }
 }
 
 export async function CardsScreen() {
   try {
-    const cards = await fetchAllCheckJson<AllCheckCreditCard[]>('/credit-cards');
+    const cards = await fetchFifteenAcJson<FifteenAcCreditCard[]>('/credit-cards');
 
     return (
-      <AllCheckShell title="Cards" eyebrow="Credit limits, cut dates, and due dates">
+      <FifteenAcShell title="Cards" eyebrow="Credit limits, cut dates, and due dates">
         <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
           <FormPanel title="Add credit card" action={createCreditCardAction}>
             <TextField name="name" label="Name" placeholder="Visa Black" required />
@@ -673,19 +673,19 @@ export async function CardsScreen() {
             ))}
           </RecordGrid>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
-    return allCheckErrorShell('Cards', 'Credit limits, cut dates, and due dates', error);
+    return fifteenAcErrorShell('Cards', 'Credit limits, cut dates, and due dates', error);
   }
 }
 
 export async function IncomeScreen() {
   try {
-    const incomeSources = await fetchAllCheckJson<AllCheckIncomeSource[]>('/income-sources');
+    const incomeSources = await fetchFifteenAcJson<FifteenAcIncomeSource[]>('/income-sources');
 
     return (
-      <AllCheckShell title="Income" eyebrow="Expected income sources">
+      <FifteenAcShell title="Income" eyebrow="Expected income sources">
         <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
           <FormPanel title="Add income source" action={createIncomeSourceAction}>
             <TextField name="name" label="Name" placeholder="Salary, client, business" required />
@@ -723,24 +723,24 @@ export async function IncomeScreen() {
             ))}
           </RecordGrid>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
-    return allCheckErrorShell('Income', 'Expected income sources', error);
+    return fifteenAcErrorShell('Income', 'Expected income sources', error);
   }
 }
 
 export async function FixedObligationsScreen() {
   try {
     const [items, accounts, cards, categories] = await Promise.all([
-      fetchAllCheckJson<AllCheckRecurring[]>('/fixed-obligations'),
-      fetchAllCheckJson<AllCheckAccount[]>('/accounts'),
-      fetchAllCheckJson<AllCheckCreditCard[]>('/credit-cards'),
-      fetchAllCheckJson<AllCheckCategory[]>('/categories'),
+      fetchFifteenAcJson<FifteenAcRecurring[]>('/fixed-obligations'),
+      fetchFifteenAcJson<FifteenAcAccount[]>('/accounts'),
+      fetchFifteenAcJson<FifteenAcCreditCard[]>('/credit-cards'),
+      fetchFifteenAcJson<FifteenAcCategory[]>('/categories'),
     ]);
 
     return (
-      <AllCheckShell title="Fixed obligations" eyebrow="Recurring payments with due dates">
+      <FifteenAcShell title="Fixed obligations" eyebrow="Recurring payments with due dates">
         <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
           <FormPanel title="Add fixed expense" action={createFixedObligationAction}>
             <TextField name="name" label="Name" placeholder="Rent, insurance, loan" required />
@@ -753,24 +753,24 @@ export async function FixedObligationsScreen() {
           </FormPanel>
           <RecurringList items={items} emptyLabel="No fixed obligations yet." editableFixed />
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
-    return allCheckErrorShell('Fixed obligations', 'Recurring payments with due dates', error);
+    return fifteenAcErrorShell('Fixed obligations', 'Recurring payments with due dates', error);
   }
 }
 
 export async function SubscriptionsScreen() {
   try {
     const [items, accounts, cards, categories] = await Promise.all([
-      fetchAllCheckJson<AllCheckRecurring[]>('/subscriptions'),
-      fetchAllCheckJson<AllCheckAccount[]>('/accounts'),
-      fetchAllCheckJson<AllCheckCreditCard[]>('/credit-cards'),
-      fetchAllCheckJson<AllCheckCategory[]>('/categories'),
+      fetchFifteenAcJson<FifteenAcRecurring[]>('/subscriptions'),
+      fetchFifteenAcJson<FifteenAcAccount[]>('/accounts'),
+      fetchFifteenAcJson<FifteenAcCreditCard[]>('/credit-cards'),
+      fetchFifteenAcJson<FifteenAcCategory[]>('/categories'),
     ]);
 
     return (
-      <AllCheckShell title="Subscriptions" eyebrow="Recurring merchant charges">
+      <FifteenAcShell title="Subscriptions" eyebrow="Recurring merchant charges">
         <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
           <FormPanel title="Add subscription" action={createSubscriptionAction}>
             <TextField
@@ -788,19 +788,19 @@ export async function SubscriptionsScreen() {
           </FormPanel>
           <RecurringList items={items} emptyLabel="No subscriptions yet." />
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
-    return allCheckErrorShell('Subscriptions', 'Recurring merchant charges', error);
+    return fifteenAcErrorShell('Subscriptions', 'Recurring merchant charges', error);
   }
 }
 
 export async function CategoriesScreen() {
   try {
-    const categories = await fetchAllCheckJson<AllCheckCategory[]>('/categories');
+    const categories = await fetchFifteenAcJson<FifteenAcCategory[]>('/categories');
 
     return (
-      <AllCheckShell title="Categories" eyebrow="Reporting and review classification">
+      <FifteenAcShell title="Categories" eyebrow="Reporting and review classification">
         <div className="grid gap-[var(--spacing-md)] lg:grid-cols-[360px_1fr]">
           <FormPanel title="Add category" action={createCategoryAction}>
             <TextField name="name" label="Name" placeholder="Groceries, housing, health" required />
@@ -812,20 +812,20 @@ export async function CategoriesScreen() {
             ))}
           </RecordGrid>
         </div>
-      </AllCheckShell>
+      </FifteenAcShell>
     );
   } catch (error) {
-    return allCheckErrorShell('Categories', 'Reporting and review classification', error);
+    return fifteenAcErrorShell('Categories', 'Reporting and review classification', error);
   }
 }
 
-function allCheckErrorShell(title: string, eyebrow: string, error: unknown) {
+function fifteenAcErrorShell(title: string, eyebrow: string, error: unknown) {
   return (
-    <AllCheckShell title={title} eyebrow={eyebrow}>
+    <FifteenAcShell title={title} eyebrow={eyebrow}>
       <ErrorBlock
-        message={error instanceof Error ? error.message : 'Unable to load allCheck data'}
+        message={error instanceof Error ? error.message : 'Unable to load fifteenAc data'}
       />
-    </AllCheckShell>
+    </FifteenAcShell>
   );
 }
 
@@ -939,7 +939,7 @@ function extractName(item: unknown): string {
 
 async function createAccountAction(formData: FormData) {
   'use server';
-  await postAllCheckJson(
+  await postFifteenAcJson(
     '/accounts',
     getFormPayload(formData, ['name', 'institutionName', 'type', 'currencyCode']),
   );
@@ -948,7 +948,7 @@ async function createAccountAction(formData: FormData) {
 
 async function createCreditCardAction(formData: FormData) {
   'use server';
-  await postAllCheckJson(
+  await postFifteenAcJson(
     '/credit-cards',
     getFormPayload(formData, [
       'name',
@@ -966,7 +966,7 @@ async function createCreditCardAction(formData: FormData) {
 
 async function createIncomeSourceAction(formData: FormData) {
   'use server';
-  await postAllCheckJson(
+  await postFifteenAcJson(
     '/income-sources',
     getFormPayload(formData, [
       'name',
@@ -982,7 +982,7 @@ async function createIncomeSourceAction(formData: FormData) {
 
 async function createFixedObligationAction(formData: FormData) {
   'use server';
-  await postAllCheckJson(
+  await postFifteenAcJson(
     '/fixed-obligations',
     getFormPayload(formData, [
       'name',
@@ -1003,7 +1003,7 @@ async function updateFixedObligationAction(formData: FormData) {
   'use server';
   const id = formData.get('id');
   if (typeof id === 'string' && id.length > 0) {
-    await patchAllCheckJson(`/fixed-obligations/${id}`, {
+    await patchFifteenAcJson(`/fixed-obligations/${id}`, {
       name: getString(formData.get('name')),
       amount: getNumber(formData.get('amount')),
       dueDay: getNumber(formData.get('dueDay')),
@@ -1014,7 +1014,7 @@ async function updateFixedObligationAction(formData: FormData) {
 
 async function createSubscriptionAction(formData: FormData) {
   'use server';
-  await postAllCheckJson(
+  await postFifteenAcJson(
     '/subscriptions',
     getFormPayload(formData, [
       'name',
@@ -1033,7 +1033,7 @@ async function createSubscriptionAction(formData: FormData) {
 
 async function createCategoryAction(formData: FormData) {
   'use server';
-  await postAllCheckJson('/categories', getFormPayload(formData, ['name']));
+  await postFifteenAcJson('/categories', getFormPayload(formData, ['name']));
   redirect('/settings/categories');
 }
 
@@ -1154,9 +1154,9 @@ function PaymentFields({
   cards,
   categories,
 }: {
-  accounts: AllCheckAccount[];
-  cards: AllCheckCreditCard[];
-  categories: AllCheckCategory[];
+  accounts: FifteenAcAccount[];
+  cards: FifteenAcCreditCard[];
+  categories: FifteenAcCategory[];
 }) {
   return (
     <>
@@ -1240,7 +1240,7 @@ function RecurringList({
   emptyLabel,
   editableFixed = false,
 }: {
-  items: AllCheckRecurring[];
+  items: FifteenAcRecurring[];
   emptyLabel: string;
   editableFixed?: boolean;
 }) {

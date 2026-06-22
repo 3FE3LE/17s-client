@@ -1,4 +1,4 @@
-import { FixedObligationsScreen } from '@/components/all-check-data';
+import { FixedObligationsScreen } from '@/components/fifteen-ac-data';
 
 export default function Page() {
   return <FixedObligationsScreen />;
