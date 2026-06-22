@@ -64,6 +64,7 @@ export {
 } from './components/AppProductFooter';
 export type { AppProductFooterProps, AppProductFooterLink } from './components/AppProductFooter';
 export {
+  Ban,
   Banknote,
   CalendarClock,
   CheckCircle2,

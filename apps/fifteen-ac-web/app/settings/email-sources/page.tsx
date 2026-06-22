@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { CheckCircle2, Link2, PauseCircle, Separator, Trash2 } from '@17suit/ui';
+import { Ban, CheckCircle2, Link2, PauseCircle, Separator, Trash2 } from '@17suit/ui';
 
 import { ErrorBlock, FifteenAcShell } from '@/components/fifteen-ac-shell';
 import {
@@ -54,6 +54,14 @@ type NotificationChannel = {
   createdAt: string;
 };
 
+type BlockedSender = {
+  id: string;
+  name: string;
+  senderEmail: string | null;
+  senderDomain: string;
+  createdAt: string;
+};
+
 export default async function Page({
   searchParams,
 }: {
@@ -65,10 +73,11 @@ export default async function Page({
   const impactFilter = firstParam(params.impact_type);
 
   try {
-    const [connections, rawEmails, channels] = await Promise.all([
+    const [connections, rawEmails, channels, blockedSenders] = await Promise.all([
       fetchFifteenAcJson<EmailConnection[]>('/email-sources'),
       fetchFifteenAcJson<RawEmail[]>('/email-sources/raw-emails'),
       fetchFifteenAcJson<NotificationChannel[]>('/email-sources/notification-channels'),
+      fetchFifteenAcJson<BlockedSender[]>('/email-sources/blocked-senders'),
     ]);
     const visibleRawEmails = rawEmails.filter((email) => {
       if (eventFilter && email.eventType !== eventFilter) return false;
@@ -253,6 +262,56 @@ export default async function Page({
             </section>
 
             <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+                    Blocked senders
+                  </p>
+                  <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Sync ignores these</h2>
+                </div>
+                <span className="rounded-[var(--radius-md)] bg-[#b42318] px-3 py-2 text-sm font-bold text-white">
+                  {blockedSenders.length}
+                </span>
+              </div>
+              <Separator className="my-[var(--spacing-md)]" />
+              <div className="grid gap-[var(--spacing-sm)] md:grid-cols-2 xl:grid-cols-3">
+                {blockedSenders.length === 0 ? (
+                  <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
+                    No blocked senders. Use the block action on a synced email to stop importing it.
+                  </p>
+                ) : (
+                  blockedSenders.map((blocked) => (
+                    <article
+                      key={blocked.id}
+                      className="flex items-start justify-between gap-2 rounded-[var(--radius-md)] bg-white/60 p-[var(--spacing-md)]"
+                    >
+                      <div className="min-w-0">
+                        <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
+                          Blocked sender
+                        </p>
+                        <p className="m-0 mt-1 font-bold text-brand-dark">{blocked.name}</p>
+                        <p className="m-0 mt-1 break-all text-sm text-muted">
+                          {blocked.senderEmail ?? blocked.senderDomain}
+                        </p>
+                      </div>
+                      <form action={unblockSenderAction}>
+                        <input type="hidden" name="blockedId" value={blocked.id} />
+                        <button
+                          type="submit"
+                          aria-label={`Unblock sender ${blocked.senderEmail ?? blocked.senderDomain}`}
+                          title="Unblock sender"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.12)] bg-white text-brand-dark transition-transform duration-200 hover:-translate-y-px"
+                        >
+                          <Trash2 size={16} strokeWidth={2.2} aria-hidden />
+                        </button>
+                      </form>
+                    </article>
+                  ))
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
               <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
                 <div>
                   <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
@@ -349,25 +408,35 @@ export default async function Page({
                             >
                               {formatDate(email.receivedAt)}
                             </time>
-                            <form
-                              action={createNotificationChannelAction}
-                              className="grid grid-cols-[minmax(0,1fr)_36px] items-center gap-2"
-                            >
-                              <input type="hidden" name="rawEmailId" value={email.id} />
-                              <input
-                                name="name"
-                                defaultValue={email.fromName ?? email.fromEmail}
-                                className="min-w-0 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-2.5 py-1.5 text-xs text-brand-dark"
-                              />
-                              <button
-                                type="submit"
-                                aria-label={`Approve sender ${email.fromEmail}`}
-                                title="Approve sender"
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-dark text-white transition-transform duration-200 hover:-translate-y-px"
-                              >
-                                <CheckCircle2 size={17} strokeWidth={2.4} aria-hidden />
-                              </button>
-                            </form>
+                            <div className="grid grid-cols-[minmax(0,1fr)_36px_36px] items-center gap-2">
+                              <form action={createNotificationChannelAction} className="contents">
+                                <input type="hidden" name="rawEmailId" value={email.id} />
+                                <input
+                                  name="name"
+                                  defaultValue={email.fromName ?? email.fromEmail}
+                                  className="min-w-0 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-2.5 py-1.5 text-xs text-brand-dark"
+                                />
+                                <button
+                                  type="submit"
+                                  aria-label={`Approve sender ${email.fromEmail}`}
+                                  title="Approve sender"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-brand-dark text-white transition-transform duration-200 hover:-translate-y-px"
+                                >
+                                  <CheckCircle2 size={17} strokeWidth={2.4} aria-hidden />
+                                </button>
+                              </form>
+                              <form action={blockSenderAction}>
+                                <input type="hidden" name="rawEmailId" value={email.id} />
+                                <button
+                                  type="submit"
+                                  aria-label={`Block sender ${email.fromEmail}`}
+                                  title="Block sender"
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-[#f8333c]/35 bg-[#f8333c]/10 text-[#b42318] transition-transform duration-200 hover:-translate-y-px"
+                                >
+                                  <Ban size={17} strokeWidth={2.4} aria-hidden />
+                                </button>
+                              </form>
+                            </div>
                           </article>
                         </div>
                       ))
@@ -455,6 +524,34 @@ async function createNotificationChannelAction(formData: FormData) {
   redirect('/settings/email-sources');
 }
 
+async function blockSenderAction(formData: FormData) {
+  'use server';
+
+  const rawEmailId = formData.get('rawEmailId');
+  if (typeof rawEmailId === 'string') {
+    try {
+      await postFifteenAcJson('/email-sources/blocked-senders', { rawEmailId });
+    } catch (error) {
+      redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
+    }
+  }
+  redirect('/settings/email-sources?sender_blocked=1');
+}
+
+async function unblockSenderAction(formData: FormData) {
+  'use server';
+
+  const blockedId = formData.get('blockedId');
+  if (typeof blockedId === 'string') {
+    try {
+      await deleteFifteenAcJson(`/email-sources/blocked-senders/${blockedId}`);
+    } catch (error) {
+      redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
+    }
+  }
+  redirect('/settings/email-sources?sender_unblocked=1');
+}
+
 function getActionToast(
   params: Record<string, string | string[] | undefined>,
 ): EmailSourceActionToastPayload | null {
@@ -463,8 +560,24 @@ function getActionToast(
   const disabled = firstParam(params.gmail_disabled);
   const deleted = firstParam(params.gmail_deleted);
   const detectedReset = firstParam(params.detected_reset);
+  const senderBlocked = firstParam(params.sender_blocked);
+  const senderUnblocked = firstParam(params.sender_unblocked);
   const clearHref = getEmailSourceCleanHref(params);
 
+  if (senderBlocked) {
+    return {
+      type: 'success',
+      message: 'Sender blocked. Future syncs will skip it and it is hidden from the inbox.',
+      clearHref,
+    };
+  }
+  if (senderUnblocked) {
+    return {
+      type: 'info',
+      message: 'Sender unblocked. It will be imported again on the next sync.',
+      clearHref,
+    };
+  }
   if (connected === 'connected') {
     return {
       type: 'success',
@@ -511,6 +624,8 @@ function getEmailSourceCleanHref(params: Record<string, string | string[] | unde
     'gmail_disabled',
     'gmail_deleted',
     'detected_reset',
+    'sender_blocked',
+    'sender_unblocked',
   ]);
   const cleanParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
