@@ -1,30 +1,43 @@
 'use client';
 
-import { useAuth, useSignUp } from '@clerk/nextjs';
+import { useSignUp } from '@clerk/nextjs';
 import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AuthShell } from '../../components/AuthShell';
 
-function getClerkErrorMessage(error: unknown): string {
+function getClerkErrors(error: unknown): Array<{ code?: string; message?: string }> {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
+    return (error as { errors?: Array<{ code?: string; message?: string }> }).errors ?? [];
   }
+  return [];
+}
+
+function isAlreadySignedInError(error: unknown): boolean {
+  return getClerkErrors(error).some(
+    (e) =>
+      e.code === 'session_exists' ||
+      e.code === 'identifier_already_signed_in' ||
+      (e.message ?? '').toLowerCase().includes('already signed in'),
+  );
+}
+
+function getClerkErrorMessage(error: unknown): string {
+  const errors = getClerkErrors(error) as Array<{
+    code?: string;
+    message?: string;
+    longMessage?: string;
+  }>;
+  const first = errors[0];
+  if (first?.longMessage) return first.longMessage;
+  if (first?.message) return first.message;
+  if (first?.code) return first.code;
   return 'No fue posible crear la cuenta.';
 }
 
 export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const router = useRouter();
   const { isLoaded, signUp, setActive } = useSignUp();
-  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,13 +45,6 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Already authenticated: skip the form and continue to the initiating product.
-  useEffect(() => {
-    if (authLoaded && isSignedIn) {
-      router.replace(redirectTarget);
-    }
-  }, [authLoaded, isSignedIn, redirectTarget, router]);
 
   const handleCreateAccount = async () => {
     if (!isLoaded) return;
@@ -71,6 +77,10 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
 
       setError('No se pudo iniciar el registro. Intenta de nuevo.');
     } catch (err) {
+      if (isAlreadySignedInError(err)) {
+        router.replace(redirectTarget);
+        return;
+      }
       setError(getClerkErrorMessage(err));
     } finally {
       setIsSubmitting(false);
