@@ -35,8 +35,8 @@ apps/
   four-yc-mobile/
   eight-dd-web/            # dishes.17suit.com
   eight-dd-mobile/
-  fourteen-cp-web/         # cash-pulse.17suit.com
-  fourteen-cp-mobile/
+  fifteen-ac-web/         # cash-pulse.17suit.com
+  fifteen-ac-mobile/
 
 packages/
   core/                              # API client, auth, env, logging, analytics, flags
@@ -50,7 +50,7 @@ packages/
     one-plan-trip/
     four-you-closet/
     eight-dream-dishes/
-    fourteen-cash-pulse/
+    fifteen-all-check/
   typescript-config/                 # shared TS configs
   eslint-config/                     # shared ESLint configs
   tailwind-config/                   # shared Tailwind baseline (optional per app)
@@ -193,9 +193,9 @@ pnpm --filter @17suit/tooling product:new <product-slug> <subdomain>
 
 4. Deploy only affected packages/apps via Turborepo in CI.
 
-## Fourteen Cash Pulse
+## Fifteen All Check
 
-Finance cockpit product docs live in [docs/fourteen-cash-pulse.md](./docs/fourteen-cash-pulse.md).
+Finance cockpit product docs live in [docs/fifteen-all-check.md](./docs/fifteen-all-check.md).
 
 ## Deployment Control
 

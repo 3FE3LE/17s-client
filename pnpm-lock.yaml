@@ -100,14 +100,14 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
-  apps/fourteen-cp-mobile:
+  apps/fifteen-ac-mobile:
     dependencies:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@17suit/module-fourteen-cash-pulse':
+      '@17suit/module-fifteen-all-check':
         specifier: workspace:*
-        version: link:../../packages/modules/fourteen-cash-pulse
+        version: link:../../packages/modules/fifteen-all-check
       '@17suit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -167,14 +167,14 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
-  apps/fourteen-cp-web:
+  apps/fifteen-ac-web:
     dependencies:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@17suit/module-fourteen-cash-pulse':
+      '@17suit/module-fifteen-all-check':
         specifier: workspace:*
-        version: link:../../packages/modules/fourteen-cash-pulse
+        version: link:../../packages/modules/fifteen-all-check
       '@17suit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -514,7 +514,7 @@ importers:
         specifier: ^8.18.2
         version: 8.56.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
 
-  packages/modules/fourteen-cash-pulse:
+  packages/modules/fifteen-all-check:
     dependencies:
       '@17suit/core':
         specifier: workspace:*

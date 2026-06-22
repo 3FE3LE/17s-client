@@ -29,7 +29,7 @@ function resolveRedirectTarget(rawValue: string | null): string {
     return rawValue;
   }
   const allowedOrigins = [
-    process.env.NEXT_PUBLIC_FOURTEEN_CP_WEB_URL,
+    process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL,
     process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
     typeof window === 'undefined' ? undefined : window.location.origin,
   ]

@@ -46,7 +46,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 { label: 'One Plan Trip', href: '/one-plan-trip' },
                 { label: 'Four You Closet', href: '/four-you-closet' },
                 { label: 'Eight Dream Dishes', href: '/eight-dream-dishes' },
-                { label: 'Fourteen Cash Pulse', href: '/fourteen-cash-pulse' },
+                { label: 'Fifteen All Check', href: '/fifteen-all-check' },
               ]}
             />
           </AppProviders>

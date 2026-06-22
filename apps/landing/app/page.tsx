@@ -23,8 +23,8 @@ const products = [
     tagline: 'Gestión de turnos y seguimiento clínico',
   },
   {
-    slug: 'fourteen-cash-pulse',
-    name: 'Fourteen Cash Pulse',
+    slug: 'fifteen-all-check',
+    name: 'Fifteen All Check',
     tagline: 'Cockpit financiero personal con evidencia',
   },
   {

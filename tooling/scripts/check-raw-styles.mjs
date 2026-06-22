@@ -8,7 +8,7 @@ const scanRoots = scanAll
   ? ['apps', 'packages']
   : [
       'apps/seven-rc-web/app/page.tsx',
-      'apps/fourteen-cp-web/components',
+      'apps/fifteen-ac-web/components',
       'packages/ui-web/src/components/AppButton.tsx',
       'packages/ui-web/src/components/AppCard.tsx',
       'packages/ui-web/src/components/AppInput.tsx',

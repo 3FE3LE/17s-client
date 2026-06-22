@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Fifteen All Check",
+    "slug": "fifteen-ac-mobile",
+    "scheme": "fifteen-ac-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "jsEngine": "hermes",
+    "splash": {
+      "backgroundColor": "#0B1020"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"]
+  }
+}

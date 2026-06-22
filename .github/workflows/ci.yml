@@ -7,7 +7,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   TURBO_SCM_BASE: origin/main
-  CI_ACTIVE_WEB_APPS: '@17suit/admin,@17suit/landing,@17suit/seven-rc-web,@17suit/fourteen-cp-web'
+  CI_ACTIVE_WEB_APPS: '@17suit/admin,@17suit/landing,@17suit/seven-rc-web,@17suit/fifteen-ac-web'
 
 jobs:
   quality:

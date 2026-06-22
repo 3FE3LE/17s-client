@@ -9,7 +9,7 @@ const defaultActiveWebApps = [
   '@17suit/admin',
   '@17suit/landing',
   '@17suit/seven-rc-web',
-  '@17suit/fourteen-cp-web',
+  '@17suit/fifteen-ac-web',
 ];
 const activeWebApps = new Set(
   (process.env.CI_ACTIVE_WEB_APPS ?? defaultActiveWebApps.join(','))

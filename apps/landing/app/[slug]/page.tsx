@@ -47,8 +47,8 @@ const products = {
       'Panel operativo para decisiones rapidas',
     ],
   },
-  'fourteen-cash-pulse': {
-    name: 'Fourteen Cash Pulse',
+  'fifteen-all-check': {
+    name: 'Fifteen All Check',
     tagline: 'Cockpit financiero personal con evidencia, revision y fechas reales de pago.',
     summary:
       'Centraliza ingresos, gastos, tarjetas, obligaciones e ingestion inicial desde Outlook/Hotmail sin mezclar datos crudos con el ledger confirmado.',
@@ -105,8 +105,8 @@ const products = {
 type ProductSlug = keyof typeof products;
 
 function getProductAppHref(slug: ProductSlug): string {
-  if (slug === 'fourteen-cash-pulse') {
-    return process.env.NEXT_PUBLIC_FOURTEEN_CP_WEB_URL ?? 'http://localhost:3003/';
+  if (slug === 'fifteen-all-check') {
+    return process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL ?? 'http://localhost:3015/';
   }
 
   return `/${slug}`;

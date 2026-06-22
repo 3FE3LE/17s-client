@@ -45,11 +45,11 @@ baseline every `apps/*-web` must match (configs, styles, auth shell, deploy).
 
 ## Dev port allocation
 
-| App             | Port |
-| --------------- | ---- |
-| landing         | 3000 |
-| fourteen-cp-web | 3003 |
-| seven-rc-web    | 3007 |
-| admin           | 3018 |
+| App            | Port |
+| -------------- | ---- |
+| landing        | 3000 |
+| fifteen-ac-web | 3015 |
+| seven-rc-web   | 3007 |
+| admin          | 3018 |
 
 New apps: pick the next free port and add it here.
