@@ -1,7 +1,7 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppLinkAction } from '@17suit/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, type FormEvent } from 'react';
 import { AuthFormError } from '../components/AuthFormError';

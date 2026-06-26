@@ -3,7 +3,32 @@
 import { buttonRecipe, cardRecipe, cx, pageContainerRecipe } from '@17suit/design-system';
 import { LogOut } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { ElementType, PropsWithChildren, ReactNode } from 'react';
+import {
+  useSyncExternalStore,
+  type CSSProperties,
+  type ElementType,
+  type PropsWithChildren,
+  type ReactNode,
+} from 'react';
+
+// Scroll distance (px) over which the header fully shrinks.
+const SHRINK_RANGE = 160;
+
+function subscribeToScroll(onChange: () => void) {
+  window.addEventListener('scroll', onChange, { passive: true });
+  return () => window.removeEventListener('scroll', onChange);
+}
+
+// Continuous 0 -> 1 scroll progress over SHRINK_RANGE, without useEffect
+// (external-store subscription). Quantized so it only re-renders on a
+// meaningful change. Drives the sticky header shrink via a CSS variable.
+function useScrollShrinkProgress(): number {
+  return useSyncExternalStore(
+    subscribeToScroll,
+    () => Math.round(Math.min(1, Math.max(0, window.scrollY / SHRINK_RANGE)) * 50) / 50,
+    () => 0,
+  );
+}
 
 export type AppWorkspaceNavItem = {
   href: string;
@@ -38,6 +63,7 @@ export function AppWorkspaceShell({
   linkComponent: LinkComponent = 'a',
   children,
 }: AppWorkspaceShellProps) {
+  const shrink = useScrollShrinkProgress();
   return (
     <main className="relative min-h-screen bg-suit-canvas text-text">
       <div
@@ -130,6 +156,7 @@ export function AppWorkspaceShell({
 
         <section className="grid content-start gap-[var(--spacing-lg)] px-[var(--spacing-md)] py-[var(--spacing-lg)] md:px-[var(--spacing-xl)] lg:px-[var(--spacing-x2l)]">
           <header
+            style={{ '--app-hdr': shrink } as CSSProperties}
             className={cx(
               cardRecipe({ variant: 'workspaceHeader' }),
               'app-workspace-header-sticky',
