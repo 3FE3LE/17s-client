@@ -32,7 +32,7 @@ export function AppTypography({
         fontFamily: typeStyle.webFamily,
         fontWeight: typeStyle.fontWeight,
         fontSize: typeStyle.fontSize,
-        lineHeight: typeStyle.fontSize * typeStyle.lineHeightRecommended,
+        lineHeight: typeStyle.lineHeightRecommended,
         letterSpacing: typeStyle.letterSpacingEm,
         ...style,
       }}

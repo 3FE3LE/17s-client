@@ -64,7 +64,7 @@ export function AppEmpty({
           fontFamily: subtitleType.webFamily,
           fontWeight: subtitleType.fontWeight,
           fontSize: subtitleType.fontSize,
-          lineHeight: subtitleType.fontSize * subtitleType.lineHeightRecommended,
+          lineHeight: subtitleType.lineHeightRecommended,
           letterSpacing: subtitleType.letterSpacingEm,
         }}
       >
@@ -78,7 +78,7 @@ export function AppEmpty({
             fontFamily: bodyType.webFamily,
             fontWeight: bodyType.fontWeight,
             fontSize: bodyType.fontSize,
-            lineHeight: bodyType.fontSize * bodyType.lineHeightRecommended,
+            lineHeight: bodyType.lineHeightRecommended,
             letterSpacing: bodyType.letterSpacingEm,
             maxWidth: 480,
           }}

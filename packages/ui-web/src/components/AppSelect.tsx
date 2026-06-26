@@ -107,8 +107,8 @@ export function AppSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className={`flex min-h-11 w-full items-center justify-between gap-sm rounded-md border bg-surface px-3 text-left font-zilla text-md leading-[1.5] tracking-normal ${
-          error ? 'border-destructive' : 'border-black/20'
+        className={`flex min-h-11 w-full items-center justify-between gap-sm rounded-[var(--radius-control)] border bg-surface px-3 text-left font-zilla text-md leading-[1.5] tracking-normal ${
+          error ? 'border-destructive' : 'border-border-strong'
         } ${disabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} ${
           selectedOption ? 'text-text' : 'text-muted'
         }`}
@@ -122,7 +122,7 @@ export function AppSelect({
       <div
         role="listbox"
         aria-hidden={!open}
-        className="overflow-hidden rounded-lg border border-black/20 bg-background"
+        className="overflow-hidden rounded-[var(--radius-md)] border border-border-default bg-background"
         style={{
           maxHeight: open ? 280 : 0,
           opacity: open ? 1 : 0,
@@ -131,7 +131,7 @@ export function AppSelect({
           pointerEvents: open ? 'auto' : 'none',
         }}
       >
-        <div className="border-b border-black/20 px-md py-sm font-zilla text-sm leading-[1.5] tracking-normal text-text">
+        <div className="border-b border-border-default px-md py-sm font-zilla text-sm leading-[1.5] tracking-normal text-text">
           {resolvedLabel}
         </div>
         <div className="max-h-[220px] overflow-y-auto py-xs">

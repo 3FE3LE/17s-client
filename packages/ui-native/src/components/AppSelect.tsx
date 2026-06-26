@@ -49,8 +49,8 @@ export function AppSelect({
       ) : null}
 
       <View
-        className={`min-h-11 justify-center rounded-md border bg-surface px-3 ${
-          error ? 'border-destructive' : 'border-black/20'
+        className={`min-h-11 justify-center rounded-[var(--radius-control)] border bg-surface px-3 ${
+          error ? 'border-destructive' : 'border-border-strong'
         } ${disabled ? 'opacity-75' : ''}`}
       >
         <Picker

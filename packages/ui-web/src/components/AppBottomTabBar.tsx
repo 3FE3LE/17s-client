@@ -36,7 +36,7 @@ function getActiveColors(tone: Tone, theme: ReturnType<typeof useAppTheme>['them
 export function AppBottomTabBar({ items, tone, showLabels = true }: AppBottomTabBarProps) {
   const { theme } = useAppTheme();
   const buttonType = theme.typography.styles.button;
-  const lineHeight = buttonType.fontSize * buttonType.lineHeightRecommended;
+  const lineHeight = buttonType.lineHeightRecommended;
 
   return (
     <div

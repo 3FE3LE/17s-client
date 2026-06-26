@@ -1,9 +1,10 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppLinkAction } from '@17suit/ui';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useMemo, useState, type FormEvent } from 'react';
+import { AuthFormError } from '../components/AuthFormError';
 import { AuthShell } from '../components/AuthShell';
 import { resolveRedirectTarget } from '../lib/auth-redirect';
 
@@ -38,7 +39,8 @@ function ForgotPasswordPageContent() {
     return resolveRedirectTarget(searchParams.get('redirect_url'));
   }, [searchParams]);
 
-  const sendResetCode = async () => {
+  const sendResetCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!isLoaded) return;
     setIsSubmitting(true);
     setError(null);
@@ -55,7 +57,8 @@ function ForgotPasswordPageContent() {
     }
   };
 
-  const resetPassword = async () => {
+  const resetPassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!isLoaded) return;
     if (newPassword !== confirmNewPassword) {
       setError('Las contrasenas no coinciden.');
@@ -93,62 +96,66 @@ function ForgotPasswordPageContent() {
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
         {step === 'request' ? (
-          <div className="grid gap-sm">
+          <form className="grid gap-sm" onSubmit={sendResetCode}>
             <AppInput
               type="email"
+              name="email"
               value={email}
               onChangeText={setEmail}
-              label=""
+              label="Correo electronico"
               placeholder="tu@empresa.com"
               autoComplete="email"
+              spellCheck={false}
               required
-              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={sendResetCode} compact>
+            <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Enviando...' : 'Enviar codigo'}
             </AppButton>
             <div id="clerk-captcha" />
-          </div>
+            <AuthFormError message={error} />
+          </form>
         ) : (
-          <div className="grid gap-sm">
+          <form className="grid gap-sm" onSubmit={resetPassword}>
             <AppInput
               type="text"
+              name="code"
               value={code}
               onChangeText={setCode}
-              label=""
+              label="Codigo de verificacion"
               placeholder="Codigo de verificacion"
               autoComplete="one-time-code"
+              spellCheck={false}
               required
-              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
+              name="newPassword"
               value={newPassword}
               onChangeText={setNewPassword}
-              label=""
+              label="Nueva contrasena"
               placeholder="Nueva contrasena"
               autoComplete="new-password"
               required
-              compact
               error={Boolean(error)}
             />
             <AppInput
               type="password"
+              name="confirmNewPassword"
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
-              label=""
+              label="Confirmar nueva contrasena"
               placeholder="Confirmar nueva contrasena"
               autoComplete="new-password"
               required
-              compact
               error={Boolean(error)}
             />
-            <AppButton onPress={resetPassword} compact>
+            <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Actualizando...' : 'Actualizar contrasena'}
             </AppButton>
-          </div>
+            <AuthFormError message={error} />
+          </form>
         )}
 
         <AppLinkAction
@@ -156,12 +163,6 @@ function ForgotPasswordPageContent() {
         >
           Volver a iniciar sesion
         </AppLinkAction>
-
-        {error ? (
-          <AppTypography variant="body" color={suitTheme.colors.destructive} style={{ margin: 0 }}>
-            {error}
-          </AppTypography>
-        ) : null}
       </div>
     </AuthShell>
   );

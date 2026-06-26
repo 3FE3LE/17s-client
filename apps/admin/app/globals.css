@@ -3,6 +3,7 @@
 @import 'tailwindcss';
 @import '@17suit/tailwind-config/theme.css';
 
+@source '../../../packages/design-system/src';
 @source '../../../packages/ui-web/src';
 
 @custom-variant dark (&:where(.dark, .dark *));

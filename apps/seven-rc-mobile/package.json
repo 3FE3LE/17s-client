@@ -47,7 +47,7 @@
     "react-native-web": "^0.21.2",
     "react-native-worklets": "0.5.1",
     "uniwind": "^1.6.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",

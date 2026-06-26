@@ -34,6 +34,7 @@
   --radius-lg: var(--suit-radius-lg);
   --radius-xl: var(--suit-radius-xl);
   --radius-full: var(--suit-radius-full);
+  --radius-control: var(--suit-radius-control);
 
   --text-xs: var(--suit-text-xs);
   --text-sm: var(--suit-text-sm);

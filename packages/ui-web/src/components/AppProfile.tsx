@@ -33,7 +33,7 @@ export function AppProfile({ fullName, email, userId, onSignOut }: AppProfilePro
           color: theme.colors.text,
           fontFamily: subtitleType.webFamily,
           fontSize: subtitleType.fontSize,
-          lineHeight: subtitleType.fontSize * subtitleType.lineHeightRecommended,
+          lineHeight: subtitleType.lineHeightRecommended,
           fontWeight: subtitleType.fontWeight,
           letterSpacing: subtitleType.letterSpacingEm,
         }}
@@ -46,7 +46,7 @@ export function AppProfile({ fullName, email, userId, onSignOut }: AppProfilePro
           color: theme.colors.muted,
           fontFamily: bodyType.webFamily,
           fontSize: bodyType.fontSize,
-          lineHeight: bodyType.fontSize * bodyType.lineHeightRecommended,
+          lineHeight: bodyType.lineHeightRecommended,
           fontWeight: bodyType.fontWeight,
           letterSpacing: bodyType.letterSpacingEm,
         }}
@@ -59,7 +59,7 @@ export function AppProfile({ fullName, email, userId, onSignOut }: AppProfilePro
           color: theme.colors.muted,
           fontFamily: captionType.webFamily,
           fontSize: captionType.fontSize,
-          lineHeight: captionType.fontSize * captionType.lineHeightRecommended,
+          lineHeight: captionType.lineHeightRecommended,
           fontWeight: captionType.fontWeight,
           letterSpacing: captionType.letterSpacingEm,
         }}

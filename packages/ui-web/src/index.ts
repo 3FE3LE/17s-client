@@ -22,6 +22,8 @@ export { AppEmpty } from './components/AppEmpty';
 export type { AppEmptyProps } from './components/AppEmpty';
 export { AppSeparator } from './components/AppSeparator';
 export type { AppSeparatorProps } from './components/AppSeparator';
+export { Separator } from './components/Separator';
+export type { SeparatorProps } from './components/Separator';
 export { AppSkeleton } from './components/AppSkeleton';
 export type { AppSkeletonProps } from './components/AppSkeleton';
 export { AppSpinner } from './components/AppSpinner';
@@ -46,9 +48,23 @@ export { AppWorkspaceShell } from './components/AppWorkspaceShell';
 export type { AppWorkspaceNavItem, AppWorkspaceShellProps } from './components/AppWorkspaceShell';
 export { AppProviders } from './components/AppProviders';
 export { ProductShell } from './components/ProductShell';
-export { AppProductFooter } from './components/AppProductFooter';
+export { ToastProvider, notify } from './feedback/toast';
+export type {
+  NotifyService,
+  ToastId,
+  ToastMessage,
+  ToastOptions,
+  ToastPromiseOptions,
+  ToastProviderProps,
+} from './feedback/toast';
+export {
+  AppProductFooter,
+  appProductFooterButtonStyle,
+  appProductFooterTextLinkStyle,
+} from './components/AppProductFooter';
 export type { AppProductFooterProps, AppProductFooterLink } from './components/AppProductFooter';
 export {
+  Ban,
   Banknote,
   CalendarClock,
   CheckCircle2,

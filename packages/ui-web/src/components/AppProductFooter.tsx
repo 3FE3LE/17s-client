@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 export interface AppProductFooterLink {
   label: string;
@@ -14,8 +14,13 @@ export interface AppProductFooterProps {
   homeHref?: string;
   signInHref?: string;
   signUpHref?: string;
+  isSignedIn?: boolean;
+  signOutControl?: ReactNode;
+  actionControls?: ReactNode;
   productLinks?: AppProductFooterLink[];
+  productLinkControls?: ReactNode;
   legalLinks?: AppProductFooterLink[];
+  legalLinkControls?: ReactNode;
 }
 
 const containerStyle: CSSProperties = {
@@ -51,7 +56,7 @@ const baseButtonStyle: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   textDecoration: 'none',
-  borderRadius: 999,
+  borderRadius: 'var(--radius-md, 8px)',
   border: '1px solid rgba(0, 23, 31, 0.12)',
   padding: '10px 16px',
   fontFamily: '"Zilla Slab", serif',
@@ -61,6 +66,8 @@ const baseButtonStyle: CSSProperties = {
   letterSpacing: '0.0125em',
 };
 
+export const appProductFooterButtonStyle = baseButtonStyle;
+
 const textLinkStyle: CSSProperties = {
   color: 'var(--color-muted, #394448)',
   textDecoration: 'none',
@@ -68,6 +75,8 @@ const textLinkStyle: CSSProperties = {
   fontSize: 16,
   lineHeight: 1.5,
 };
+
+export const appProductFooterTextLinkStyle = textLinkStyle;
 
 function renderLink(link: AppProductFooterLink, index: number) {
   return (
@@ -91,8 +100,13 @@ export function AppProductFooter({
   homeHref = '/',
   signInHref = '/sign-in',
   signUpHref = '/sign-up',
+  isSignedIn = false,
+  signOutControl,
+  actionControls,
   productLinks = [],
+  productLinkControls,
   legalLinks = [],
+  legalLinkControls,
 }: AppProductFooterProps) {
   const year = new Date().getFullYear();
 
@@ -128,40 +142,54 @@ export function AppProductFooter({
           </div>
 
           <div style={actionRowStyle}>
-            <a
-              href={homeHref}
-              style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
-            >
-              Ir al inicio
-            </a>
-            <a
-              href={signInHref}
-              style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
-            >
-              Iniciar sesion
-            </a>
-            <a
-              href={signUpHref}
-              style={{
-                ...baseButtonStyle,
-                color: '#ffffff',
-                border: '1px solid #01695b',
-                background: 'linear-gradient(95deg, #00916e, #007666)',
-                boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
-              }}
-            >
-              Crear cuenta
-            </a>
+            {actionControls ?? (
+              <>
+                <a
+                  href={homeHref}
+                  style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
+                >
+                  Ir al inicio
+                </a>
+                {isSignedIn ? (
+                  signOutControl
+                ) : (
+                  <>
+                    <a
+                      href={signInHref}
+                      style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
+                    >
+                      Iniciar sesion
+                    </a>
+                    <a
+                      href={signUpHref}
+                      style={{
+                        ...baseButtonStyle,
+                        color: '#ffffff',
+                        border: '1px solid #01695b',
+                        background: 'linear-gradient(95deg, #00916e, #007666)',
+                        boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
+                      }}
+                    >
+                      Crear cuenta
+                    </a>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
 
-        {productLinks.length > 0 ? (
+        {productLinkControls ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>{productLinkControls}</div>
+        ) : productLinks.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {productLinks.map((link, index) => renderLink(link, index))}
           </div>
         ) : null}
 
-        {legalLinks.length > 0 ? (
+        {legalLinkControls ? (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>{legalLinkControls}</div>
+        ) : legalLinks.length > 0 ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {legalLinks.map((link, index) => renderLink(link, index))}
           </div>
