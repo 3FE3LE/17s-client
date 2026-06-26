@@ -12,6 +12,17 @@ Start with component/unit tests before browser E2E:
 - Product modules: validators, formatters, query helpers, pure domain functions
 - Auth routing helpers: redirect target sanitization and public route config
 
+## Next Implementation Target
+
+Add the first web unit tests around `apps/landing/app/lib/auth-redirect.ts`.
+
+Scope:
+
+- Add Vitest to the client workspace.
+- Add a `test` script for `@17suit/landing`.
+- Cover allowed relative redirects, disallowed external redirects, configured product origins, and localhost redirects in development.
+- Keep tests pure; do not render Clerk pages or depend on browser navigation.
+
 Recommended initial tooling:
 
 - Web packages/apps: Vitest + React Testing Library
