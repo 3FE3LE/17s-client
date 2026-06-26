@@ -87,6 +87,7 @@ export default async function Page({
       fetchFifteenAcJson<BlockedSender[]>('/email-sources/blocked-senders'),
     ]);
     const senderGroups = groupRawEmails(rawEmails);
+    const refillThreshold = Math.max(5, Math.ceil(targetSenderCount * 0.2));
     const gmailConnection = connections.find((connection) => connection.provider === 'GMAIL');
     const isGmailConnected = gmailConnection?.status === 'active';
 
@@ -312,7 +313,7 @@ export default async function Page({
             </section>
 
             <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
-              <div>
+              <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
                     Discovery inbox
@@ -321,6 +322,15 @@ export default async function Page({
                     Pending sender decisions
                   </h2>
                 </div>
+                {isGmailConnected && senderGroups.length <= refillThreshold ? (
+                  <SyncButton
+                    mode="recent"
+                    body={{ maxResults: 100, targetSenderCount }}
+                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-white px-4 py-[10px] text-sm font-bold text-[#01695b] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Refill queue
+                  </SyncButton>
+                ) : null}
               </div>
               <Separator className="my-[var(--spacing-md)]" />
               <RawEmailsSyncOverlay>
@@ -382,7 +392,6 @@ export default async function Page({
                               rawEmailId={email.id}
                               senderEmail={group.senderEmail}
                               defaultName={group.senderName}
-                              targetSenderCount={targetSenderCount}
                             />
                           </article>
                         </div>

@@ -2,6 +2,7 @@
 
 import { Ban, CheckCircle2 } from '@17suit/ui';
 import { notify } from '@17suit/ui/feedback/toast';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { useGmailSync } from './gmail-sync-controls';
@@ -10,16 +11,15 @@ type SenderDecisionControlsProps = {
   rawEmailId: string;
   senderEmail: string;
   defaultName: string;
-  targetSenderCount: number;
 };
 
 export function SenderDecisionControls({
   rawEmailId,
   senderEmail,
   defaultName,
-  targetSenderCount,
 }: SenderDecisionControlsProps) {
-  const { isSyncing, runSync } = useGmailSync();
+  const router = useRouter();
+  const { isSyncing } = useGmailSync();
   const [name, setName] = useState(defaultName);
   const [isSaving, setIsSaving] = useState(false);
   const disabled = isSaving || isSyncing;
@@ -55,10 +55,7 @@ export function SenderDecisionControls({
           : 'Sender blocked.',
         { id: toastId },
       );
-      runSync('recent', {
-        maxResults: 100,
-        targetSenderCount,
-      });
+      router.refresh();
     } catch (error) {
       notify.error(error instanceof Error ? error.message : 'Could not save sender decision.', {
         id: toastId,
