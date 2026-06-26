@@ -220,6 +220,15 @@ Finance cockpit product docs live in [docs/fifteen-all-check.md](./docs/fifteen-
   - `@17suit/ui/feedback/toast` exposes `ToastProvider` and `notify`.
   - `AppProviders` mounts one global web toaster.
 
+### Current Hardening Checkpoint (2026-06-26)
+
+- Client onboarding docs now match the real baseline: Node 24, pnpm 10.30.3, Expo 54, and React Native 0.81.5.
+- Shared env examples include product redirect URLs, allowed redirect origins, Expo API base URLs, and Clerk JWT template config.
+- `seven-rc-mobile` debug navigation/submission logs were removed after confirming app lint and typecheck.
+- `@17suit/tooling` quality gates now syntax-check monorepo scripts instead of returning no-op success.
+- Frontend testing gap is documented; next implementation target is a Vitest-based unit test layer for landing auth redirect sanitization.
+- The `fix/auth-redirect-loop` branch was updated with `main`; conflicts were resolved by keeping the shared `apps/landing/app/lib/auth-redirect.ts` helper instead of reintroducing inline redirect sanitizers.
+
 ## Deployment Control
 
 - Product preview branches are documented in [docs/deployment-branches.md](./docs/deployment-branches.md).
