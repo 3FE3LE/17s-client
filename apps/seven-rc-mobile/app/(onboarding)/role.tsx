@@ -28,20 +28,16 @@ export default function OnboardingRoleScreen() {
   const handleSetRole = async (role: 'OWNER' | 'PLAYER') => {
     setSubmitError(null);
     setIsSubmittingRole(role);
-    console.log(`[onboarding] submit role -> ${role}`);
 
     try {
       await setRoleMutation.mutateAsync(role);
-      console.log('[onboarding] role saved, redirecting to /home');
       router.replace('/home');
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'No se pudo guardar el rol. Intenta nuevamente.';
-      console.log('[onboarding] role error', message);
       setSubmitError(message);
       Alert.alert('Onboarding', message);
     } finally {
-      console.log('[onboarding] submit done');
       setIsSubmittingRole(null);
     }
   };

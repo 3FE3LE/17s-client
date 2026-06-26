@@ -24,13 +24,11 @@ export default function IndexScreen() {
     }
 
     if (!isSignedIn) {
-      console.log('[nav] index -> /sign-in');
       router.replace('/sign-in');
       return;
     }
 
     if (error) {
-      console.log('[nav] index error -> /role');
       router.replace('/role');
       return;
     }
@@ -40,12 +38,10 @@ export default function IndexScreen() {
     }
 
     if (!role) {
-      console.log('[nav] index no role -> /role');
       router.replace('/role');
       return;
     }
 
-    console.log('[nav] index -> /home');
     router.replace('/home');
   }, [error, isLoading, isLoaded, isSignedIn, role, router, rootNavigationState?.key]);
 

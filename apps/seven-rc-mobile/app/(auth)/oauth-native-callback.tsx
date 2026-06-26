@@ -14,12 +14,10 @@ export default function OAuthNativeCallback() {
     }
 
     if (isSignedIn) {
-      console.log('[nav] oauth-callback -> /');
       router.replace('/');
       return;
     }
 
-    console.log('[nav] oauth-callback -> /sign-in');
     router.replace('/sign-in');
   }, [isLoaded, isSignedIn, rootNavigationState?.key, router]);
 

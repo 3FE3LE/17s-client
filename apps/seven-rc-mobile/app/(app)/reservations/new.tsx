@@ -115,7 +115,6 @@ export default function NewReservationScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     if (!venueId) {
-      console.log('[reservation] missing venueId');
       toast.error('Error', 'Complejo invalido.');
       return;
     }
@@ -125,10 +124,8 @@ export default function NewReservationScreen() {
 
     const startAtIso = startAtDate.toISOString();
     const endAtIso = endAtDate.toISOString();
-    console.log('[reservation] submit', { pitchId: values.pitchId, startAtIso, endAtIso });
 
     if (endAtDate <= startAtDate) {
-      console.log('[reservation] invalid time range');
       toast.error('Horario invalido', 'La hora fin debe ser posterior a la hora de inicio.');
       return;
     }
@@ -141,11 +138,9 @@ export default function NewReservationScreen() {
         invitedCount: toOptionalNumber(values.invitedCount),
         notes: values.notes?.trim() || undefined,
       });
-      console.log('[reservation] success');
       toast.success('Reserva creada', 'Revisa tus reservas en el home.');
       router.replace('/home');
     } catch (error) {
-      console.log('[reservation] error', error);
       const message = error instanceof Error ? error.message : 'No se pudo crear la reserva.';
       toast.error('Error', message);
     }

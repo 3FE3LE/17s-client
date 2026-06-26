@@ -5,11 +5,11 @@ Enterprise-grade multi-product monorepo for 17Suit, designed for scaling from da
 ## Stack
 
 - Node `24.13.1` (mínimo `>=24.0.0 <25`)
-- `pnpm` workspaces (`10.30.0`)
+- `pnpm` workspaces (`10.30.3`)
 - Turborepo
 - TypeScript everywhere
 - Next.js 16 for web surfaces
-- Expo SDK 55 + React Native 0.83 for mobile surfaces
+- Expo SDK 54 + React Native 0.81.5 for mobile surfaces
 - Shared ESLint + TypeScript + Prettier configuration packages
 - Husky + lint-staged pre-commit enforcement
 
@@ -91,6 +91,16 @@ Use app-level `.env` files with shared keys:
 - `APP_ENV=local|staging|production`
 - `API_BASE_URL=...`
 - `FEATURE_FLAG_PROVIDER=memory|launchdarkly|...`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL`
+- `NEXT_PUBLIC_CLERK_SIGN_UP_URL`
+- `NEXT_PUBLIC_FIFTEEN_AC_WEB_URL`
+- `NEXT_PUBLIC_SEVEN_RC_WEB_URL`
+- `NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS`
+- `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `EXPO_PUBLIC_CLERK_JWT_TEMPLATE`
+- `EXPO_PUBLIC_API_BASE_URL`
+- `EXPO_PUBLIC_API_BASE_URL_FALLBACKS`
 
 Examples are provided:
 
@@ -100,7 +110,7 @@ Examples are provided:
 
 ## pnpm 10 Notes
 
-- This repo is pinned to `pnpm@10.30.0` via `packageManager` in root `package.json`.
+- This repo is pinned to `pnpm@10.30.3` via `packageManager` in root `package.json`.
 - pnpm 10 blocks dependency lifecycle scripts by default unless explicitly allowed.
 - Allowed native build dependencies are declared in `pnpm-workspace.yaml` under `onlyBuiltDependencies`:
   - `@swc/core`
@@ -111,7 +121,7 @@ Examples are provided:
 ## Upgrade Notes (Current Baseline)
 
 - Web apps use Next.js 16 (including `proxy.ts` convention replacing deprecated `middleware.ts`).
-- Mobile apps use Expo SDK 55 and React Native 0.83 (New Architecture always on in RN 0.82+).
+- Mobile apps use Expo SDK 54 and React Native 0.81.5.
 
 ## Turborepo Pipeline
 
@@ -226,3 +236,5 @@ This scaffold is intentionally enterprise-oriented and ready for further hardeni
 - add observability exporters in `packages/core/logger`
 - add integration/unit test layers per package/app
 - map each app to isolated deployment targets
+
+Frontend test rollout guidance lives in [docs/frontend-testing-plan.md](./docs/frontend-testing-plan.md).
