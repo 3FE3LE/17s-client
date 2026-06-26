@@ -236,3 +236,5 @@ This scaffold is intentionally enterprise-oriented and ready for further hardeni
 - add observability exporters in `packages/core/logger`
 - add integration/unit test layers per package/app
 - map each app to isolated deployment targets
+
+Frontend test rollout guidance lives in [docs/frontend-testing-plan.md](./docs/frontend-testing-plan.md).
