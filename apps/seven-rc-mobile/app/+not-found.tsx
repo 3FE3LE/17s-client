@@ -8,7 +8,6 @@ export default function NotFound() {
 
   if (rootNavigationState?.key && isLoaded) {
     const target = isSignedIn ? '/' : '/sign-in';
-    console.log(`[nav] not-found -> ${target}`);
     return <Redirect href={target} />;
   }
 
