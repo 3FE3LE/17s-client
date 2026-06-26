@@ -7,18 +7,32 @@ import { useState, type FormEvent } from 'react';
 import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
 
-function getClerkErrorMessage(error: unknown): string {
+function getClerkErrors(error: unknown): Array<{ code?: string; message?: string }> {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
+    return (error as { errors?: Array<{ code?: string; message?: string }> }).errors ?? [];
   }
+  return [];
+}
+
+function isAlreadySignedInError(error: unknown): boolean {
+  return getClerkErrors(error).some(
+    (e) =>
+      e.code === 'session_exists' ||
+      e.code === 'identifier_already_signed_in' ||
+      (e.message ?? '').toLowerCase().includes('already signed in'),
+  );
+}
+
+function getClerkErrorMessage(error: unknown): string {
+  const errors = getClerkErrors(error) as Array<{
+    code?: string;
+    message?: string;
+    longMessage?: string;
+  }>;
+  const first = errors[0];
+  if (first?.longMessage) return first.longMessage;
+  if (first?.message) return first.message;
+  if (first?.code) return first.code;
   return 'No fue posible crear la cuenta.';
 }
 
@@ -65,6 +79,10 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
 
       setError('No se pudo iniciar el registro. Intenta de nuevo.');
     } catch (err) {
+      if (isAlreadySignedInError(err)) {
+        router.replace(redirectTarget);
+        return;
+      }
       setError(getClerkErrorMessage(err));
     } finally {
       setIsSubmitting(false);

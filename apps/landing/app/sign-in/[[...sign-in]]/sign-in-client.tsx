@@ -7,18 +7,34 @@ import { useState, type FormEvent } from 'react';
 import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
 
-function getClerkErrorMessage(error: unknown): string {
+function getClerkErrors(error: unknown): Array<{ code?: string; message?: string }> {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
+    return (error as { errors?: Array<{ code?: string; message?: string }> }).errors ?? [];
   }
+  return [];
+}
+
+// Clerk rejects sign-in attempts when a session is already active
+// (single-session). Treat that as "continue to the product".
+function isAlreadySignedInError(error: unknown): boolean {
+  return getClerkErrors(error).some(
+    (e) =>
+      e.code === 'session_exists' ||
+      e.code === 'identifier_already_signed_in' ||
+      (e.message ?? '').toLowerCase().includes('already signed in'),
+  );
+}
+
+function getClerkErrorMessage(error: unknown): string {
+  const errors = getClerkErrors(error) as Array<{
+    code?: string;
+    message?: string;
+    longMessage?: string;
+  }>;
+  const first = errors[0];
+  if (first?.longMessage) return first.longMessage;
+  if (first?.message) return first.message;
+  if (first?.code) return first.code;
   return 'No fue posible iniciar sesion.';
 }
 
@@ -51,6 +67,10 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
 
       setError('Tu sesion necesita un paso adicional para completarse.');
     } catch (err) {
+      if (isAlreadySignedInError(err)) {
+        router.replace(redirectTarget);
+        return;
+      }
       setError(getClerkErrorMessage(err));
     } finally {
       setIsSubmitting(false);
@@ -67,6 +87,11 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
         redirectUrlComplete: redirectTarget,
       });
     } catch (err) {
+      // Session already active: skip SSO and continue to the product home.
+      if (isAlreadySignedInError(err)) {
+        router.replace(redirectTarget);
+        return;
+      }
       setError(getClerkErrorMessage(err));
     }
   };

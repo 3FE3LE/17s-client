@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, type FormEvent } from 'react';
 import { AuthFormError } from '../components/AuthFormError';
 import { AuthShell } from '../components/AuthShell';
+import { resolveRedirectTarget } from '../lib/auth-redirect';
 
 function getClerkErrorMessage(error: unknown): string {
   if (typeof error === 'object' && error !== null && 'errors' in error) {
@@ -20,35 +21,6 @@ function getClerkErrorMessage(error: unknown): string {
     }
   }
   return 'No fue posible restablecer la contrasena.';
-}
-
-function resolveRedirectTarget(rawValue: string | null): string {
-  if (!rawValue || rawValue.trim().length === 0) {
-    return '/';
-  }
-  if (rawValue.startsWith('/') && !rawValue.startsWith('//')) {
-    return rawValue;
-  }
-  const allowedOrigins = [
-    process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL,
-    process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL,
-    process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
-    typeof window === 'undefined' ? undefined : window.location.origin,
-  ]
-    .flatMap((entry) => entry?.split(',') ?? [])
-    .map((entry) => entry.trim().replace(/\/+$/, ''))
-    .filter(Boolean);
-
-  try {
-    const url = new URL(rawValue);
-    if (allowedOrigins.includes(url.origin)) {
-      return url.toString();
-    }
-  } catch {
-    return '/';
-  }
-
-  return '/';
 }
 
 function ForgotPasswordPageContent() {
