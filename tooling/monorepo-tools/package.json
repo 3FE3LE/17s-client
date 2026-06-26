@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "product:new": "node ../../tooling/generators/create-product.mjs",
-    "build": "echo 'tooling package build not required'",
-    "lint": "echo 'tooling package lint not required'",
-    "typecheck": "echo 'tooling package typecheck not required'",
+    "build": "pnpm run lint",
+    "lint": "node --check ../../tooling/generators/create-product.mjs && node --check ../../tooling/scripts/check-raw-styles.mjs && node --check ../../tooling/scripts/create-preview-branches.mjs && node --check ../../tooling/scripts/deployment-config.mjs && node --check ../../tooling/scripts/run-product-dev.mjs && node --check ../../tooling/scripts/vercel-ignored-build.mjs && node --check ../../tooling/vercel/shared.mjs && node --check ../../tooling/product-template/app-web/postcss.config.mjs && node --check ../../tooling/product-template/app-web/vercel.mjs",
+    "typecheck": "pnpm run lint",
     "clean": "echo 'tooling package clean not required'",
     "dev:product": "node ../../tooling/scripts/run-product-dev.mjs",
     "product": "node ../../tooling/scripts/run-product-dev.mjs",
