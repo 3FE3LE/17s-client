@@ -1,6 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Ban, CheckCircle2, Link2, PauseCircle, Separator, Trash2 } from '@17suit/ui';
+import { Link2, PauseCircle, Separator, Trash2 } from '@17suit/ui';
 
 import { ErrorBlock, FifteenAcShell } from '@/components/fifteen-ac-shell';
 import {
@@ -16,6 +16,7 @@ import {
 } from './email-source-action-toast';
 import { EmailSourceDiscoveryForm } from './email-source-discovery-form';
 import { GmailSyncProvider, RawEmailsSyncOverlay, SyncButton } from './gmail-sync-controls';
+import { SenderDecisionControls } from './sender-decision-controls';
 
 type EmailConnection = {
   id: string;
@@ -63,6 +64,12 @@ type BlockedSender = {
   createdAt: string;
 };
 
+type SenderGroup = {
+  senderEmail: string;
+  senderName: string;
+  emails: [RawEmail, ...RawEmail[]];
+};
+
 export default async function Page({
   searchParams,
 }: {
@@ -70,8 +77,7 @@ export default async function Page({
 }) {
   const params = (await searchParams) ?? {};
   const actionToast = getActionToast(params);
-  const eventFilter = firstParam(params.event_type);
-  const impactFilter = firstParam(params.impact_type);
+  const targetSenderCount = normalizeTargetSenderCount(firstParam(params.targetSenderCount));
 
   try {
     const [connections, rawEmails, channels, blockedSenders] = await Promise.all([
@@ -80,27 +86,10 @@ export default async function Page({
       fetchFifteenAcJson<NotificationChannel[]>('/email-sources/notification-channels'),
       fetchFifteenAcJson<BlockedSender[]>('/email-sources/blocked-senders'),
     ]);
-    const visibleRawEmails = rawEmails.filter((email) => {
-      if (eventFilter && email.eventType !== eventFilter) return false;
-      if (impactFilter && email.financialImpactType !== impactFilter) return false;
-      return true;
-    });
+    const senderGroups = groupRawEmails(rawEmails);
+    const refillThreshold = Math.max(5, Math.ceil(targetSenderCount * 0.2));
     const gmailConnection = connections.find((connection) => connection.provider === 'GMAIL');
-    const classifiedEmails = rawEmails.filter(
-      (email) => email.eventType && email.eventType !== 'UNKNOWN',
-    );
     const isGmailConnected = gmailConnection?.status === 'active';
-    const averageConfidence =
-      classifiedEmails.length > 0
-        ? Math.round(
-            (classifiedEmails.reduce(
-              (sum, email) => sum + Number(email.classificationConfidence ?? 0),
-              0,
-            ) /
-              classifiedEmails.length) *
-              100,
-          )
-        : 0;
 
     return (
       <FifteenAcShell
@@ -145,14 +134,14 @@ export default async function Page({
               <Separator />
               <div className="grid sm:grid-cols-2">
                 <Metric
-                  label="Raw emails"
-                  value={`${rawEmails.length}`}
-                  detail={`${visibleRawEmails.length} visible with filters`}
+                  label="Pending senders"
+                  value={`${senderGroups.length}`}
+                  detail={`${rawEmails.length} email samples · target ${targetSenderCount}`}
                 />
                 <Metric
-                  label="Classifier"
-                  value={averageConfidence > 0 ? `${averageConfidence}%` : 'Pending'}
-                  detail={`${classifiedEmails.length} classified emails`}
+                  label="Decided senders"
+                  value={`${channels.length + blockedSenders.length}`}
+                  detail={`${channels.length} approved · ${blockedSenders.length} blocked`}
                 />
               </div>
             </section>
@@ -324,74 +313,53 @@ export default async function Page({
             </section>
 
             <section className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 p-[var(--spacing-md)] shadow-[0_10px_28px_rgba(0,23,31,0.06)] backdrop-blur-sm">
-              <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+              <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
                   <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
                     Discovery inbox
                   </p>
                   <h2 className="m-0 font-amaranth text-2xl text-brand-dark">
-                    Recent synced emails
+                    Pending sender decisions
                   </h2>
                 </div>
-                {rawEmails.length > 0 ? (
-                  <form className="grid gap-2 md:grid-cols-[220px_220px_auto]">
-                    <select
-                      name="event_type"
-                      defaultValue={eventFilter ?? ''}
-                      className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm text-brand-dark"
-                    >
-                      <option value="">All event types</option>
-                      {eventTypeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      name="impact_type"
-                      defaultValue={impactFilter ?? ''}
-                      className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm text-brand-dark"
-                    >
-                      <option value="">All impacts</option>
-                      {impactTypeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] px-4 py-2 text-sm font-bold text-brand-dark">
-                      Filter
-                    </button>
-                  </form>
+                {isGmailConnected && senderGroups.length <= refillThreshold ? (
+                  <SyncButton
+                    mode="recent"
+                    body={{ maxResults: 100, targetSenderCount }}
+                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-white px-4 py-[10px] text-sm font-bold text-[#01695b] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Refill queue
+                  </SyncButton>
                 ) : null}
               </div>
               <Separator className="my-[var(--spacing-md)]" />
               <RawEmailsSyncOverlay>
-                {rawEmails.length === 0 ? (
+                {senderGroups.length === 0 ? (
                   <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
                     No emails fetched yet. Connect Gmail and run a sync to populate this inbox.
                   </p>
                 ) : (
                   <div className="max-h-[560px] overflow-y-auto pr-1">
-                    {visibleRawEmails.length === 0 ? (
-                      <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
-                        No emails match the current filters.
-                      </p>
-                    ) : (
-                      visibleRawEmails.map((email, index) => (
-                        <div key={email.id}>
+                    {senderGroups.map((group, index) => {
+                      const email = group.emails[0];
+                      return (
+                        <div key={group.senderEmail}>
                           {index > 0 ? <Separator /> : null}
                           <article className="grid gap-3 py-2.5 lg:grid-cols-[minmax(170px,0.72fr)_minmax(220px,1.45fr)_120px_220px] lg:items-center">
                             <div className="min-w-0">
                               <p className="m-0 truncate text-sm font-bold text-brand-dark">
-                                {email.fromName || email.fromEmail}
+                                {group.senderName}
                               </p>
-                              <p className="m-0 truncate text-xs text-muted">{email.fromEmail}</p>
+                              <p className="m-0 truncate text-xs text-muted">{group.senderEmail}</p>
                             </div>
                             <div className="min-w-0">
                               <h3 className="m-0 truncate text-sm font-bold text-brand-dark">
                                 {email.subject}
                               </h3>
+                              <p className="m-0 mt-0.5 text-xs font-bold text-brand-secondary">
+                                {group.emails.length}{' '}
+                                {group.emails.length === 1 ? 'email' : 'emails'} from this sender
+                              </p>
                               {email.snippet ? (
                                 <p className="m-0 mt-0.5 truncate text-xs text-muted">
                                   {email.snippet}
@@ -420,42 +388,15 @@ export default async function Page({
                             >
                               {formatDate(email.receivedAt)}
                             </time>
-                            <div className="flex items-center gap-2">
-                              <form
-                                action={createNotificationChannelAction}
-                                className="flex min-w-0 flex-1 items-center gap-2"
-                              >
-                                <input type="hidden" name="rawEmailId" value={email.id} />
-                                <input
-                                  name="name"
-                                  defaultValue={email.fromName ?? email.fromEmail}
-                                  className="min-w-0 flex-1 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-2.5 py-1.5 text-xs text-brand-dark"
-                                />
-                                <button
-                                  type="submit"
-                                  aria-label={`Approve sender ${email.fromEmail}`}
-                                  title="Approve sender"
-                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-brand-dark text-white transition-transform duration-200 hover:-translate-y-px"
-                                >
-                                  <CheckCircle2 size={17} strokeWidth={2.4} aria-hidden />
-                                </button>
-                              </form>
-                              <form action={blockSenderAction}>
-                                <input type="hidden" name="rawEmailId" value={email.id} />
-                                <button
-                                  type="submit"
-                                  aria-label={`Block sender ${email.fromEmail}`}
-                                  title="Block sender"
-                                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[#f8333c]/35 bg-[#f8333c]/10 text-[#b42318] transition-transform duration-200 hover:-translate-y-px"
-                                >
-                                  <Ban size={17} strokeWidth={2.4} aria-hidden />
-                                </button>
-                              </form>
-                            </div>
+                            <SenderDecisionControls
+                              rawEmailId={email.id}
+                              senderEmail={group.senderEmail}
+                              defaultName={group.senderName}
+                            />
                           </article>
                         </div>
-                      ))
-                    )}
+                      );
+                    })}
                   </div>
                 )}
               </RawEmailsSyncOverlay>
@@ -528,21 +469,6 @@ async function resetDetectedDataAction() {
   redirect('/settings/email-sources?detected_reset=1');
 }
 
-async function createNotificationChannelAction(formData: FormData) {
-  'use server';
-
-  const rawEmailId = formData.get('rawEmailId');
-  const name = formData.get('name');
-  if (typeof rawEmailId === 'string') {
-    await postFifteenAcJson('/email-sources/notification-channels', {
-      rawEmailId,
-      ...(typeof name === 'string' && name.trim().length > 0 ? { name: name.trim() } : {}),
-    });
-  }
-  revalidatePath('/settings/email-sources');
-  redirect('/settings/email-sources?sender_approved=1');
-}
-
 async function removeNotificationChannelAction(formData: FormData) {
   'use server';
 
@@ -556,21 +482,6 @@ async function removeNotificationChannelAction(formData: FormData) {
   }
   revalidatePath('/settings/email-sources');
   redirect('/settings/email-sources?sender_removed=1');
-}
-
-async function blockSenderAction(formData: FormData) {
-  'use server';
-
-  const rawEmailId = formData.get('rawEmailId');
-  if (typeof rawEmailId === 'string') {
-    try {
-      await postFifteenAcJson('/email-sources/blocked-senders', { rawEmailId });
-    } catch (error) {
-      redirect(`/settings/email-sources?gmail_error=${encodeError(error)}`);
-    }
-  }
-  revalidatePath('/settings/email-sources');
-  redirect('/settings/email-sources?sender_blocked=1');
 }
 
 async function unblockSenderAction(formData: FormData) {
@@ -708,33 +619,30 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function normalizeTargetSenderCount(value: string | undefined): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 50;
+  return Math.min(100, Math.max(1, Math.trunc(parsed)));
+}
+
+function groupRawEmails(emails: RawEmail[]): SenderGroup[] {
+  const groups = new Map<string, SenderGroup>();
+  for (const email of emails) {
+    const senderEmail = email.fromEmail.trim().toLowerCase();
+    const existing = groups.get(senderEmail);
+    if (existing) {
+      existing.emails.push(email);
+      continue;
+    }
+    groups.set(senderEmail, {
+      senderEmail,
+      senderName: email.fromName || email.fromEmail,
+      emails: [email],
+    });
+  }
+  return [...groups.values()];
+}
+
 function encodeError(error: unknown): string {
   return encodeURIComponent(error instanceof Error ? error.message : 'Unknown Gmail sync error');
 }
-
-const eventTypeOptions = [
-  'PURCHASE_AUTHORIZATION',
-  'PAYMENT_CONFIRMATION',
-  'CARD_PAYMENT_CONFIRMATION',
-  'BILL_ISSUED',
-  'BILL_DUE_REMINDER',
-  'STATEMENT_AVAILABLE',
-  'SUBSCRIPTION_CHARGE',
-  'SUBSCRIPTION_INVOICE',
-  'REFUND_CONFIRMATION',
-  'TRANSFER_SENT',
-  'TRANSFER_RECEIVED',
-  'INCOME_RECEIVED',
-  'SECURITY_NOTIFICATION',
-  'MARKETING',
-  'UNKNOWN',
-];
-
-const impactTypeOptions = [
-  'CREATES_EXPENSE',
-  'CREATES_INCOME',
-  'REDUCES_CARD_DEBT',
-  'CREATES_PAYABLE',
-  'INFORMATION_ONLY',
-  'UNKNOWN',
-];

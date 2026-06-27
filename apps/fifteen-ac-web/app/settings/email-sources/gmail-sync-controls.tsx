@@ -27,6 +27,8 @@ type SyncJob = {
   status: 'pending' | 'processing' | 'processed' | 'failed' | 'ignored';
   fetchedMessages: number;
   parsedCandidates: number;
+  pendingSenders: number;
+  targetSenderCount: number;
   error: string | null;
 };
 
@@ -96,10 +98,11 @@ export function GmailSyncProvider({ children }: { children: ReactNode }) {
             throw new Error(job.error ?? 'Gmail sync failed.');
           }
 
-          notify.success(
-            `Sync completed. ${job.fetchedMessages} emails stored, ${job.parsedCandidates} candidates added.`,
-            { id: toastId },
-          );
+          const summary =
+            mode === 'recent'
+              ? `${job.pendingSenders} pending senders ready for review.`
+              : `${job.fetchedMessages} emails scanned, ${job.parsedCandidates} candidates added.`;
+          notify.success(summary, { id: toastId });
           router.refresh();
         } catch (error) {
           notify.error(error instanceof Error ? error.message : 'Gmail sync failed.', {

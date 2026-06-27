@@ -8,10 +8,12 @@ import { z } from 'zod';
 
 import { useGmailSync } from './gmail-sync-controls';
 
+const DEFAULT_FINANCE_KEYWORDS =
+  'davibank davivienda nu nubank rappicard rappi pse extracto compra pago factura transaccion transferencia tarjeta abono debito credito';
+
 function buildGmailSearchQuery(days: number, keywords: string): string {
-  const trimmed = keywords.trim();
-  if (!trimmed) return `newer_than:${days}d`;
-  const keywordQuery = `{${trimmed
+  const terms = keywords.trim() || DEFAULT_FINANCE_KEYWORDS;
+  const keywordQuery = `{${terms
     .split(/\s+/)
     .map((keyword) => keyword.trim())
     .filter(Boolean)
@@ -25,17 +27,17 @@ const discoveryFormSchema = z.object({
     .int('Days must be a whole number.')
     .min(1, 'Days must be at least 1.')
     .max(365, 'Days must be 365 or less.'),
-  maxResults: z.coerce
+  targetSenderCount: z.coerce
     .number()
-    .int('Limit must be a whole number.')
-    .min(1, 'Limit must be at least 1.')
-    .max(100, 'Limit must be 100 or less.'),
+    .int('Queue target must be a whole number.')
+    .min(1, 'Queue target must be at least 1.')
+    .max(100, 'Queue target must be 100 or less.'),
   keywords: z.string().trim().max(500, 'Keywords must be 500 characters or less.').optional(),
 });
 
 const discoveryQueryParsers = {
   days: parseAsInteger.withDefault(90),
-  maxResults: parseAsInteger.withDefault(100),
+  targetSenderCount: parseAsInteger.withDefault(50),
   keywords: parseAsString.withDefault(''),
 };
 
@@ -61,12 +63,13 @@ export function EmailSourceDiscoveryForm() {
     const keywords = values.keywords?.trim() ?? '';
     void setQueryValues({
       days: values.days,
-      maxResults: values.maxResults,
+      targetSenderCount: values.targetSenderCount,
       keywords: keywords || null,
     });
     runSync('recent', {
       searchQuery: buildGmailSearchQuery(values.days, keywords),
-      maxResults: values.maxResults,
+      maxResults: 100,
+      targetSenderCount: values.targetSenderCount,
     });
   });
 
@@ -89,15 +92,17 @@ export function EmailSourceDiscoveryForm() {
         {errors.days ? <FieldError message={errors.days.message} /> : null}
       </label>
       <label className="grid gap-1 text-sm font-bold text-brand-dark">
-        Limit
+        Pending senders
         <input
-          {...register('maxResults', { valueAsNumber: true })}
+          {...register('targetSenderCount', { valueAsNumber: true })}
           type="number"
           min="1"
           max="100"
           className="rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.18)] bg-white px-3 py-2 text-sm font-normal text-brand-dark"
         />
-        {errors.maxResults ? <FieldError message={errors.maxResults.message} /> : null}
+        {errors.targetSenderCount ? (
+          <FieldError message={errors.targetSenderCount.message} />
+        ) : null}
       </label>
       <label className="grid gap-1 text-sm font-bold text-brand-dark">
         Keywords
