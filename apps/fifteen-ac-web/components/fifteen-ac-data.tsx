@@ -255,7 +255,7 @@ function estimateImpact(
   }
 }
 
-export async function ReviewScreen() {
+export async function ReviewScreen({ focus = false }: { focus?: boolean } = {}) {
   try {
     const [candidates, categories, accounts, cards] = await Promise.all([
       fetchFifteenAcJson<FifteenAcTransactionCandidate[]>('/transaction-candidates'),
@@ -267,7 +267,12 @@ export async function ReviewScreen() {
     const ready = pending.filter((candidate) => Number(candidate.confidenceScore) >= 0.85);
     const needsCorrection = pending.filter((candidate) => Number(candidate.confidenceScore) < 0.85);
     const rejected = candidates.filter((candidate) => candidate.status === 'REJECTED').slice(0, 8);
+    const postponed = candidates.filter((candidate) => candidate.status === 'POSTPONED');
     const queue = [...needsCorrection, ...ready];
+    // Where the confirm/reject/postpone server actions send the user back to.
+    // In focused mode we return to the same one-at-a-time view, so confirming
+    // the shown card lands on the next pending one (auto-advance).
+    const returnTo = focus ? '/review?view=focus' : '/review';
 
     // One card = evidence on the left, the interpreted movement plus a single
     // atomic confirm form on the right. `expanded` opens the detail fields and
@@ -308,6 +313,7 @@ export async function ReviewScreen() {
           </div>
           <form action={confirmCandidateAction} className="grid gap-2">
             <input type="hidden" name="candidateId" value={candidate.id} />
+            <input type="hidden" name="returnTo" value={returnTo} />
             <div>
               <p className="m-0 font-amaranth text-lg text-brand-dark">
                 {candidate.merchantNameRaw ?? candidate.rawEmail?.fromEmail ?? 'Movimiento'}
@@ -438,6 +444,12 @@ export async function ReviewScreen() {
             <button className={cx(darkSubmitButtonClassName, 'w-full')}>
               Confirmar movimiento
             </button>
+            <button
+              formAction={postponeCandidateAction}
+              className={cx(outlineButtonClassName, 'w-full')}
+            >
+              Posponer
+            </button>
             <details>
               <summary className="cursor-pointer text-center text-xs text-muted">
                 No es un movimiento
@@ -453,6 +465,42 @@ export async function ReviewScreen() {
         </article>
       );
     };
+
+    // Focused mode: one card at a time. Confirming/posponing/rejecting returns
+    // here, so the next pending candidate takes its place — auto-advance.
+    if (focus) {
+      const focusItem = queue[0];
+      return (
+        <FifteenAcShell title="Confirmar movimientos" eyebrow="Modo enfocado">
+          <div className="mx-auto grid w-full max-w-[760px] gap-[var(--spacing-lg)]">
+            <div className="flex items-center justify-between gap-3">
+              <p className="m-0 text-sm text-muted">
+                {queue.length} pendiente{queue.length === 1 ? '' : 's'} en la cola
+              </p>
+              <Link href="/review" className="text-sm font-bold text-brand-secondary">
+                Salir del modo enfocado
+              </Link>
+            </div>
+            {focusItem ? (
+              renderItem(focusItem, true)
+            ) : (
+              <section className={cx(sectionPanelClassName, 'text-center')}>
+                <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Cola al día</h2>
+                <p className="m-0 mt-2 text-muted">No quedan evidencias por confirmar.</p>
+                <div className="mt-[var(--spacing-md)] flex flex-wrap justify-center gap-2">
+                  <Link href="/" className={darkSubmitButtonClassName}>
+                    Ver el panel
+                  </Link>
+                  <Link href="/settings/email-sources" className={outlineButtonClassName}>
+                    Importar más correos
+                  </Link>
+                </div>
+              </section>
+            )}
+          </div>
+        </FifteenAcShell>
+      );
+    }
 
     return (
       <FifteenAcShell title="Confirmar movimientos" eyebrow="Revisión de evidencias">
@@ -471,7 +519,17 @@ export async function ReviewScreen() {
               <p className="m-0 mt-4 text-sm text-muted">
                 {queue.length} pendiente{queue.length === 1 ? '' : 's'} · {ready.length} listo
                 {ready.length === 1 ? '' : 's'} · {needsCorrection.length} por corregir
+                {postponed.length > 0
+                  ? ` · ${postponed.length} pospuesto${postponed.length === 1 ? '' : 's'}`
+                  : ''}
               </p>
+              {queue.length > 0 ? (
+                <div className="mt-[var(--spacing-md)]">
+                  <Link href="/review?view=focus" className={darkSubmitButtonClassName}>
+                    Revisar una a la vez
+                  </Link>
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -526,6 +584,42 @@ export async function ReviewScreen() {
             </>
           )}
 
+          {postponed.length > 0 ? (
+            <section className={sectionPanelClassName}>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className={sectionEyebrowClassName}>Pospuestos</p>
+                  <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Para más tarde</h2>
+                </div>
+                <span className={countBadgeClassName}>{postponed.length}</span>
+              </div>
+              <Separator className="my-[var(--spacing-md)]" />
+              <div className="grid gap-[var(--spacing-sm)]">
+                {postponed.map((candidate) => (
+                  <article
+                    key={candidate.id}
+                    className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.08)] bg-white/60 p-[var(--spacing-sm)]"
+                  >
+                    <div>
+                      <p className="m-0 text-sm font-bold text-brand-dark">
+                        {candidate.merchantNameRaw ?? candidate.rawEmail?.fromEmail ?? 'Movimiento'}
+                      </p>
+                      <p className="m-0 text-xs text-muted">
+                        {formatDate(candidate.occurredAt)} ·{' '}
+                        {formatMoney(candidate.amount, candidate.currencyCode)}
+                      </p>
+                    </div>
+                    <form action={restoreCandidateAction}>
+                      <input type="hidden" name="candidateId" value={candidate.id} />
+                      <input type="hidden" name="returnTo" value={returnTo} />
+                      <button className={outlineButtonClassName}>Retomar</button>
+                    </form>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           {rejected.length > 0 ? (
             <section className={sectionPanelClassName}>
               <div className="flex items-end justify-between gap-3">
@@ -553,6 +647,7 @@ export async function ReviewScreen() {
                     </div>
                     <form action={restoreCandidateAction}>
                       <input type="hidden" name="candidateId" value={candidate.id} />
+                      <input type="hidden" name="returnTo" value={returnTo} />
                       <button className={outlineButtonClassName}>Deshacer</button>
                     </form>
                   </article>
@@ -598,7 +693,7 @@ async function confirmCandidateAction(formData: FormData) {
       creditCardId,
     });
   }
-  redirect('/review');
+  redirect(getReturnTo(formData));
 }
 
 async function rejectCandidateAction(formData: FormData) {
@@ -608,7 +703,17 @@ async function rejectCandidateAction(formData: FormData) {
   if (typeof candidateId === 'string' && candidateId.length > 0) {
     await postFifteenAcJson(`/transaction-candidates/${candidateId}/reject`);
   }
-  redirect('/review');
+  redirect(getReturnTo(formData));
+}
+
+async function postponeCandidateAction(formData: FormData) {
+  'use server';
+
+  const candidateId = formData.get('candidateId');
+  if (typeof candidateId === 'string' && candidateId.length > 0) {
+    await postFifteenAcJson(`/transaction-candidates/${candidateId}/postpone`);
+  }
+  redirect(getReturnTo(formData));
 }
 
 async function restoreCandidateAction(formData: FormData) {
@@ -618,7 +723,14 @@ async function restoreCandidateAction(formData: FormData) {
   if (typeof candidateId === 'string' && candidateId.length > 0) {
     await postFifteenAcJson(`/transaction-candidates/${candidateId}/restore`);
   }
-  redirect('/review');
+  redirect(getReturnTo(formData));
+}
+
+// Only allow returning to a /review path, so a crafted form value can't turn
+// the post-action redirect into an open redirect.
+function getReturnTo(formData: FormData): string {
+  const value = formData.get('returnTo');
+  return typeof value === 'string' && value.startsWith('/review') ? value : '/review';
 }
 
 function getString(value: FormDataEntryValue | null): string | undefined {
