@@ -1,9 +1,9 @@
 import type {
   FifteenAcDashboardOverview,
-  FifteenAcReviewItem,
   FifteenAcTransaction,
 } from '@17suit/module-fifteen-all-check';
 import { cardRecipe, cx, inputRecipe, Separator } from '@17suit/ui';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { DataCard, ErrorBlock, FifteenAcShell } from './fifteen-ac-shell';
 import { fetchFifteenAcJson, patchFifteenAcJson, postFifteenAcJson } from '@/lib/fifteen-ac-server';
@@ -18,6 +18,8 @@ type FifteenAcTransactionCandidate = {
   merchantNameRaw?: string | null;
   cardLast4?: string | null;
   referenceCode?: string | null;
+  accountId?: string | null;
+  creditCardId?: string | null;
   confidenceScore: string | number;
   status: string;
   rawEmail?: {
@@ -106,16 +108,6 @@ const sectionEyebrowClassName =
   'm-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary';
 const countBadgeClassName =
   'rounded-[var(--radius-md)] bg-[#092025] px-3 py-2 text-sm font-bold text-white';
-
-function ReviewMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <article className="border-b border-[rgba(0,23,31,0.08)] p-[var(--spacing-md)] sm:border-r sm:last:border-r-0 lg:border-b-0">
-      <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">{label}</p>
-      <p className="m-0 mt-1 font-amaranth text-3xl leading-none text-brand-dark">{value}</p>
-      <p className="m-0 mt-2 text-sm text-muted">{detail}</p>
-    </article>
-  );
-}
 
 export async function DashboardScreen() {
   try {
@@ -226,366 +218,386 @@ export async function TransactionsScreen() {
   }
 }
 
+const CANDIDATE_TYPE_LABELS: Record<string, string> = {
+  PURCHASE: 'Gasto',
+  FIXED_OBLIGATION: 'Pago de factura',
+  SUBSCRIPTION: 'Suscripción',
+  CARD_PAYMENT: 'Pago de tarjeta',
+  INCOME: 'Ingreso',
+  TRANSFER: 'Transferencia',
+  REFUND: 'Reembolso',
+  FEE: 'Comisión',
+  UNKNOWN: 'Sin clasificar',
+};
+
+function humanType(type: string): string {
+  return CANDIDATE_TYPE_LABELS[type] ?? 'Movimiento';
+}
+
+// Interpreted financial impact shown before confirming, so the user sees what
+// the movement will do to their estimate without reading internal enums.
+function estimateImpact(
+  type: string,
+  amount: string | number,
+  currencyCode: string,
+): { label: string; tone: string } {
+  const money = formatMoney(amount, currencyCode);
+  switch (type) {
+    case 'INCOME':
+    case 'REFUND':
+      return { label: `Ingreso +${money}`, tone: 'text-[#00916e]' };
+    case 'CARD_PAYMENT':
+      return { label: `Pago de tarjeta −${money} · reduce deuda`, tone: 'text-muted' };
+    case 'TRANSFER':
+      return { label: `Transferencia ${money}`, tone: 'text-muted' };
+    default:
+      return { label: `Gasto −${money}`, tone: 'text-[#b3261e]' };
+  }
+}
+
 export async function ReviewScreen() {
   try {
-    const [items, candidates] = await Promise.all([
-      fetchFifteenAcJson<FifteenAcReviewItem[]>('/review-items'),
+    const [candidates, categories, accounts, cards] = await Promise.all([
       fetchFifteenAcJson<FifteenAcTransactionCandidate[]>('/transaction-candidates'),
+      fetchFifteenAcJson<FifteenAcCategory[]>('/categories'),
+      fetchFifteenAcJson<FifteenAcAccount[]>('/accounts'),
+      fetchFifteenAcJson<FifteenAcCreditCard[]>('/credit-cards'),
     ]);
-    const pendingCandidates = candidates.filter(
-      (candidate) => candidate.status === 'PENDING_REVIEW',
-    );
-    const openItems = items.filter((item) => item.status === 'OPEN');
+    const pending = candidates.filter((candidate) => candidate.status === 'PENDING_REVIEW');
+    const ready = pending.filter((candidate) => Number(candidate.confidenceScore) >= 0.85);
+    const needsCorrection = pending.filter((candidate) => Number(candidate.confidenceScore) < 0.85);
+    const rejected = candidates.filter((candidate) => candidate.status === 'REJECTED').slice(0, 8);
+    const queue = [...needsCorrection, ...ready];
+
+    // One card = evidence on the left, the interpreted movement plus a single
+    // atomic confirm form on the right. `expanded` opens the detail fields and
+    // shows the low-confidence hint for the "needs correction" bucket.
+    const renderItem = (candidate: FifteenAcTransactionCandidate, expanded: boolean) => {
+      const impact = estimateImpact(
+        candidate.candidateType,
+        candidate.amount,
+        candidate.currencyCode,
+      );
+      const matchedCard = cards.find((card) => card.last4 === candidate.cardLast4);
+      const defaultSource = candidate.creditCardId
+        ? `card:${candidate.creditCardId}`
+        : candidate.accountId
+          ? `acc:${candidate.accountId}`
+          : matchedCard
+            ? `card:${matchedCard.id}`
+            : '';
+      return (
+        <article key={candidate.id} className={reviewCardClassName}>
+          <div>
+            <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
+              Evidencia
+            </p>
+            {candidate.rawEmail ? (
+              <div className={cx(insetClassName, 'mt-[var(--spacing-sm)] grid gap-1')}>
+                <p className="m-0 text-sm font-bold text-brand-dark">
+                  {candidate.rawEmail.subject}
+                </p>
+                <p className="m-0 break-all text-xs text-muted">{candidate.rawEmail.fromEmail}</p>
+                {candidate.rawEmail.snippet ? (
+                  <p className="m-0 text-sm text-muted">{candidate.rawEmail.snippet}</p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="m-0 mt-[var(--spacing-sm)] text-sm text-muted">Sin correo asociado.</p>
+            )}
+          </div>
+          <form action={confirmCandidateAction} className="grid gap-2">
+            <input type="hidden" name="candidateId" value={candidate.id} />
+            <div>
+              <p className="m-0 font-amaranth text-lg text-brand-dark">
+                {candidate.merchantNameRaw ?? candidate.rawEmail?.fromEmail ?? 'Movimiento'}
+              </p>
+              <p className={cx('m-0 mt-1 text-sm font-bold', impact.tone)}>
+                Impacto estimado: {impact.label}
+              </p>
+              {expanded ? (
+                <p className="m-0 mt-1 text-xs text-muted">
+                  Confianza baja — revisa los datos antes de confirmar.
+                </p>
+              ) : null}
+            </div>
+            <label className="grid gap-1 text-sm font-bold text-brand-dark">
+              Tipo de movimiento
+              <select
+                name="candidateType"
+                defaultValue={candidate.candidateType}
+                className={fieldClasses.control}
+              >
+                {candidateTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {humanType(option.value)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="grid gap-1 text-sm font-bold text-brand-dark">
+                Monto
+                <input
+                  name="amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={String(candidate.amount)}
+                  className={fieldClasses.control}
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-bold text-brand-dark">
+                Fecha
+                <input
+                  name="occurredAt"
+                  type="date"
+                  defaultValue={candidate.occurredAt.slice(0, 10)}
+                  className={fieldClasses.control}
+                />
+              </label>
+            </div>
+            <label className="grid gap-1 text-sm font-bold text-brand-dark">
+              ¿De dónde salió?
+              <select name="source" defaultValue={defaultSource} className={fieldClasses.control}>
+                <option value="">Sin definir</option>
+                {accounts.length > 0 ? (
+                  <optgroup label="Cuentas">
+                    {accounts.map((account) => (
+                      <option key={account.id} value={`acc:${account.id}`}>
+                        {account.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+                {cards.length > 0 ? (
+                  <optgroup label="Tarjetas">
+                    {cards.map((card) => (
+                      <option key={card.id} value={`card:${card.id}`}>
+                        {card.name} *{card.last4}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-bold text-brand-dark">
+              Categoría
+              <select name="categoryId" defaultValue="" className={fieldClasses.control}>
+                <option value="">Sin categoría</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <details {...(expanded ? { open: true } : {})}>
+              <summary className="cursor-pointer text-sm font-bold text-brand-secondary">
+                Ajustar detalles
+              </summary>
+              <div className="mt-2 grid gap-2">
+                <label className="grid gap-1 text-sm font-bold text-brand-dark">
+                  Nombre / comercio
+                  <input
+                    name="merchantNameRaw"
+                    defaultValue={candidate.merchantNameRaw ?? ''}
+                    className={fieldClasses.control}
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="grid gap-1 text-sm font-bold text-brand-dark">
+                    Moneda
+                    <input
+                      name="currencyCode"
+                      maxLength={3}
+                      defaultValue={candidate.currencyCode}
+                      className={cx(fieldClasses.control, 'uppercase')}
+                    />
+                  </label>
+                  <label className="grid gap-1 text-sm font-bold text-brand-dark">
+                    Tarjeta (4 díg.)
+                    <input
+                      name="cardLast4"
+                      maxLength={4}
+                      defaultValue={candidate.cardLast4 ?? ''}
+                      className={fieldClasses.control}
+                    />
+                  </label>
+                </div>
+                <label className="grid gap-1 text-sm font-bold text-brand-dark">
+                  Referencia
+                  <input
+                    name="referenceCode"
+                    defaultValue={candidate.referenceCode ?? ''}
+                    className={fieldClasses.control}
+                  />
+                </label>
+              </div>
+            </details>
+            <button className={cx(darkSubmitButtonClassName, 'w-full')}>
+              Confirmar movimiento
+            </button>
+            <details>
+              <summary className="cursor-pointer text-center text-xs text-muted">
+                No es un movimiento
+              </summary>
+              <button
+                formAction={rejectCandidateAction}
+                className={cx(outlineButtonClassName, 'mt-2 w-full')}
+              >
+                Descartar evidencia
+              </button>
+            </details>
+          </form>
+        </article>
+      );
+    };
 
     return (
-      <FifteenAcShell title="Review queue" eyebrow="Candidates and evidence">
+      <FifteenAcShell title="Confirmar movimientos" eyebrow="Revisión de evidencias">
         <div className="grid gap-[var(--spacing-lg)]">
           <section className="overflow-hidden rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/85 shadow-[0_12px_30px_rgba(0,23,31,0.08)] backdrop-blur-sm">
             <div className="relative p-[clamp(20px,3vw,36px)]">
               <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,#00916e,#35a7ff,#092025)]" />
-              <p className={sectionEyebrowClassName}>Review pipeline</p>
-              <h2 className="m-0 mt-2 max-w-[16ch] font-arvo text-[clamp(34px,5vw,56px)] font-bold leading-[1.06] tracking-minus1_5 text-text">
-                Classify, confirm, then post.
+              <p className={sectionEyebrowClassName}>Cola de revisión</p>
+              <h2 className="m-0 mt-2 max-w-[18ch] font-arvo text-[clamp(34px,5vw,56px)] font-bold leading-[1.06] tracking-minus1_5 text-text">
+                Confirma cada movimiento.
               </h2>
               <p className="m-0 mt-3 max-w-[720px] text-md leading-[1.5] text-muted">
-                Parsed candidates and open review items land here. Confirm what is real, fix what is
-                off, and accept it to post the transaction to your ledger.
+                Cada evidencia se traduce en un movimiento de dinero. Revisa el impacto estimado,
+                corrige lo que haga falta y confírmalo para sumarlo a tu estimación.
               </p>
-            </div>
-            <Separator />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3">
-              <ReviewMetric
-                label="Pending candidates"
-                value={`${pendingCandidates.length}`}
-                detail="awaiting accept or reject"
-              />
-              <ReviewMetric
-                label="Open review items"
-                value={`${openItems.length}`}
-                detail={`${items.length} total in queue`}
-              />
-              <ReviewMetric
-                label="Parsed candidates"
-                value={`${candidates.length}`}
-                detail="across all statuses"
-              />
+              <p className="m-0 mt-4 text-sm text-muted">
+                {queue.length} pendiente{queue.length === 1 ? '' : 's'} · {ready.length} listo
+                {ready.length === 1 ? '' : 's'} · {needsCorrection.length} por corregir
+              </p>
             </div>
           </section>
 
-          <section className={sectionPanelClassName}>
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className={sectionEyebrowClassName}>Parsed candidates</p>
-                <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Awaiting your call</h2>
+          {queue.length === 0 ? (
+            <section className={cx(sectionPanelClassName, 'text-center')}>
+              <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Cola al día</h2>
+              <p className="m-0 mt-2 text-muted">No hay evidencias pendientes por confirmar.</p>
+              <div className="mt-[var(--spacing-md)] flex flex-wrap justify-center gap-2">
+                <Link href="/" className={darkSubmitButtonClassName}>
+                  Ver el panel
+                </Link>
+                <Link href="/settings/email-sources" className={outlineButtonClassName}>
+                  Importar más correos
+                </Link>
               </div>
-              <span className={countBadgeClassName}>{pendingCandidates.length}</span>
-            </div>
-            <Separator className="my-[var(--spacing-md)]" />
-            {pendingCandidates.length === 0 ? (
-              <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
-                No pending candidates yet.
-              </p>
-            ) : (
-              <div className="grid gap-[var(--spacing-sm)]">
-                {pendingCandidates.map((candidate) => (
-                  <article key={candidate.id} className={reviewCardClassName}>
+            </section>
+          ) : (
+            <>
+              {needsCorrection.length > 0 ? (
+                <section className={sectionPanelClassName}>
+                  <div className="flex items-end justify-between gap-3">
                     <div>
-                      <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
-                        {candidate.candidateType} · confidence{' '}
-                        {Math.round(Number(candidate.confidenceScore) * 100)}%
+                      <p className={sectionEyebrowClassName}>Necesitan corrección</p>
+                      <h2 className="m-0 font-amaranth text-2xl text-brand-dark">
+                        Revisa antes de confirmar
+                      </h2>
+                    </div>
+                    <span className={countBadgeClassName}>{needsCorrection.length}</span>
+                  </div>
+                  <Separator className="my-[var(--spacing-md)]" />
+                  <div className="grid gap-[var(--spacing-sm)]">
+                    {needsCorrection.map((candidate) => renderItem(candidate, true))}
+                  </div>
+                </section>
+              ) : null}
+
+              {ready.length > 0 ? (
+                <section className={sectionPanelClassName}>
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className={sectionEyebrowClassName}>Listos para confirmar</p>
+                      <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Alta confianza</h2>
+                    </div>
+                    <span className={countBadgeClassName}>{ready.length}</span>
+                  </div>
+                  <Separator className="my-[var(--spacing-md)]" />
+                  <div className="grid gap-[var(--spacing-sm)]">
+                    {ready.map((candidate) => renderItem(candidate, false))}
+                  </div>
+                </section>
+              ) : null}
+            </>
+          )}
+
+          {rejected.length > 0 ? (
+            <section className={sectionPanelClassName}>
+              <div className="flex items-end justify-between gap-3">
+                <div>
+                  <p className={sectionEyebrowClassName}>Descartados recientemente</p>
+                  <h2 className="m-0 font-amaranth text-2xl text-brand-dark">¿Te equivocaste?</h2>
+                </div>
+                <span className={countBadgeClassName}>{rejected.length}</span>
+              </div>
+              <Separator className="my-[var(--spacing-md)]" />
+              <div className="grid gap-[var(--spacing-sm)]">
+                {rejected.map((candidate) => (
+                  <article
+                    key={candidate.id}
+                    className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[rgba(0,23,31,0.08)] bg-white/60 p-[var(--spacing-sm)]"
+                  >
+                    <div>
+                      <p className="m-0 text-sm font-bold text-brand-dark">
+                        {candidate.merchantNameRaw ?? candidate.rawEmail?.fromEmail ?? 'Movimiento'}
                       </p>
-                      <h3 className="m-0 mt-1 font-amaranth text-lg text-brand-dark">
-                        {candidate.merchantNameRaw ??
-                          candidate.rawEmail?.fromEmail ??
-                          'Email candidate'}
-                      </h3>
-                      <p className="m-0 mt-1 text-muted">
+                      <p className="m-0 text-xs text-muted">
                         {formatDate(candidate.occurredAt)} ·{' '}
                         {formatMoney(candidate.amount, candidate.currencyCode)}
-                        {candidate.cardLast4 ? ` · card *${candidate.cardLast4}` : ''}
                       </p>
-                      {candidate.rawEmail ? (
-                        <div className={cx(insetClassName, 'mt-[var(--spacing-sm)] grid gap-1')}>
-                          <p className="m-0 text-sm font-bold text-brand-dark">
-                            {candidate.rawEmail.subject}
-                          </p>
-                          <p className="m-0 break-all text-xs text-muted">
-                            {candidate.rawEmail.fromEmail}
-                          </p>
-                          {candidate.rawEmail.snippet ? (
-                            <p className="m-0 text-sm text-muted">{candidate.rawEmail.snippet}</p>
-                          ) : null}
-                          <p className="m-0 text-xs text-muted">
-                            Detected: {candidate.rawEmail.eventType ?? candidate.candidateType} ·{' '}
-                            {candidate.rawEmail.financialImpactType ?? 'UNKNOWN'}
-                          </p>
-                        </div>
-                      ) : null}
                     </div>
-                    <div className="grid gap-2">
-                      <form action={updateCandidateAction} className="grid gap-2">
-                        <input type="hidden" name="candidateId" value={candidate.id} />
-                        <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                          Type
-                          <select
-                            name="candidateType"
-                            defaultValue={candidate.candidateType}
-                            className={fieldClasses.control}
-                          >
-                            {candidateTypeOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                          Name / merchant
-                          <input
-                            name="merchantNameRaw"
-                            defaultValue={candidate.merchantNameRaw ?? ''}
-                            className={fieldClasses.control}
-                          />
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                            Amount
-                            <input
-                              name="amount"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              defaultValue={String(candidate.amount)}
-                              className={fieldClasses.control}
-                            />
-                          </label>
-                          <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                            Currency
-                            <input
-                              name="currencyCode"
-                              maxLength={3}
-                              defaultValue={candidate.currencyCode}
-                              className={cx(fieldClasses.control, 'uppercase')}
-                            />
-                          </label>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                            Card last 4
-                            <input
-                              name="cardLast4"
-                              maxLength={4}
-                              defaultValue={candidate.cardLast4 ?? ''}
-                              className={fieldClasses.control}
-                            />
-                          </label>
-                          <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                            Reference
-                            <input
-                              name="referenceCode"
-                              defaultValue={candidate.referenceCode ?? ''}
-                              className={fieldClasses.control}
-                            />
-                          </label>
-                        </div>
-                        <button className={outlineButtonClassName}>Save classification</button>
-                      </form>
-                      <form action={acceptCandidateAction}>
-                        <input type="hidden" name="candidateId" value={candidate.id} />
-                        <button className={cx(darkSubmitButtonClassName, 'w-full')}>Accept</button>
-                      </form>
-                      <form action={rejectCandidateAction}>
-                        <input type="hidden" name="candidateId" value={candidate.id} />
-                        <button className={cx(outlineButtonClassName, 'w-full')}>Reject</button>
-                      </form>
-                    </div>
+                    <form action={restoreCandidateAction}>
+                      <input type="hidden" name="candidateId" value={candidate.id} />
+                      <button className={outlineButtonClassName}>Deshacer</button>
+                    </form>
                   </article>
                 ))}
               </div>
-            )}
-          </section>
-
-          <section className={sectionPanelClassName}>
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className={sectionEyebrowClassName}>Review items</p>
-                <h2 className="m-0 font-amaranth text-2xl text-brand-dark">Needs a decision</h2>
-              </div>
-              <span className={countBadgeClassName}>{items.length}</span>
-            </div>
-            <Separator className="my-[var(--spacing-md)]" />
-            {items.length === 0 ? (
-              <p className="m-0 rounded-[var(--radius-md)] border border-dashed border-[rgba(0,23,31,0.22)] bg-white/60 p-[var(--spacing-md)] text-muted">
-                No review items in the queue.
-              </p>
-            ) : (
-              <div className="grid gap-[var(--spacing-sm)]">
-                {items.map((item) => {
-                  const payload = extractReviewPayload(item.payloadJson);
-                  return (
-                    <article key={item.id} className={reviewCardClassName}>
-                      <div>
-                        <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
-                          {item.type}
-                        </p>
-                        <h3 className="m-0 mt-1 font-amaranth text-lg text-brand-dark">
-                          {payload.title}
-                        </h3>
-                        <p className="m-0 mt-1 text-muted">
-                          {item.status} · {formatDate(item.createdAt)}
-                          {payload.eventType ? ` · ${payload.eventType}` : ''}
-                          {payload.financialImpactType ? ` · ${payload.financialImpactType}` : ''}
-                        </p>
-                        {payload.rawEmail ? (
-                          <div className={cx(insetClassName, 'mt-[var(--spacing-sm)] grid gap-1')}>
-                            <p className="m-0 text-sm font-bold text-brand-dark">
-                              {payload.rawEmail.subject}
-                            </p>
-                            <p className="m-0 break-all text-xs text-muted">
-                              {payload.rawEmail.fromName ? `${payload.rawEmail.fromName} · ` : ''}
-                              {payload.rawEmail.fromEmail}
-                            </p>
-                            {payload.rawEmail.snippet ? (
-                              <p className="m-0 text-sm text-muted">{payload.rawEmail.snippet}</p>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {payload.extractedSummary ? (
-                          <p className="m-0 mt-2 text-sm font-bold text-brand-dark">
-                            Extracted: {payload.extractedSummary}
-                          </p>
-                        ) : null}
-                      </div>
-                      {payload.rawEmailId && item.status === 'OPEN' ? (
-                        <form action={createCandidateFromReviewItemAction} className="grid gap-2">
-                          <input type="hidden" name="rawEmailId" value={payload.rawEmailId} />
-                          <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                            Type
-                            <select
-                              name="candidateType"
-                              defaultValue={payload.suggestedCandidateType ?? 'PURCHASE'}
-                              className={fieldClasses.control}
-                            >
-                              {candidateTypeOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                            Name / merchant
-                            <input
-                              name="merchantNameRaw"
-                              defaultValue={
-                                payload.merchantNameRaw ?? payload.rawEmail?.fromName ?? ''
-                              }
-                              className={fieldClasses.control}
-                            />
-                          </label>
-                          <div className="grid grid-cols-2 gap-2">
-                            <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                              Amount
-                              <input
-                                name="amount"
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                defaultValue={payload.amount ?? ''}
-                                className={fieldClasses.control}
-                              />
-                            </label>
-                            <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                              Currency
-                              <input
-                                name="currencyCode"
-                                maxLength={3}
-                                defaultValue={payload.currencyCode ?? 'COP'}
-                                className={cx(fieldClasses.control, 'uppercase')}
-                              />
-                            </label>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                              Card last 4
-                              <input
-                                name="cardLast4"
-                                maxLength={4}
-                                defaultValue={payload.cardLast4 ?? ''}
-                                className={fieldClasses.control}
-                              />
-                            </label>
-                            <label className="grid gap-1 text-sm font-bold text-brand-dark">
-                              Reference
-                              <input
-                                name="referenceCode"
-                                defaultValue={payload.referenceCode ?? ''}
-                                className={fieldClasses.control}
-                              />
-                            </label>
-                          </div>
-                          <button className={darkSubmitButtonClassName}>Create candidate</button>
-                        </form>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+            </section>
+          ) : null}
         </div>
       </FifteenAcShell>
     );
   } catch (error) {
     return (
-      <FifteenAcShell title="Review queue" eyebrow="Candidates and evidence">
+      <FifteenAcShell title="Confirmar movimientos" eyebrow="Revisión de evidencias">
         <ErrorBlock
-          message={error instanceof Error ? error.message : 'Unable to load review queue'}
+          message={error instanceof Error ? error.message : 'No se pudo cargar la cola de revisión'}
         />
       </FifteenAcShell>
     );
   }
 }
 
-async function acceptCandidateAction(formData: FormData) {
+async function confirmCandidateAction(formData: FormData) {
   'use server';
 
   const candidateId = formData.get('candidateId');
   if (typeof candidateId === 'string' && candidateId.length > 0) {
-    await postFifteenAcJson(`/transaction-candidates/${candidateId}/accept`);
-  }
-  redirect('/review');
-}
+    // The source select packs account vs card into one control as "acc:<id>"
+    // or "card:<id>"; split it back into the two fields the API expects.
+    const source = getString(formData.get('source'));
+    const accountId = source?.startsWith('acc:') ? source.slice(4) : undefined;
+    const creditCardId = source?.startsWith('card:') ? source.slice(5) : undefined;
 
-async function updateCandidateAction(formData: FormData) {
-  'use server';
-
-  const candidateId = formData.get('candidateId');
-  if (typeof candidateId === 'string' && candidateId.length > 0) {
-    await patchFifteenAcJson(`/transaction-candidates/${candidateId}`, {
+    await postFifteenAcJson(`/transaction-candidates/${candidateId}/confirm`, {
       candidateType: getString(formData.get('candidateType')),
       amount: getNumber(formData.get('amount')),
       currencyCode: getString(formData.get('currencyCode'))?.toUpperCase(),
+      occurredAt: getString(formData.get('occurredAt')),
       merchantNameRaw: getString(formData.get('merchantNameRaw')) ?? '',
       cardLast4: getString(formData.get('cardLast4')) ?? '',
       referenceCode: getString(formData.get('referenceCode')) ?? '',
+      categoryId: getString(formData.get('categoryId')),
+      accountId,
+      creditCardId,
     });
   }
-  redirect('/review');
-}
-
-async function createCandidateFromReviewItemAction(formData: FormData) {
-  'use server';
-
-  await postFifteenAcJson('/transaction-candidates/from-raw-email', {
-    rawEmailId: getString(formData.get('rawEmailId')),
-    candidateType: getString(formData.get('candidateType')),
-    amount: getNumber(formData.get('amount')),
-    currencyCode: getString(formData.get('currencyCode'))?.toUpperCase(),
-    merchantNameRaw: getString(formData.get('merchantNameRaw')),
-    cardLast4: getString(formData.get('cardLast4')),
-    referenceCode: getString(formData.get('referenceCode')),
-  });
   redirect('/review');
 }
 
@@ -595,6 +607,16 @@ async function rejectCandidateAction(formData: FormData) {
   const candidateId = formData.get('candidateId');
   if (typeof candidateId === 'string' && candidateId.length > 0) {
     await postFifteenAcJson(`/transaction-candidates/${candidateId}/reject`);
+  }
+  redirect('/review');
+}
+
+async function restoreCandidateAction(formData: FormData) {
+  'use server';
+
+  const candidateId = formData.get('candidateId');
+  if (typeof candidateId === 'string' && candidateId.length > 0) {
+    await postFifteenAcJson(`/transaction-candidates/${candidateId}/restore`);
   }
   redirect('/review');
 }
@@ -922,70 +944,6 @@ function Breakdown({
       </div>
     </article>
   );
-}
-
-function extractReviewPayload(payload: unknown) {
-  const record = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {};
-  const extracted =
-    record.extracted && typeof record.extracted === 'object'
-      ? (record.extracted as Record<string, unknown>)
-      : {};
-  const rawEmail =
-    record.rawEmail && typeof record.rawEmail === 'object'
-      ? (record.rawEmail as Record<string, unknown>)
-      : null;
-  const amount = typeof extracted.amount === 'number' ? extracted.amount : undefined;
-  const currencyCode =
-    typeof extracted.currencyCode === 'string' ? extracted.currencyCode : undefined;
-  const merchantNameRaw =
-    typeof extracted.merchantNameRaw === 'string' ? extracted.merchantNameRaw : undefined;
-  const cardLast4 = typeof extracted.cardLast4 === 'string' ? extracted.cardLast4 : undefined;
-  const referenceCode =
-    typeof extracted.referenceCode === 'string' ? extracted.referenceCode : undefined;
-
-  return {
-    title: typeof record.title === 'string' ? record.title : 'Review item',
-    rawEmailId: typeof record.rawEmailId === 'string' ? record.rawEmailId : undefined,
-    eventType: typeof record.eventType === 'string' ? record.eventType : undefined,
-    financialImpactType:
-      typeof record.financialImpactType === 'string' ? record.financialImpactType : undefined,
-    suggestedCandidateType: suggestCandidateType(record.eventType, record.financialImpactType),
-    amount,
-    currencyCode,
-    merchantNameRaw,
-    cardLast4,
-    referenceCode,
-    extractedSummary: [
-      amount !== undefined && currencyCode ? `${currencyCode} ${amount}` : null,
-      merchantNameRaw,
-      cardLast4 ? `card *${cardLast4}` : null,
-      referenceCode,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-    rawEmail: rawEmail
-      ? {
-          fromEmail: typeof rawEmail.fromEmail === 'string' ? rawEmail.fromEmail : undefined,
-          fromName: typeof rawEmail.fromName === 'string' ? rawEmail.fromName : undefined,
-          subject: typeof rawEmail.subject === 'string' ? rawEmail.subject : 'Email evidence',
-          snippet: typeof rawEmail.snippet === 'string' ? rawEmail.snippet : undefined,
-        }
-      : null,
-  };
-}
-
-function suggestCandidateType(eventType: unknown, impactType: unknown): string | undefined {
-  if (eventType === 'SUBSCRIPTION_CHARGE') return 'SUBSCRIPTION';
-  if (
-    eventType === 'BILL_ISSUED' ||
-    eventType === 'BILL_DUE_REMINDER' ||
-    impactType === 'CREATES_PAYABLE'
-  ) {
-    return 'FIXED_OBLIGATION';
-  }
-  if (eventType === 'CARD_PAYMENT_CONFIRMATION') return 'CARD_PAYMENT';
-  if (impactType === 'CREATES_INCOME') return 'INCOME';
-  return undefined;
 }
 
 function extractId(item: unknown, index: number): string {
