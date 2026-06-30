@@ -23,7 +23,8 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "gen:api-schema": "openapi-typescript ../../17s-server/openapi.json -o src/api-schema.ts"
   },
   "dependencies": {
     "@clerk/clerk-expo": "^2.19.24",
@@ -41,6 +42,7 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
     "@types/react": "~19.1.10",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.8.2"
   }
 }
