@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import { Animated, View } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { useAppTheme } from '@17suit/ui';

@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 'use client';
 
 import { useRouter } from 'next/navigation';

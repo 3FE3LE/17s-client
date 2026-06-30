@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import {
   AppAlert,

@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import { BackHandler, View, useWindowDimensions } from 'react-native';
 import type { PropsWithChildren } from 'react';
 import { useCallback, useEffect, useMemo } from 'react';
