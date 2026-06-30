@@ -8,10 +8,32 @@ import { AppProviders } from '@17suit/ui/app-providers';
 import { SignOutButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import type { Metadata } from 'next';
+import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SevenRcClientProviders } from '@/components/seven-rc-client-providers';
 import './globals.css';
+
+const amaranth = Amaranth({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-amaranth',
+  display: 'swap',
+});
+
+const arvo = Arvo({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-arvo',
+  display: 'swap',
+});
+
+const zillaSlab = Zilla_Slab({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
+  variable: '--font-zilla',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Seven Reservations Club | 17Suit',
@@ -36,7 +58,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   ];
 
   return (
-    <html lang="es">
+    <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
       <body>
         <WebAuthProvider>
           <AppProviders>

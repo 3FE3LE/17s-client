@@ -12,7 +12,9 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": { "bundleIdentifier": "com.seventeensuit.fifteenac" },
+      "android": { "package": "com.seventeensuit.fifteenac" }
     }
   },
   "submit": {
