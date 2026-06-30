@@ -41,7 +41,8 @@
       "@types/react": "19.1.10",
       "@types/react-dom": "19.1.7",
       "react-native-web": "0.21.2",
-      "react-native-svg": "15.12.1"
+      "react-native-svg": "15.12.1",
+      "zod": "4.4.3"
     }
   }
 }
