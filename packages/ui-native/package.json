@@ -14,6 +14,8 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf dist"
   },
   "dependencies": {
@@ -36,6 +38,12 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
     "@types/react": "~19.1.10",
-    "typescript": "^5.8.2"
+    "@types/react-test-renderer": "19.1.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-test-renderer": "19.1.0",
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.9"
   }
 }
