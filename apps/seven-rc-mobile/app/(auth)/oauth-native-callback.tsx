@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import { useEffect } from 'react';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';

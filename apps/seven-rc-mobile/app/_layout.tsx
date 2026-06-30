@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import 'react-native-gesture-handler';
 import '../global.css';
 import { ExpoAuthProvider } from '@17suit/core/auth/expo';

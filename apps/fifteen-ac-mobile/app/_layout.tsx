@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import { ExpoAuthProvider, getExpoAuthRedirect } from '@17suit/core/auth/expo';
 import { AppProviders } from '@17suit/ui';
 import { Slot, usePathname, useRouter } from 'expo-router';

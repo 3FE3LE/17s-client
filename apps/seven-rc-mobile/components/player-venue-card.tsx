@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-imports -- TODO(useEffect): replace react-native Modal / ScrollView with @17suit/ui wrappers. */
+/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import {
   Animated,
   ImageBackground,
