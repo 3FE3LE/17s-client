@@ -28,6 +28,11 @@
       "favicon": "./assets/icon-17suit.png",
       "bundler": "metro"
     },
-    "plugins": ["expo-router", "@react-native-community/datetimepicker"]
+    "plugins": ["expo-router", "@react-native-community/datetimepicker"],
+    "extra": {
+      "sentryDsn": "SENTRY_DSN",
+      "sentryEnvironment": "SENTRY_ENVIRONMENT",
+      "sentryTracesSampleRate": "SENTRY_TRACES_SAMPLE_RATE"
+    }
   }
 }
