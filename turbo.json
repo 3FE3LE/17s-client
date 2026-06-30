@@ -30,6 +30,11 @@
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": false
+    },
     "clean": {
       "cache": false
     },
