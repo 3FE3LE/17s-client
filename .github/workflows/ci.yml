@@ -1,7 +1,16 @@
 name: CI
 
+# Triggers:
+# - pull_request: required status check for branch protection on main.
+# - push to main: runs after a merge so the merge commit carries its own
+#   CI status. Without this, Vercel's "Wait for CI" gate and any strict
+#   branch-protection rule block because the workflow never fires on
+#   the merge event.
+# - workflow_dispatch: manual re-run for debugging.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 env:
