@@ -1,5 +1,4 @@
-/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -22,7 +21,6 @@ import { Text } from 'react-native';
 
 const reservationSchema = z.object({
   pitchId: z.string().trim().min(1, 'Selecciona una cancha.'),
-  startAt: z.string().trim().min(1, 'Ingresa la hora de inicio.'),
   slotCount: z.string().trim().min(1, 'Selecciona la cantidad de turnos.'),
   invitedCount: z.string().trim().optional(),
   notes: z.string().trim().max(500).optional(),
@@ -57,10 +55,6 @@ function buildUtcDate(date: Date, time: Date) {
   );
 }
 
-function buildUtcIso(date: Date, time: Date) {
-  return buildUtcDate(date, time).toISOString();
-}
-
 function addMinutes(value: Date, minutes: number) {
   const next = new Date(value.getTime());
   next.setMinutes(next.getMinutes() + minutes);
@@ -93,12 +87,11 @@ export default function NewReservationScreen() {
     [pitchesQuery.data],
   );
 
-  const { control, handleSubmit, formState, setValue, watch } = useForm<ReservationFormValues>({
+  const { control, handleSubmit, formState, watch } = useForm<ReservationFormValues>({
     resolver: zodResolver(reservationSchema),
     mode: 'onChange',
     defaultValues: {
       pitchId: pitchIdParam ?? '',
-      startAt: '',
       slotCount: '1',
       invitedCount: '0',
       notes: '',
@@ -147,10 +140,6 @@ export default function NewReservationScreen() {
     }
   });
 
-  useEffect(() => {
-    setValue('startAt', buildUtcIso(selectedDate, startTime));
-  }, [selectedDate, setValue, startTime]);
-
   return (
     <AppFrame appName="Nueva reserva" subtitle="Completa los datos para reservar la cancha.">
       <GapView gap="md">
@@ -183,11 +172,6 @@ export default function NewReservationScreen() {
         >
           {`Fecha: ${formatDate(selectedDate)}`}
         </AppButton>
-        {formState.errors.startAt ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-            {formState.errors.startAt.message}
-          </Text>
-        ) : null}
         <AppButton
           variant="neutral"
           onPress={() => {
@@ -274,7 +258,6 @@ export default function NewReservationScreen() {
               setSelectedDate(value);
             } else if (pickerMode === 'start') {
               setStartTime(value);
-              setValue('startAt', buildUtcIso(selectedDate, value));
             }
             setPickerMode(null);
           }}

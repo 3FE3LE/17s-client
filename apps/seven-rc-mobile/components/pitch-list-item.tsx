@@ -1,7 +1,6 @@
-/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
 import { Animated, View } from 'react-native';
-import { useEffect, useRef } from 'react';
 import { useAppTheme } from '@17suit/ui';
+import { usePulseAnimation } from '@17suit/ui-native';
 import type { Pitch } from '../lib/seven-rc-api';
 
 interface PitchListItemProps {
@@ -11,21 +10,7 @@ interface PitchListItemProps {
 
 export function PitchListItem({ pitch, loading = false }: PitchListItemProps) {
   const { theme } = useAppTheme();
-  const shimmer = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!loading) return;
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 700, useNativeDriver: true }),
-        Animated.timing(shimmer, { toValue: 0, duration: 700, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => {
-      loop.stop();
-    };
-  }, [loading, shimmer]);
+  const shimmer = usePulseAnimation({ duration: 700, enabled: loading });
 
   const opacity = shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
 

@@ -1,28 +1,16 @@
-/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
-import { ExpoAuthProvider, getExpoAuthRedirect } from '@17suit/core/auth/expo';
+import { ExpoAuthProvider } from '@17suit/core/auth/expo';
 import { AppProviders } from '@17suit/ui';
-import { Slot, usePathname, useRouter } from 'expo-router';
+import { useExpoAuthRedirect } from '@17suit/ui-native';
+import { Slot } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
-import { useEffect } from 'react';
 
 function AuthRouteGuard() {
-  const { isLoaded, isSignedIn } = useAuth();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  useEffect(() => {
-    const target = getExpoAuthRedirect({
-      isLoaded,
-      isSignedIn,
-      pathname,
-      publicPaths: ['/sign-in', '/sign-up', '/forgot-password'],
-      signedInPath: '/',
-      signedOutPath: '/sign-in',
-    });
-    if (target && target !== pathname) {
-      router.replace(target);
-    }
-  }, [isLoaded, isSignedIn, pathname, router]);
+  const { isLoaded } = useAuth();
+  useExpoAuthRedirect({
+    publicPaths: ['/sign-in', '/sign-up', '/forgot-password'],
+    signedInPath: '/',
+    signedOutPath: '/sign-in',
+  });
 
   if (!isLoaded) return null;
   return <Slot />;

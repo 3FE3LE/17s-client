@@ -20,6 +20,7 @@
     "@17suit/core": "workspace:*",
     "@17suit/module-seven-reservations-club": "workspace:*",
     "@17suit/ui": "workspace:*",
+    "@17suit/ui-native": "workspace:*",
     "@clerk/clerk-expo": "^2.19.24",
     "@expo-google-fonts/amaranth": "latest",
     "@expo-google-fonts/arvo": "latest",

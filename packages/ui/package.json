@@ -9,6 +9,7 @@
   "exports": {
     ".": {
       "react-native": "./src/index.native.ts",
+      "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
     "./app-providers": {
