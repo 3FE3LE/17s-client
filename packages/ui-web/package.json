@@ -11,7 +11,8 @@
     },
     "./feedback/toast": {
       "default": "./src/feedback/toast/index.ts"
-    }
+    },
+    "./suit-tokens.css": "./src/styles/suit-tokens.css"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

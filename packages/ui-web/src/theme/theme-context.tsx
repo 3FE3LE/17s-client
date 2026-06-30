@@ -43,6 +43,7 @@ export function ThemeProvider({
   const resolvedMode: ThemeMode = effectiveMode === 'system' ? systemMode : effectiveMode;
   const theme = useMemo(() => getSuitTheme(resolvedMode), [resolvedMode]);
 
+  // eslint-disable-next-line no-restricted-syntax -- matchMedia listener; React cannot subscribe to media queries declaratively
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;
     const media = window.matchMedia('(prefers-color-scheme: light)');
