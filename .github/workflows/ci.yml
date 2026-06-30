@@ -27,3 +27,7 @@ jobs:
       # packages.
       - name: Lint and typecheck affected packages
         run: pnpm exec turbo run lint typecheck --affected
+      # Test gate runs landing for now (the only workspace wired for vitest).
+      # Extend the `test` turbo task to additional apps as they adopt tests.
+      - name: Test affected packages
+        run: pnpm exec turbo run test --affected
