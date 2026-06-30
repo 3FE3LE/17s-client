@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf .next",
     "dev:product": "pnpm run dev"
   },
@@ -32,8 +34,10 @@
     "@types/node": "^24.12.2",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",
+    "@vitest/coverage-v8": "^4.1.9",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.12",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.9"
   }
 }

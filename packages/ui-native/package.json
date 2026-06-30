@@ -17,13 +17,17 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@17suit/core": "workspace:*",
     "@17suit/design-system": "workspace:*",
+    "@clerk/clerk-expo": "^2.19.24",
     "@expo-google-fonts/amaranth": "*",
     "@expo-google-fonts/arvo": "*",
     "@expo-google-fonts/zilla-slab": "*",
     "@expo/vector-icons": "*",
     "@react-native-picker/picker": "^2.11.0",
     "expo-font": "~14.0.11",
+    "expo-router": "~6.0.23",
+    "react-native-reanimated": "~4.1.1",
     "react-native-safe-area-context": "*",
     "react-native-svg": "15.12.1",
     "uniwind": "^1.6.0"
@@ -32,7 +36,6 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
     "@types/react": "~19.1.10",
-    "expo-router": "~6.0.23",
     "typescript": "^5.8.2"
   }
 }

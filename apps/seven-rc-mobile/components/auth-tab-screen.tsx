@@ -1,6 +1,6 @@
 import { BackHandler, View, useWindowDimensions } from 'react-native';
 import type { PropsWithChildren } from 'react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useFocusEffect, usePathname, useRouter } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -9,9 +9,9 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { AppFrame } from '@17suit/ui';
+import { useSwipeTransition } from '@17suit/ui-native';
 import { AuthBottomNav } from './auth-bottom-nav';
 import {
   consumeLastSwipeDirection,
@@ -55,6 +55,16 @@ export function AuthTabScreen({
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
+
+  const { runExit } = useSwipeTransition({
+    translateX,
+    consumeLastDirection: consumeLastSwipeDirection,
+    setExitAnimator,
+    replace: (href) => {
+      router.replace(href);
+    },
+  });
+
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
@@ -74,21 +84,13 @@ export function AuthTabScreen({
 
           if (goLeft && swipeRoutes?.left) {
             runOnJS(setLastSwipeDirection)('left');
-            translateX.value = withTiming(-width, { duration: 200 }, (finished) => {
-              if (finished) {
-                runOnJS(router.replace)(swipeRoutes.left!);
-              }
-            });
+            runOnJS(runExit)('left', swipeRoutes.left);
             return;
           }
 
           if (goRight && swipeRoutes?.right) {
             runOnJS(setLastSwipeDirection)('right');
-            translateX.value = withTiming(width, { duration: 200 }, (finished) => {
-              if (finished) {
-                runOnJS(router.replace)(swipeRoutes.right!);
-              }
-            });
+            runOnJS(runExit)('right', swipeRoutes.right);
             return;
           }
 
@@ -98,19 +100,7 @@ export function AuthTabScreen({
             mass: 0.4,
           });
         }),
-    [canSwipe, router, swipeRoutes, swipeDistance, translateX, width],
-  );
-
-  const runExitAnimation = useCallback(
-    (direction: 'left' | 'right', onDone: () => void) => {
-      const target = direction === 'left' ? -width : width;
-      translateX.value = withTiming(target, { duration: 180 }, (finished) => {
-        if (finished) {
-          runOnJS(onDone)();
-        }
-      });
-    },
-    [translateX, width],
+    [canSwipe, runExit, router, swipeRoutes, swipeDistance, translateX, width],
   );
 
   useFocusEffect(
@@ -135,22 +125,6 @@ export function AuthTabScreen({
       return () => subscription.remove();
     }, [isLoaded, isSignedIn, pathname, router]),
   );
-
-  useEffect(() => {
-    const direction = consumeLastSwipeDirection();
-    if (direction === 'left') {
-      translateX.value = width;
-      translateX.value = withTiming(0, { duration: 220 });
-    } else if (direction === 'right') {
-      translateX.value = -width;
-      translateX.value = withTiming(0, { duration: 220 });
-    }
-
-    setExitAnimator(runExitAnimation);
-    return () => {
-      setExitAnimator(null);
-    };
-  }, [runExitAnimation, translateX, width]);
 
   return (
     <View style={{ flex: 1 }}>

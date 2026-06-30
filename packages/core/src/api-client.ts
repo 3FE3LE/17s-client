@@ -2,7 +2,15 @@ export interface ApiClientOptions {
   baseUrl: string;
   getAccessToken?: () => string | null | Promise<string | null>;
   timeoutMs?: number;
+  /**
+   * Default `x-trace-id` to send on every request when the caller does not
+   * provide one in `init.headers`. Useful when a higher-level tracing library
+   * (e.g. OpenTelemetry) supplies a correlation ID per request.
+   */
+  traceId?: string;
 }
+
+export const TRACE_ID_HEADER = 'x-trace-id';
 
 export type ApiErrorCode = 'HTTP_ERROR' | 'NETWORK_ERROR' | 'TIMEOUT' | 'PARSE_ERROR';
 
@@ -77,6 +85,10 @@ export class ApiClient {
     }
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
+    }
+    if (!headers.has(TRACE_ID_HEADER)) {
+      const fallbackTraceId = this.options.traceId ?? generateTraceId();
+      headers.set(TRACE_ID_HEADER, fallbackTraceId);
     }
 
     const response = await fetchWithTimeout(
@@ -182,4 +194,8 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+export function generateTraceId(): string {
+  return crypto.randomUUID();
 }

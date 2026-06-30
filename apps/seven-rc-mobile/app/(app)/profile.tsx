@@ -1,9 +1,10 @@
 import { useClerk, useUser } from '@clerk/clerk-expo';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppProfile, GapView, useAppTheme } from '@17suit/ui';
+import { useAnimatedValue } from '@17suit/ui-native';
 import { Animated, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { AuthTabScreen } from '../../components/auth-tab-screen';
 import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
@@ -17,7 +18,6 @@ export default function ProfileScreen() {
   const { role } = useCurrentUserRoleQuery({ userId: user?.id, enabled: Boolean(user?.id) });
   const { mode, setMode, theme } = useAppTheme();
   const [selectorWidth, setSelectorWidth] = useState(0);
-  const indicator = useRef(new Animated.Value(0)).current;
 
   const roleBadgeLabel = role === 'OWNER' ? 'Cuenta OWNER' : 'Cuenta PLAYER';
 
@@ -28,19 +28,12 @@ export default function ProfileScreen() {
   ] as const;
 
   const activeIndex = options.findIndex((item) => item.key === mode);
+  const indicator = useAnimatedValue(activeIndex >= 0 ? activeIndex : 0, { duration: 180 });
   const indicatorWidth = selectorWidth / options.length;
   const indicatorTranslate = indicator.interpolate({
-    inputRange: [0, options.length - 1],
+    inputRange: [0, 1],
     outputRange: [0, indicatorWidth * (options.length - 1)],
   });
-
-  useEffect(() => {
-    Animated.timing(indicator, {
-      toValue: activeIndex >= 0 ? activeIndex : 0,
-      duration: 180,
-      useNativeDriver: true,
-    }).start();
-  }, [activeIndex, indicator]);
 
   const handleSignOut = async () => {
     try {

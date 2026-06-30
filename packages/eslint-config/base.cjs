@@ -3,12 +3,28 @@ const tseslint = require('typescript-eslint');
 
 module.exports = tseslint.config(
   {
-    ignores: ['**/dist/**', '**/.next/**', '**/build/**', '**/coverage/**'],
+    ignores: [
+      '**/node_modules/**',
+      '**/.turbo/**',
+      '**/.tamagui/**',
+      '**/.next/**',
+      '**/dist/**',
+      '**/build/**',
+      '**/coverage/**',
+      '**/.expo/**',
+      '**/web-build/**',
+      '**/babel.config.js',
+      '**/postcss.config.mjs',
+      '**/metro.config.js',
+    ],
   },
-  js.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
+  {
+    files: ['**/*.{js,jsx,cjs,mjs}'],
+    ...js.configs.recommended,
+  },
   {
     files: ['**/*.{ts,tsx}'],
+    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -17,7 +33,14 @@ module.exports = tseslint.config(
     rules: {
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        {
+          checksVoidReturn: {
+            attributes: false,
+          },
+        },
+      ],
       'no-restricted-imports': [
         'error',
         {

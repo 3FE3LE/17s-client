@@ -2,17 +2,6 @@ import { ClerkProvider } from '@clerk/clerk-expo';
 import * as SecureStore from 'expo-secure-store';
 import type { ReactNode } from 'react';
 
-export interface ExpoAuthRedirectInput {
-  isLoaded: boolean;
-  isSignedIn: boolean | undefined;
-  pathname: string;
-  publicPaths?: string[];
-  signedInPath?: string;
-  signedOutPath?: string;
-}
-
-export const DEFAULT_EXPO_PUBLIC_PATHS = ['/sign-in'] as const;
-
 const tokenCache = {
   getToken: async (key: string) => SecureStore.getItemAsync(key),
   saveToken: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
@@ -34,21 +23,9 @@ export function ExpoAuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function getExpoAuthRedirect(input: ExpoAuthRedirectInput): string | null {
-  if (!input.isLoaded) return null;
-
-  const publicPaths = input.publicPaths ?? [...DEFAULT_EXPO_PUBLIC_PATHS];
-  const isPublicPath = publicPaths.some(
-    (path) => input.pathname === path || input.pathname.startsWith(`${path}/`),
-  );
-
-  if (!input.isSignedIn && !isPublicPath) {
-    return input.signedOutPath ?? '/sign-in';
-  }
-
-  if (input.isSignedIn && isPublicPath) {
-    return input.signedInPath ?? '/';
-  }
-
-  return null;
-}
+// Re-export the pure redirect helper so callers continue to import it from
+// `@17suit/core/auth/expo`. The helper itself lives in expo-redirect so it
+// can be unit-tested without pulling expo-secure-store into a Node
+// test environment.
+export { getExpoAuthRedirect } from './expo-redirect';
+export type { ExpoAuthRedirectInput } from './expo-redirect';

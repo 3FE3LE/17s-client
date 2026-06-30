@@ -1,16 +1,8 @@
-import {
-  Animated,
-  ImageBackground,
-  Modal,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-} from 'react-native';
-import { useEffect, useRef, useState } from 'react';
+import { Animated, ImageBackground, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme, GapView } from '@17suit/ui';
+import { AppModal, AppScrollView, useAnimatedValue } from '@17suit/ui-native';
 import type { OwnerVenue } from '../lib/seven-rc-api';
 import { useOwnerVenuePitchesQuery } from '../lib/owner-queries';
 import { PitchListItem } from './pitch-list-item';
@@ -26,17 +18,9 @@ export function VenueCard({ venue }: VenueCardProps) {
   const { theme } = useAppTheme();
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
-  const overlay = useRef(new Animated.Value(0)).current;
+  const overlay = useAnimatedValue(expanded ? 1 : 0, { duration: 220 });
 
   const pitchesQuery = useOwnerVenuePitchesQuery(expanded ? venue.id : null);
-
-  useEffect(() => {
-    Animated.timing(overlay, {
-      toValue: expanded ? 1 : 0,
-      duration: 220,
-      useNativeDriver: true,
-    }).start();
-  }, [expanded, overlay]);
 
   const overlayOpacity = overlay.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
   const overlayScale = overlay.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
@@ -98,7 +82,7 @@ export function VenueCard({ venue }: VenueCardProps) {
         </ImageBackground>
       </Pressable>
 
-      <Modal visible={expanded} transparent animationType="none">
+      <AppModal visible={expanded}>
         <Animated.View
           style={{
             flex: 1,
@@ -179,7 +163,7 @@ export function VenueCard({ venue }: VenueCardProps) {
               ) : null}
             </View>
 
-            <ScrollView
+            <AppScrollView
               style={{ marginTop: theme.spacing.lg }}
               refreshControl={
                 <RefreshControl
@@ -243,10 +227,10 @@ export function VenueCard({ venue }: VenueCardProps) {
                   </>
                 ) : null}
               </GapView>
-            </ScrollView>
+            </AppScrollView>
           </View>
         </Animated.View>
-      </Modal>
+      </AppModal>
     </>
   );
 }

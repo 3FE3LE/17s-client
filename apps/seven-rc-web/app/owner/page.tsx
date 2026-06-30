@@ -1,10 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
+import { useMemo, useState, type FormEvent } from 'react';
+import {
+  useCurrentUserRoleQuery,
+  useRoleGate,
+} from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppFrame, AppInput } from '@17suit/ui';
-import { getRoleHomePath } from '@/lib/role';
 import {
   useConfirmVenueReservationMutation,
   useConfigurePitchSlotsMutation,
@@ -42,7 +44,10 @@ export default function OwnerPage() {
   const [newVenueName, setNewVenueName] = useState('');
   const [newVenueLocation, setNewVenueLocation] = useState('');
   const [newVenueTimezone, setNewVenueTimezone] = useState('');
-  const [selectedVenueId, setSelectedVenueId] = useState<string>('');
+
+  const venues = venuesQuery.data ?? [];
+  const [explicitVenueId, setExplicitVenueId] = useState<string | null>(null);
+  const selectedVenueId = explicitVenueId ?? venues[0]?.id ?? '';
 
   const [newPitchName, setNewPitchName] = useState('');
   const [newPitchSportType, setNewPitchSportType] = useState('padel');
@@ -50,7 +55,10 @@ export default function OwnerPage() {
   const [newPitchDuration, setNewPitchDuration] = useState('60');
 
   const pitchesQuery = useOwnerVenuePitchesQuery(selectedVenueId || null);
-  const [selectedPitchId, setSelectedPitchId] = useState<string>('');
+  const pitches = pitchesQuery.data ?? [];
+  const [explicitPitchId, setExplicitPitchId] = useState<string | null>(null);
+  const selectedPitchId = explicitPitchId ?? pitches[0]?.id ?? '';
+
   const [slotDayOfWeek, setSlotDayOfWeek] = useState('1');
   const [slotOpenTime, setSlotOpenTime] = useState('10:00');
   const [slotCloseTime, setSlotCloseTime] = useState('22:00');
@@ -82,37 +90,11 @@ export default function OwnerPage() {
   const [reservationActionId, setReservationActionId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
+  useRoleGate({ required: 'OWNER', router });
 
-    if (!role) {
-      router.replace('/onboarding/role');
-      return;
-    }
+  const isRoleAllowed = !isLoading && role === 'OWNER';
 
-    if (role !== 'OWNER') {
-      router.replace(getRoleHomePath(role));
-    }
-  }, [isLoading, role, router]);
-
-  useEffect(() => {
-    if (!selectedVenueId && venuesQuery.data && venuesQuery.data.length > 0) {
-      setSelectedVenueId(venuesQuery.data[0]?.id ?? '');
-    }
-  }, [selectedVenueId, venuesQuery.data]);
-
-  useEffect(() => {
-    if (selectedPitchId) {
-      return;
-    }
-    if (pitchesQuery.data && pitchesQuery.data.length > 0) {
-      setSelectedPitchId(pitchesQuery.data[0]?.id ?? '');
-    }
-  }, [pitchesQuery.data, selectedPitchId]);
-
-  if (isLoading || role !== 'OWNER') {
+  if (!isRoleAllowed) {
     return (
       <AppFrame appName="Owner Dashboard" subtitle="Verificando tu rol...">
         <p>Un momento...</p>
@@ -153,7 +135,7 @@ export default function OwnerPage() {
         capacity: Number(newPitchCapacity) || 4,
         slotDurationMinutes: Number(newPitchDuration) || 60,
       });
-      setSelectedPitchId(created.id);
+      setExplicitPitchId(created.id);
       setNewPitchName('');
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'No se pudo crear la cancha.');
@@ -265,11 +247,11 @@ export default function OwnerPage() {
           <h3 style={{ margin: 0 }}>Complejo activo</h3>
           <select
             value={selectedVenueId}
-            onChange={(event) => setSelectedVenueId(event.target.value)}
+            onChange={(event) => setExplicitVenueId(event.target.value || null)}
             style={{ padding: 10, borderRadius: 8, border: '1px solid #394448' }}
           >
             <option value="">Selecciona un complejo</option>
-            {(venuesQuery.data ?? []).map((venue) => (
+            {venues.map((venue) => (
               <option key={venue.id} value={venue.id}>
                 {venue.name}
               </option>
@@ -323,11 +305,11 @@ export default function OwnerPage() {
           <h3 style={{ margin: 0 }}>Configurar horarios</h3>
           <select
             value={selectedPitchId}
-            onChange={(event) => setSelectedPitchId(event.target.value)}
+            onChange={(event) => setExplicitPitchId(event.target.value || null)}
             style={{ padding: 10, borderRadius: 8, border: '1px solid #394448' }}
           >
             <option value="">Selecciona una cancha</option>
-            {(pitchesQuery.data ?? []).map((pitch) => (
+            {pitches.map((pitch) => (
               <option key={pitch.id} value={pitch.id}>
                 {pitch.name}
               </option>

@@ -1,33 +1,24 @@
 import 'react-native-gesture-handler';
 import '../global.css';
 import { ExpoAuthProvider } from '@17suit/core/auth/expo';
-import { AppProviders } from '@17suit/ui';
+import { AppProviders, type ThemeModePreference } from '@17suit/ui';
+import { useStoredState } from '@17suit/ui-native';
 import { Slot } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SevenRcClientProviders } from '../components/seven-rc-client-providers';
 import * as SecureStore from 'expo-secure-store';
-import type { ThemeModePreference } from '@17suit/ui';
 
 const THEME_STORAGE_KEY = '17suit.theme.mode';
 
-export default function Layout() {
-  const [themeMode, setThemeMode] = useState<ThemeModePreference>('system');
+const isThemeMode = (value: string): value is ThemeModePreference =>
+  value === 'system' || value === 'dark' || value === 'light';
 
-  useEffect(() => {
-    let isMounted = true;
-    SecureStore.getItemAsync(THEME_STORAGE_KEY)
-      .then((value) => {
-        if (!isMounted || !value) return;
-        if (value === 'system' || value === 'dark' || value === 'light') {
-          setThemeMode(value);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+export default function Layout() {
+  const [themeMode, setThemeMode] = useStoredState<ThemeModePreference>({
+    defaultValue: 'system',
+    load: () => SecureStore.getItemAsync(THEME_STORAGE_KEY),
+    applyWhen: isThemeMode,
+  });
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

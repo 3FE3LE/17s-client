@@ -1,10 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
+import { useMemo, useState, type FormEvent } from 'react';
+import {
+  useCurrentUserRoleQuery,
+  useRoleGate,
+} from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppFrame, AppInput } from '@17suit/ui';
-import { getRoleHomePath } from '@/lib/role';
 import {
   useCancelReservationMutation,
   useCreateReservationMutation,
@@ -36,9 +38,16 @@ export default function PlayPage() {
   const { role, isLoading } = useCurrentUserRoleQuery();
   const [query, setQuery] = useState('');
   const venuesQuery = usePlayerVenuesQuery(query.trim() || undefined);
-  const [selectedVenueId, setSelectedVenueId] = useState('');
+
+  const venues = venuesQuery.data ?? [];
+  const [explicitVenueId, setExplicitVenueId] = useState<string | null>(null);
+  const selectedVenueId = explicitVenueId ?? venues[0]?.id ?? '';
+
   const pitchesQuery = usePlayerVenuePitchesQuery(selectedVenueId || null);
-  const [selectedPitchId, setSelectedPitchId] = useState('');
+  const pitches = pitchesQuery.data ?? [];
+  const [explicitPitchId, setExplicitPitchId] = useState<string | null>(null);
+  const selectedPitchId = explicitPitchId ?? pitches[0]?.id ?? '';
+
   const [reservationDate, setReservationDate] = useState('');
   const [reservationTime, setReservationTime] = useState('');
   const [slotCount, setSlotCount] = useState('1');
@@ -50,34 +59,11 @@ export default function PlayPage() {
   const [cancelReservationId, setCancelReservationId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
+  useRoleGate({ required: 'PLAYER', router });
 
-    if (!role) {
-      router.replace('/onboarding/role');
-      return;
-    }
+  const isRoleAllowed = !isLoading && role === 'PLAYER';
 
-    if (role !== 'PLAYER') {
-      router.replace(getRoleHomePath(role));
-    }
-  }, [isLoading, role, router]);
-
-  useEffect(() => {
-    if (!selectedVenueId && venuesQuery.data && venuesQuery.data.length > 0) {
-      setSelectedVenueId(venuesQuery.data[0]?.id ?? '');
-    }
-  }, [selectedVenueId, venuesQuery.data]);
-
-  useEffect(() => {
-    if (!selectedPitchId && pitchesQuery.data && pitchesQuery.data.length > 0) {
-      setSelectedPitchId(pitchesQuery.data[0]?.id ?? '');
-    }
-  }, [pitchesQuery.data, selectedPitchId]);
-
-  if (isLoading || role !== 'PLAYER') {
+  if (!isRoleAllowed) {
     return (
       <AppFrame appName="Player Dashboard" subtitle="Verificando tu rol...">
         <p>Un momento...</p>
@@ -85,7 +71,7 @@ export default function PlayPage() {
     );
   }
 
-  const selectedPitch = (pitchesQuery.data ?? []).find((pitch) => pitch.id === selectedPitchId);
+  const selectedPitch = pitches.find((pitch) => pitch.id === selectedPitchId);
   const slotDuration = selectedPitch?.slotDurationMinutes ?? 60;
 
   async function onCreateReservation(event: FormEvent<HTMLFormElement>) {
@@ -165,11 +151,11 @@ export default function PlayPage() {
           </AppButton>
           <select
             value={selectedVenueId}
-            onChange={(event) => setSelectedVenueId(event.target.value)}
+            onChange={(event) => setExplicitVenueId(event.target.value || null)}
             style={{ padding: 10, borderRadius: 8, border: '1px solid #394448' }}
           >
             <option value="">Selecciona un complejo</option>
-            {(venuesQuery.data ?? []).map((venue) => (
+            {venues.map((venue) => (
               <option key={venue.id} value={venue.id}>
                 {venue.name}
               </option>
@@ -182,11 +168,11 @@ export default function PlayPage() {
           <form onSubmit={onCreateReservation} style={{ display: 'grid', gap: 8 }}>
             <select
               value={selectedPitchId}
-              onChange={(event) => setSelectedPitchId(event.target.value)}
+              onChange={(event) => setExplicitPitchId(event.target.value || null)}
               style={{ padding: 10, borderRadius: 8, border: '1px solid #394448' }}
             >
               <option value="">Selecciona una cancha</option>
-              {(pitchesQuery.data ?? []).map((pitch) => (
+              {pitches.map((pitch) => (
                 <option key={pitch.id} value={pitch.id}>
                   {pitch.name} ({pitch.slotDurationMinutes} min)
                 </option>
