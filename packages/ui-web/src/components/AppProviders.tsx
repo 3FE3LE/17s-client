@@ -38,7 +38,6 @@ function ThemeStyles({ children }: PropsWithChildren) {
     <>
       <style>
         {`
-          @import url('https://fonts.googleapis.com/css2?family=Amaranth:wght@400;700&family=Arvo:wght@400;700&family=Zilla+Slab:wght@300;400;500;700&display=swap');
           html, body {
             margin: 0;
             padding: 0;
