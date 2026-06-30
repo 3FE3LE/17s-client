@@ -2,19 +2,36 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { resolveRedirectTarget } from './auth-redirect';
 
+// process.env is typed read-only in @types/node; the spec needs to mutate
+// and reset it, so we cast to a mutable record and use bracket assignment.
+const env = process.env as Record<string, string | undefined>;
+
+const trackedKeys = [
+  'NEXT_PUBLIC_FIFTEEN_AC_WEB_URL',
+  'NEXT_PUBLIC_SEVEN_RC_WEB_URL',
+  'NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS',
+  'NODE_ENV',
+] as const;
+
 describe('resolveRedirectTarget', () => {
-  const originalEnv = { ...process.env };
+  const originalValues: Record<string, string | undefined> = {};
 
   beforeEach(() => {
-    process.env = { ...originalEnv };
-    delete process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL;
-    delete process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL;
-    delete process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS;
-    delete process.env.NODE_ENV;
+    for (const key of trackedKeys) {
+      originalValues[key] = env[key];
+      delete env[key];
+    }
   });
 
   afterEach(() => {
-    process.env = originalEnv;
+    for (const key of trackedKeys) {
+      const value = originalValues[key];
+      if (value === undefined) {
+        delete env[key];
+      } else {
+        env[key] = value;
+      }
+    }
   });
 
   describe('relative paths', () => {
@@ -69,14 +86,14 @@ describe('resolveRedirectTarget', () => {
 
   describe('localhost behavior', () => {
     it('allows localhost in development', () => {
-      process.env.NODE_ENV = 'development';
+      env.NODE_ENV = 'development';
       expect(resolveRedirectTarget('http://localhost:5173/app')).toBe('http://localhost:5173/app');
       expect(resolveRedirectTarget('http://127.0.0.1:3000/x')).toBe('http://127.0.0.1:3000/x');
     });
 
     it('rejects localhost in production even when other origins are configured', () => {
-      process.env.NODE_ENV = 'production';
-      process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL = 'https://15ac.example.com';
+      env.NODE_ENV = 'production';
+      env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL = 'https://15ac.example.com';
       expect(resolveRedirectTarget('http://localhost:3000/app')).toBe('/');
     });
   });
