@@ -13,7 +13,15 @@
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.seventeensuit.fifteenac"
+    },
+    "android": {
+      "package": "com.seventeensuit.fifteenac",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-17suit.png",
+        "backgroundColor": "#0B1020"
+      }
     },
     "web": {
       "bundler": "metro"
