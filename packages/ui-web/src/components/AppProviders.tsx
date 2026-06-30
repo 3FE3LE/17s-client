@@ -50,7 +50,7 @@ export function AppProviders({ children, themeMode, onThemeModeChange }: AppProv
 function ThemeStyles({ children }: PropsWithChildren) {
   const { theme } = useAppTheme();
   const [mounted, setMounted] = useState(false);
-
+  // eslint-disable-next-line no-restricted-syntax -- TODO(useEffect): gates SSR/CSR theme swap; see PR #35
   useEffect(() => {
     setMounted(true);
   }, []);
