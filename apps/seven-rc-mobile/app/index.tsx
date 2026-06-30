@@ -1,7 +1,9 @@
-/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
-import { useEffect, useRef } from 'react';
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
+import {
+  useCurrentUserRoleQuery,
+  getSevenReservationsClubRoleHomePath,
+} from '@17suit/module-seven-reservations-club/client';
 import { useAppTheme } from '@17suit/ui';
+import { usePulseAnimation, useRouteRoleSplash } from '@17suit/ui-native';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';
 import { Animated, Image, View } from 'react-native';
@@ -17,43 +19,21 @@ export default function IndexScreen() {
     enabled: Boolean(user?.id),
   });
   const { theme } = useAppTheme();
-  const pulse = useRef(new Animated.Value(0)).current;
+  const pulse = usePulseAnimation();
+  const isNavigationReady = Boolean(rootNavigationState?.key);
 
-  useEffect(() => {
-    if (!rootNavigationState?.key || !isLoaded) {
-      return;
-    }
-
-    if (!isSignedIn) {
-      router.replace('/sign-in');
-      return;
-    }
-
-    if (error) {
-      router.replace('/role');
-      return;
-    }
-
-    if (isLoading) {
-      return;
-    }
-
-    if (!role) {
-      router.replace('/role');
-      return;
-    }
-
-    router.replace('/home');
-  }, [error, isLoading, isLoaded, isSignedIn, role, router, rootNavigationState?.key]);
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
-      ]),
-    ).start();
-  }, [pulse]);
+  useRouteRoleSplash({
+    router,
+    isAuthLoaded: isLoaded,
+    isSignedIn,
+    isLoading,
+    role,
+    error,
+    roleOnboardingPath: '/role',
+    signedOutPath: '/sign-in',
+    resolveHomePath: getSevenReservationsClubRoleHomePath,
+    ready: isNavigationReady,
+  });
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.04] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });

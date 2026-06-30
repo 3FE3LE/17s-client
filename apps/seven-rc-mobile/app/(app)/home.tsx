@@ -1,5 +1,7 @@
-/* eslint-disable no-restricted-syntax -- TODO(useEffect): migrate to RSC / event handlers / derived state per audit policy. */
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
+import {
+  useCurrentUserRoleQuery,
+  useRoleGate,
+} from '@17suit/module-seven-reservations-club/client';
 import {
   AppAlert,
   AppBadge,
@@ -13,8 +15,7 @@ import {
   GapView,
 } from '@17suit/ui';
 import { useRouter } from 'expo-router';
-import { useAuth, useUser } from '@clerk/clerk-expo';
-import { useEffect } from 'react';
+import { useUser } from '@clerk/clerk-expo';
 import { AuthTabScreen } from '../../components/auth-tab-screen';
 import { useOwnerVenuesQuery } from '../../lib/owner-queries';
 import { VenueCard } from '../../components/venue-card';
@@ -62,7 +63,6 @@ function RoleModeBanner({ role }: { role: 'OWNER' | 'PLAYER' }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { role, isLoading, error, refetch } = useCurrentUserRoleQuery({
     userId: user?.id ?? null,
@@ -72,15 +72,8 @@ export default function HomeScreen() {
   const myReservationsQuery = useMyReservationsQuery();
   const playerVenuesQuery = usePlayerVenuesQuery();
 
-  useEffect(() => {
-    if (!isSignedIn) {
-      return;
-    }
-
-    if (!isLoading && !error && !role) {
-      router.replace('/role');
-    }
-  }, [error, isLoading, isSignedIn, role, router]);
+  // If role is missing once data has loaded, send the user to onboarding.
+  useRoleGate({ required: '*', router, onboardingPath: '/role' });
 
   if (isLoading) {
     return (
