@@ -12,3 +12,4 @@ export * from './query/role-data-source';
 export * from './query/role-query';
 export * from './query/query-client';
 export * from './query/seven-rc-query';
+export { useRoleGate, type UseRoleGateOptions, type UseRoleGateResult } from './query/useRoleGate';

@@ -15,6 +15,9 @@
     "./auth/expo": {
       "default": "./src/auth/expo.tsx"
     },
+    "./auth/expo-redirect": {
+      "default": "./src/auth/expo-redirect.ts"
+    },
     "./query-client": {
       "default": "./src/query-client.ts"
     }

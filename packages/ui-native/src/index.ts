@@ -44,7 +44,23 @@ export type { AppSelectProps, AppSelectOption } from './components/AppSelect';
 export { AppTitle } from './components/AppTitle';
 export type { AppTitleProps } from './components/AppTitle';
 export { AppProviders } from './components/AppProviders';
+export { AppModal } from './components/AppModal';
+export type { AppModalProps } from './components/AppModal';
+export { AppScrollView } from './components/AppScrollView';
+export type { AppScrollViewProps } from './components/AppScrollView';
 export { ProductShell } from './components/ProductShell';
+export { useAnimatedValue } from './hooks/useAnimatedValue';
+export { useExpoAuthRedirect } from './hooks/useExpoAuthRedirect';
+export type { UseExpoAuthRedirectOptions } from './hooks/useExpoAuthRedirect';
+export { usePulseAnimation } from './hooks/usePulseAnimation';
+export { useReplaceOnceReady, type UseReplaceOnceReadyOptions } from './hooks/useReplaceOnceReady';
+export { useRouteRoleSplash, type UseRouteRoleSplashOptions } from './hooks/useRouteRoleSplash';
+export { useStoredState, type UseStoredStateOptions } from './hooks/useStoredState';
+export {
+  useSwipeTransition,
+  type UseSwipeTransitionOptions,
+  type UseSwipeTransitionResult,
+} from './hooks/useSwipeTransition';
 export { suitTheme } from '@17suit/design-system';
 export {
   buttonLabelRecipe,
