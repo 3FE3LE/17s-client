@@ -31,3 +31,12 @@ jobs:
       # Extend the `test` turbo task to additional apps as they adopt tests.
       - name: Test affected packages
         run: pnpm exec turbo run test --affected
+      # API contract drift gate. Fetches the latest openapi.json artifact
+      # from 17Suit/17s-server main and diffs the regenerated
+      # packages/core/src/api-schema.ts against the committed version. Fails
+      # on drift; no-ops cleanly when the artifact can't be fetched (so
+      # missing server CI never blocks a client PR).
+      - name: Verify API schema
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm verify:api-schema

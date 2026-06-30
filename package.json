@@ -15,6 +15,7 @@
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "clean": "turbo run clean && rm -rf node_modules",
+    "verify:api-schema": "tsx scripts/verify-api-schema.ts",
     "prepare": "husky",
     "dev:product": "pnpm --filter @17suit/tooling run dev:product",
     "product": "pnpm --filter @17suit/tooling run dev:product",
@@ -29,6 +30,7 @@
     "lint-staged": "^15.2.11",
     "prettier": "^3.4.2",
     "react-native": "0.81.5",
+    "tsx": "^4.19.2",
     "turbo": "^2.3.3",
     "typescript": "^5.8.2"
   },
