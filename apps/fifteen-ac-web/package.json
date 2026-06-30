@@ -30,6 +30,7 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/tailwind-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
+    "@sentry/nextjs": "10.62.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/node": "^24.12.2",
     "@types/react": "~19.1.10",
