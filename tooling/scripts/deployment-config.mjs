@@ -1,3 +1,27 @@
+// Per-project deployment config for the 3-tier release flow.
+//
+// 3-tier model (per AGENTS.md):
+//   feat/* ─PR─→ development ─release.sh─→ preview ─release.sh─→ production
+//
+// Branch tracking is global: every app builds off the same 'preview'
+// and 'production' branches. Vercel's per-project Ignored Build Step
+// (tooling/scripts/vercel-ignored-build.mjs) gates per-app relevance
+// via this config + a git-diff check, so an app whose files don't
+// change still skips its own build even when preview or production
+// is updated.
+//
+// Why global branches instead of per-app (preview-<slug>):
+// - The release.sh promotion model fast-forwards preview and
+//   production across the whole repo. Per-app preview branches
+//   fragment the deployment story (each app would need its own
+//   promotion pipeline).
+// - Vercel Hobby auto-deploys every non-production branch by
+//   default; the strict branch gate in vercel-ignored-build.mjs
+//   keeps the deploy count sane (only preview + production).
+// - The git-diff relevance check inside the script handles the
+//   per-app dimension: a docs-only push to preview still skips
+//   every app's build.
+
 export const sharedPaths = {
   root: ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'turbo.json'],
   ts: ['packages/typescript-config'],
@@ -21,24 +45,31 @@ const productModules = {
   'nine-cc': 'packages/modules/nine-care-companion',
 };
 
-function appConfig({ app, previewBranch, paths, productionBranch = 'main' }) {
+const PREVIEW_BRANCH = 'preview';
+const PRODUCTION_BRANCH = 'production';
+const ALLOWED_BRANCHES = [PREVIEW_BRANCH, PRODUCTION_BRANCH];
+
+function appConfig({
+  app,
+  paths,
+  productionBranch = PRODUCTION_BRANCH,
+  previewBranch = PREVIEW_BRANCH,
+}) {
   return {
     app,
     previewBranch,
     productionBranch,
-    allowedBranches: [previewBranch, productionBranch],
+    allowedBranches: ALLOWED_BRANCHES,
     paths: [...sharedPaths.root, ...sharedPaths.ts, ...paths],
   };
 }
 
 function productAppConfigs(slug) {
   const modulePath = productModules[slug];
-  const previewBranch = `preview-${slug}`;
 
   return {
     [`${slug}-web`]: appConfig({
       app: `${slug}-web`,
-      previewBranch,
       paths: [
         `apps/${slug}-web`,
         modulePath,
@@ -51,7 +82,6 @@ function productAppConfigs(slug) {
     }),
     [`${slug}-mobile`]: appConfig({
       app: `${slug}-mobile`,
-      previewBranch,
       paths: [
         `apps/${slug}-mobile`,
         modulePath,
@@ -68,7 +98,6 @@ function productAppConfigs(slug) {
 export const deploymentConfig = {
   landing: appConfig({
     app: 'landing',
-    previewBranch: 'preview-landing',
     paths: [
       'apps/landing',
       ...sharedPaths.core,
@@ -80,7 +109,6 @@ export const deploymentConfig = {
   }),
   admin: appConfig({
     app: 'admin',
-    previewBranch: 'preview-admin',
     paths: [
       'apps/admin',
       ...sharedPaths.core,
@@ -101,16 +129,5 @@ export const deploymentConfig = {
   ...productAppConfigs('nine-cc'),
 };
 
-export const previewBranches = [
-  'preview-admin',
-  'preview-landing',
-  'preview-one-pt',
-  'preview-two-sb',
-  'preview-four-yc',
-  'preview-five-bg',
-  'preview-six-sp',
-  'preview-seven-rc',
-  'preview-eight-dd',
-  'preview-nine-nr',
-  'preview-nine-cc',
-];
+export const previewBranches = [PREVIEW_BRANCH];
+export const productionBranches = [PRODUCTION_BRANCH];
