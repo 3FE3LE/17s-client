@@ -100,8 +100,31 @@ function collectUsedPorts(globSuffix, marker) {
 
 const usedWebPorts = collectUsedPorts('-web', '--port ');
 const usedMobilePorts = collectUsedPorts('-mobile', '--port ');
-const webPort = nextFreePort(3001, usedWebPorts);
-const mobilePort = nextFreePort(8081, usedMobilePorts);
+
+// Optional explicit port flags. Falls back to the lowest-free-port allocator
+// when omitted. Per tooling/INFRA.md, products usually want the formula
+// `3000 + N` for web and `8000 + N` for mobile.
+const explicitWebPort = parsePortFlag(process.argv, '--web-port');
+const explicitMobilePort = parsePortFlag(process.argv, '--mobile-port');
+const webPort =
+  explicitWebPort !== null && !usedWebPorts.has(explicitWebPort)
+    ? explicitWebPort
+    : nextFreePort(3001, usedWebPorts);
+const mobilePort =
+  explicitMobilePort !== null && !usedMobilePorts.has(explicitMobilePort)
+    ? explicitMobilePort
+    : nextFreePort(8081, usedMobilePorts);
+
+function parsePortFlag(argv, flag) {
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === flag) {
+      const raw = argv[i + 1];
+      const n = Number.parseInt(raw, 10);
+      return Number.isFinite(n) && n > 0 && n < 65536 ? n : null;
+    }
+  }
+  return null;
+}
 
 const productName = toTitleCaseKebab(moduleSlug);
 const modulePascal = toPascalCaseKebab(moduleSlug);
