@@ -2,7 +2,7 @@
 
 import type { PropsWithChildren } from 'react';
 import { ToastProvider } from '../feedback/toast';
-import { ThemeProvider, useAppTheme } from '../theme/theme-context';
+import { ThemeProvider } from '../theme/theme-context';
 import type { ThemeModePreference } from '../theme/theme-context';
 
 export interface AppProvidersProps extends PropsWithChildren {
@@ -24,32 +24,14 @@ export function AppProviders({ children, themeMode, onThemeModeChange }: AppProv
     themeProviderProps.onModeChange = onThemeModeChange;
   }
 
+  // Theme tokens (background / text / accent) are applied via CSS custom
+  // properties resolved by the browser via `prefers-color-scheme`. Import
+  // the stylesheet once at the app entry — the same file ships in every
+  // web app that consumes @17suit/ui-web.
   return (
     <ThemeProvider {...themeProviderProps}>
-      <ThemeStyles>{children}</ThemeStyles>
+      {children}
       <ToastProvider />
     </ThemeProvider>
-  );
-}
-
-function ThemeStyles({ children }: PropsWithChildren) {
-  const { theme } = useAppTheme();
-  return (
-    <>
-      <style>
-        {`
-          html, body {
-            margin: 0;
-            padding: 0;
-            background: ${theme.colors.background};
-            color: ${theme.colors.text};
-          }
-          * {
-            box-sizing: border-box;
-          }
-        `}
-      </style>
-      {children}
-    </>
   );
 }

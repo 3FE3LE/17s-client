@@ -6,6 +6,7 @@
   "exports": {
     "./native-theme.css": "./native-theme.css",
     "./semantic.css": "./semantic.css",
+    "./suit-tokens.css": "./suit-tokens.css",
     "./theme.css": "./theme.css",
     "./variables.css": "./variables.css",
     "./web-patterns.css": "./web-patterns.css",

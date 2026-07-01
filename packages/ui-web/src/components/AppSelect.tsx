@@ -43,6 +43,7 @@ export function AppSelect({
     throw new Error(`[AppSelect] Received value "${value}" that is not present in options.`);
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- outside-click + escape listener; standard useEffect idiom
   useEffect(() => {
     if (!open) return;
 

@@ -1,0 +1,41 @@
+/* Suit design-system theme tokens — web only.
+ *
+ * Theme is resolved by the browser via `prefers-color-scheme`, so server
+ * and first client render produce the same DOM. No `useEffect`, no
+ * inline `<style>`, no hydration mismatch.
+ *
+ * Tokens mirror `packages/design-system/src/tokens.ts` (darkColors /
+ * lightColors). Keep them in sync if the JS theme changes.
+ *
+ * Mobile keeps the JS theme (`@17suit/ui-native`) because it supports a
+ * user-controlled toggle; CSS-only would not handle the override.
+ */
+:root {
+  --suit-color-bg: #00151c;
+  --suit-color-surface: #394448;
+  --suit-color-accent: #35a7ff;
+  --suit-color-text: #f0f0f0;
+  --suit-color-muted: #cfcfcf;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --suit-color-bg: #f7f8fa;
+    --suit-color-surface: #ffffff;
+    --suit-color-accent: #35a7ff;
+    --suit-color-text: #00151c;
+    --suit-color-muted: #394448;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--suit-color-bg);
+  color: var(--suit-color-text);
+}
+
+* {
+  box-sizing: border-box;
+}
