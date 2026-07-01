@@ -25,13 +25,21 @@
 
 ## Cross-cutting invariants (carry into every change)
 
-These mirror `.claude/agents/nine-cc-web.md` and are restated here so the working-tree operating contract is self-contained.
+These mirror `.claude/agents/nine-cc.md` (the **product-level** agent — every surface shares it) and are restated here so the working-tree operating contract is self-contained.
 
 - **Backend = source of truth.** No state derives in the client. Reads hit the backend or a derived view it authorises. Writes always go through the backend.
 - **Medication responses deterministic.** No LLM in the factual med-status request path.
 - **Alexa never decides medical state.** (Out of this app's scope; mirror the rule across collaboration with the Alexa skill repo when it lands.)
 - **Every missed critical medication escalates.** Per-care-circle configuration decides recipients and cadence.
 - **Privacy > convenience.** Defaults favor minimal data exposure.
+
+## Related Context
+
+- **Product agent: `.claude/agents/nine-cc.md`** — single source of truth for product philosophy, invariants, compliance. Read first for cross-cutting product concerns.
+- **Memory: `/home/fl/.claude/projects/-home-fl-17s-workspace/memory/project/nine-cc.md`** — non-derivable facts: ownership, compliance posture, integration partners, why-this-product.
+- **Neighbor fence: `apps/nine-cc-mobile/AGENTS.md`** — same product, mobile conventions.
+- **Registry entries: `apps-registry.json#apps.nine-cc-web` + `apps.nine-cc-mobile`** (both rows point at the same product agent and memory file).
+- **Module: `17s-client/packages/modules/nine-care-companion`** — frontend-agnostic domain logic.
 
 ## Local conventions
 

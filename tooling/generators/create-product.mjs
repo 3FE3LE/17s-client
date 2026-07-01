@@ -312,6 +312,11 @@ function appendRegistryEntries() {
   }
   const reg = readJson(REGISTRY_PATH);
   const subdomainFinal = normalizeSubdomain(subdomain);
+  // Agent + memory are PER PRODUCT (not per surface). All surfaces of the
+  // same product share a single .claude/agents/<slug>.md and
+  // memory/project/<slug>.md; surface specifics live in each fence file.
+  const agentFile = `.claude/agents/${appSlug}.md`;
+  const memoryFile = `memory/project/${appSlug}.md`;
   reg.apps[`${appSlug}-web`] = {
     kind: 'web',
     product: appSlug,
@@ -323,8 +328,8 @@ function appendRegistryEntries() {
     devPort: webPort,
     neighborApps: [`${appSlug}-mobile`],
     owner: 'TBD',
-    memoryFile: `memory/project/${appSlug}-web.md`,
-    agentFile: `.claude/agents/${appSlug}-web.md`,
+    memoryFile,
+    agentFile,
     fenceFile: `17s-client/apps/${appSlug}-web/AGENTS.md`,
     createdAt: today,
     active: true,
@@ -340,8 +345,8 @@ function appendRegistryEntries() {
     devPort: mobilePort,
     neighborApps: [`${appSlug}-web`],
     owner: 'TBD',
-    memoryFile: `memory/project/${appSlug}-mobile.md`,
-    agentFile: `.claude/agents/${appSlug}-mobile.md`,
+    memoryFile,
+    agentFile,
     fenceFile: `17s-client/apps/${appSlug}-mobile/AGENTS.md`,
     createdAt: today,
     active: true,
@@ -480,15 +485,13 @@ ${neighbors}
 function writeAgentStubs() {
   const dir = join(workspaceRoot, '.claude', 'agents');
   mkdirSync(dir, { recursive: true });
-  for (const slug of [`${appSlug}-web`, `${appSlug}-mobile`]) {
-    const out = join(dir, `${slug}.md`);
-    if (existsSync(out)) continue;
-    const kind = slug.endsWith('-web') ? 'web' : 'mobile';
-    const content = agentStub(slug, kind);
-    if (!content) continue;
-    writeFileSync(out, content, 'utf8');
-    console.log(`agent: ${out}`);
-  }
+  // Per-product agent (shared by every surface of this product).
+  const out = join(dir, `${appSlug}.md`);
+  if (existsSync(out)) return;
+  const content = agentStub(appSlug, 'product');
+  if (!content) return;
+  writeFileSync(out, content, 'utf8');
+  console.log(`agent: ${out}`);
 }
 
 function memoryStub(slug) {
@@ -516,12 +519,11 @@ function writeMemoryStubs() {
   } catch {
     // already exists
   }
-  for (const slug of [`${appSlug}-web`, `${appSlug}-mobile`]) {
-    const out = join(dir, `${slug}.md`);
-    if (existsSync(out)) continue;
-    writeFileSync(out, memoryStub(slug), 'utf8');
-    console.log(`memory: ${out}`);
-  }
+  // One memory stub per PRODUCT (every surface of this product reads it).
+  const out = join(dir, `${appSlug}.md`);
+  if (existsSync(out)) return;
+  writeFileSync(out, memoryStub(appSlug), 'utf8');
+  console.log(`memory: ${out}`);
 }
 
 appendRegistryEntries();
