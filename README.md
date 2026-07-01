@@ -231,10 +231,35 @@ Finance cockpit product docs live in [docs/fifteen-all-check.md](./docs/fifteen-
 
 ## Deployment Control
 
-- Product preview branches are documented in [docs/deployment-branches.md](./docs/deployment-branches.md).
-- Create them locally with `pnpm preview:branches:create`.
-- For Vercel monorepo projects, configure the Ignored Build Step with `tooling/scripts/vercel-ignored-build.mjs` so each app only builds on its own preview branch or `main`, and only when relevant files changed.
-- Deployed web apps also expose this from code through per-app `vercel.mjs` wrappers that import shared logic from `tooling/vercel/shared.mjs`.
+The client uses a 3-tier promotion model that maps 1:1 to Vercel's
+default environment names. See the "Branching & Release Workflow"
+section in the root [`AGENTS.md`](../AGENTS.md) for the full scheme.
+
+- **Branches** (long-lived): `development` (integration), `preview`
+  (staging), `production` (live). Feature branches (`feat/*`,
+  `fix/*`, `chore/*`, `refactor/*`) target `development` and never
+  trigger Vercel by themselves.
+- **Promote via script**:
+  `./tooling/scripts/release.sh development preview v0.4.2-rc.1`
+  then `./tooling/scripts/release.sh preview production v0.4.2`.
+  Both commands fast-forward the target branch to the source and
+  push; Vercel deploys the corresponding env.
+- **Vercel per-project settings** (one project per app):
+  - `Root Directory = apps/<app-name>`.
+  - `Production Branch = production`.
+  - `Preview Branches = development, preview`.
+  - `Ignored Build Step` (inline, copy from AGENTS.md): exits 0 when
+    the latest commit didn't touch the app's own files or any
+    shared package it depends on.
+- **CI** (`.github/workflows/ci.yml`) runs lint, typecheck, test,
+  build, and an OpenAPI schema check on every PR. The push trigger
+  is also set on `production`, `preview`, and `development` so the
+  merge commit on each promotion branch gets its own CI run.
+
+`tooling/scripts/check-affected.sh` ships as a reference and a
+local-CI helper. The canonical Vercel wiring is the inline template
+in AGENTS.md because Vercel's build sandbox only sees the project
+Root Directory.
 
 ## Notes for Productionization
 
