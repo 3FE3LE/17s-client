@@ -262,7 +262,9 @@ stripSentrySource(mobileDir);
 
 // --- Post-hooks: update workspace tooling artifacts --------------------
 
-const REGISTRY_PATH = join(workspaceRoot, 'apps-registry.json');
+// Registry is co-located at 17s-client root so CI/local scripts can find it
+// without a sibling workspace checkout.
+const REGISTRY_PATH = join(root, 'apps-registry.json');
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
