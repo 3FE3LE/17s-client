@@ -1,16 +1,17 @@
 name: CI
 
 # Triggers:
-# - pull_request: required status check for branch protection on main.
-# - push to main: runs after a merge so the merge commit carries its own
-#   CI status. Without this, Vercel's "Wait for CI" gate and any strict
-#   branch-protection rule block because the workflow never fires on
-#   the merge event.
+# - pull_request: required status check for branch protection on main and
+#   on the development/preview/production promotion branches.
+# - push to main, production, preview, development: runs after a merge so
+#   the merge commit carries its own CI status. Without the push trigger,
+#   branch-protection rules and downstream consumers (Vercel, status
+#   badges) can block because the workflow never fires on the merge event.
 # - workflow_dispatch: manual re-run for debugging.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, production, preview, development]
   workflow_dispatch:
 
 env:
@@ -31,15 +32,19 @@ jobs:
           node-version: 24.13.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # No build here: Vercel builds on deploy, so building again in CI is
-      # redundant. CI only gates code quality (lint + types) on affected
-      # packages.
       - name: Lint and typecheck affected packages
         run: pnpm exec turbo run lint typecheck --affected
       # Test gate runs landing for now (the only workspace wired for vitest).
       # Extend the `test` turbo task to additional apps as they adopt tests.
       - name: Test affected packages
         run: pnpm exec turbo run test --affected
+      # Build gate. Runs the full turbo build pipeline on affected
+      # packages so the PR is guaranteed to compile end-to-end before
+      # landing on development. Vercel no longer auto-deploys on push, so
+      # this is the only build signal we have for PRs targeting the
+      # development/preview/production promotion branches.
+      - name: Build affected packages
+        run: pnpm exec turbo run build --affected
       # API contract drift gate. Fetches the latest openapi.json artifact
       # from 17Suit/17s-server main and diffs the regenerated
       # packages/core/src/api-schema.ts against the committed version. Fails
