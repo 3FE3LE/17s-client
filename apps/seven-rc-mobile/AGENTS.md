@@ -28,3 +28,11 @@
 <!-- TODO: state mgmt, form lib, validation lib, query lib, test framework -->
 
 - (placeholder)
+
+## Related Context
+
+- **Product agent: `.claude/agents/seven-rc.md`** — single source of truth for the seven-rc product (philosophy, invariants, conventions). Read first for cross-cutting product concerns.
+- **Memory: `/home/fl/.claude/projects/-home-fl-17s-workspace/memory/project/seven-rc.md`** — non-derivable facts (reservation flow rules, deposit logic, role selection meaning).
+- **Neighbor fence: `apps/seven-rc-web/AGENTS.md`** — same product, web conventions.
+- **Registry entries: `apps-registry.json#apps.seven-rc-web` + `apps.seven-rc-mobile`**.
+- **Module: `17s-client/packages/modules/seven-reservations-club`** — shared domain logic.

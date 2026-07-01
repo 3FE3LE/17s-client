@@ -28,3 +28,11 @@
 <!-- TODO: state mgmt, form lib, validation lib, query lib, test framework -->
 
 - (placeholder)
+
+## Related Context
+
+- **Product agent: `.claude/agents/fifteen-ac.md`** — single source of truth for the fifteen-ac product (philosophy, invariants, conventions). Read first for cross-cutting product concerns.
+- **Memory: `/home/fl/.claude/projects/-home-fl-17s-workspace/memory/project/fifteen-ac.md`** — non-derivable facts (Gmail OAuth owner, approved-sender business rule, candidate semantics).
+- **Neighbor fence: `apps/fifteen-ac-web/AGENTS.md`** — same product, web conventions.
+- **Registry entries: `apps-registry.json#apps.fifteen-ac-web` + `apps.fifteen-ac-mobile`**.
+- **Module: `17s-client/packages/modules/fifteen-all-check`** — shared domain logic.
