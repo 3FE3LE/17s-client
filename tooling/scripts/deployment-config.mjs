@@ -98,20 +98,7 @@ export const deploymentConfig = {
   ...productAppConfigs('seven-rc'),
   ...productAppConfigs('eight-dd'),
   ...productAppConfigs('nine-nr'),
-  // nine-cc is web-only on Day 1; mobile adapter is intentionally omitted.
-  'nine-cc-web': appConfig({
-    app: 'nine-cc-web',
-    previewBranch: 'preview-nine-cc',
-    paths: [
-      'apps/nine-cc-web',
-      'packages/modules/nine-care-companion',
-      ...sharedPaths.core,
-      ...sharedPaths.ui,
-      ...sharedPaths.uiWeb,
-      ...sharedPaths.design,
-      ...sharedPaths.tailwind,
-    ],
-  }),
+  ...productAppConfigs('nine-cc'),
 };
 
 export const previewBranches = [

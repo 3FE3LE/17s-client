@@ -4,11 +4,11 @@
 
 ## Own files
 
-- `apps/nine-cc-web/**` — everything under this directory is owned by this app. Mobile directory does NOT exist on Day 1; do not create `apps/nine-cc-mobile/` without a deliberate product decision.
+- `apps/nine-cc-web/**` — everything under this directory is owned by this app. `apps/nine-cc-mobile/**` is owned by its own app; coordinate UI changes that should mirror across both.
 
 ## Neighbor apps
 
-- (none on Day 1. The platform is web-first; mobile is future as PWA. Re-evaluate when caregiver analytics show a clear mobile gap.)
+- `nine-cc-mobile` — same product, same module, same auth surface; coordinate UI changes that should mirror across the dashboard.
 
 ## Branch scope
 
