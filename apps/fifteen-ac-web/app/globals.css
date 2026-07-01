@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 @import '@17suit/tailwind-config/theme.css';
-@import '@17suit/ui-web/suit-tokens.css';
+@import '@17suit/tailwind-config/suit-tokens.css';
 
 @source '../../../packages/design-system/src';
 @source '../../../packages/ui-web/src';
