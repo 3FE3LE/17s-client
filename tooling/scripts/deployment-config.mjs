@@ -18,6 +18,7 @@ const productModules = {
   'seven-rc': 'packages/modules/seven-reservations-club',
   'eight-dd': 'packages/modules/eight-dream-dishes',
   'nine-nr': 'packages/modules/nine-to-nine-nurse',
+  'nine-cc': 'packages/modules/nine-care-companion',
 };
 
 function appConfig({ app, previewBranch, paths, productionBranch = 'main' }) {
@@ -97,6 +98,20 @@ export const deploymentConfig = {
   ...productAppConfigs('seven-rc'),
   ...productAppConfigs('eight-dd'),
   ...productAppConfigs('nine-nr'),
+  // nine-cc is web-only on Day 1; mobile adapter is intentionally omitted.
+  'nine-cc-web': appConfig({
+    app: 'nine-cc-web',
+    previewBranch: 'preview-nine-cc',
+    paths: [
+      'apps/nine-cc-web',
+      'packages/modules/nine-care-companion',
+      ...sharedPaths.core,
+      ...sharedPaths.ui,
+      ...sharedPaths.uiWeb,
+      ...sharedPaths.design,
+      ...sharedPaths.tailwind,
+    ],
+  }),
 };
 
 export const previewBranches = [
@@ -110,4 +125,5 @@ export const previewBranches = [
   'preview-seven-rc',
   'preview-eight-dd',
   'preview-nine-nr',
+  'preview-nine-cc',
 ];

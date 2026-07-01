@@ -274,18 +274,27 @@ function writeJson(path, value) {
 
 const today = new Date().toISOString().slice(0, 10);
 
+function normalizeSubdomain(input) {
+  // Accept either a bare slug ("nine-cc") or a fully-qualified host
+  // ("nine-cc.17suit.com"). Avoid the previous double-suffix bug.
+  const trimmed = input.replace(/\.+$/, '');
+  if (/\.17suit\.com$/i.test(trimmed)) return trimmed.toLowerCase();
+  return `${trimmed.toLowerCase()}.17suit.com`;
+}
+
 function appendRegistryEntries() {
   if (!existsSync(REGISTRY_PATH)) {
     console.warn(`skip registry: ${REGISTRY_PATH} not found`);
     return;
   }
   const reg = readJson(REGISTRY_PATH);
+  const subdomainFinal = normalizeSubdomain(subdomain);
   reg.apps[`${appSlug}-web`] = {
     kind: 'web',
     product: appSlug,
     appDir: `17s-client/apps/${appSlug}-web`,
     vercelProject: `17s-${appSlug}-web`,
-    subdomain: `${subdomain}.17suit.com`,
+    subdomain: subdomainFinal,
     module: `17s-client/packages/modules/${moduleSlug}`,
     package: `@17suit/${appSlug}-web`,
     devPort: webPort,
@@ -302,7 +311,7 @@ function appendRegistryEntries() {
     product: appSlug,
     appDir: `17s-client/apps/${appSlug}-mobile`,
     vercelProject: `17s-${appSlug}-mobile`,
-    subdomain: `${subdomain}.17suit.com`,
+    subdomain: subdomainFinal,
     module: `17s-client/packages/modules/${moduleSlug}`,
     package: `@17suit/${appSlug}-mobile`,
     devPort: mobilePort,
