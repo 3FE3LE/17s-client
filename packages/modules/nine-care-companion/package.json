@@ -1,0 +1,42 @@
+{
+  "name": "@17suit/module-nine-care-companion",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./client": {
+      "default": "./src/client.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@17suit/core": "workspace:*",
+    "@17suit/ui": "workspace:*",
+    "@tanstack/react-query": "^5.90.3",
+    "react": "19.1.0",
+    "zod": "^3.24.1"
+  },
+  "peerDependencies": {
+    "react": "19.1.0"
+  },
+  "devDependencies": {
+    "@17suit/eslint-config": "workspace:*",
+    "@17suit/typescript-config": "workspace:*",
+    "@types/react": "~19.1.10",
+    "@vitest/coverage-v8": "^4.1.9",
+    "typescript": "^5.8.2",
+    "vitest": "^4.1.9"
+  }
+}
