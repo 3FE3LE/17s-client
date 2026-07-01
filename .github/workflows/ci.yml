@@ -49,3 +49,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm verify:api-schema
+      # App registry drift gate. Asserts every apps/<slug>/ and
+      # packages/modules/<slug>/ referenced in apps-registry.json exists on
+      # disk and vice versa. Fails CI when the registry and the filesystem
+      # disagree.
+      - name: Verify apps registry
+        run: node tooling/scripts/check-registry.mjs
