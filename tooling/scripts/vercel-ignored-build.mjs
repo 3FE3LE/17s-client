@@ -48,15 +48,23 @@ const currentSha = process.env.VERCEL_GIT_COMMIT_SHA ?? 'HEAD';
 const previousSha = process.env.VERCEL_GIT_PREVIOUS_SHA;
 
 if (!config.allowedBranches.includes(branch)) {
-  // Branch is outside the conventional list (e.g. feat/* or development).
-  // We DON'T skip the build — Vercel Hobby auto-deploys every
-  // non-production branch and we want every push to produce a preview.
-  // The git-diff check below decides per-app relevance, so an app
-  // whose files don't change still skips its own build, but other
-  // apps in the same push build and deploy normally.
-  console.log(
-    `[info] ${app}: branch ${branch} not in allowedBranches, falling through to diff check`,
-  );
+  // Strict branch gate: only the app's preview and production branches
+  // (configured in deployment-config.mjs) trigger a build. Any other
+  // branch (feat/*, development, chore/*, etc.) is skipped entirely.
+  //
+  // This is the first line of defense against Vercel Hobby's
+  // auto-deploy-on-every-branch behavior. Pair with Vercel project
+  // settings: Production Branch = `production`; for finer control,
+  // restrict Branch Tracking to the preview + production branches
+  // (Vercel UI → Settings → Git → Ignored Build Step).
+  //
+  // The 3-tier release flow (feat/* → development → preview →
+  // production) means preview deploys only happen on the explicit
+  // preview branch, and production deploys on the production branch.
+  // PRs targeting preview (e.g. from development) are the path that
+  // updates the preview branch and triggers a preview deploy.
+  console.log(`[skip] ${app}: branch ${branch} is not in allowedBranches`);
+  process.exit(0);
 }
 
 let baseSha = previousSha;
