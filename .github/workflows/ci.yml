@@ -56,10 +56,14 @@ jobs:
         run: node tooling/scripts/check-registry.mjs
 
   build:
-    # Only runs on push to preview/production (PRs skip the build per the
-    # promotion policy above). Pushed into a separate job so it doesn't
-    # burn minutes on every PR.
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/preview' || github.ref == 'refs/heads/production')
+    # Build runs ONLY on PRs that target development — the first
+    # promotion step in the 3-tier flow (feat/* → development → preview →
+    # production). PRs against preview or production, plus push events
+    # on those branches, skip the build; their compile-validation is
+    # already proven by the PR that landed them in development. This
+    # matches the release.sh promotion model where the actual compile
+    # happens once, at the development PR boundary.
+    if: github.event_name == 'pull_request' && github.base_ref == 'development'
     runs-on: ubuntu-latest
     needs: quality
     steps:
@@ -74,8 +78,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Build gate. Runs the full turbo build pipeline on affected
-      # packages so the promotion branch is guaranteed to compile
-      # end-to-end before Vercel picks up the deployment. Vercel no
-      # longer auto-builds on push; this job is the build signal.
+      # packages so the development branch is guaranteed to compile
+      # end-to-end before promotion. Subsequent promotions to preview
+      # and production don't re-run this; they fast-forward from
+      # development where the build was already proven.
       - name: Build affected packages
         run: pnpm exec turbo run build --affected
