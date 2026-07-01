@@ -48,8 +48,15 @@ const currentSha = process.env.VERCEL_GIT_COMMIT_SHA ?? 'HEAD';
 const previousSha = process.env.VERCEL_GIT_PREVIOUS_SHA;
 
 if (!config.allowedBranches.includes(branch)) {
-  console.log(`[skip] ${app}: branch ${branch} is not enabled for this project`);
-  process.exit(0);
+  // Branch is outside the conventional list (e.g. feat/* or development).
+  // We DON'T skip the build — Vercel Hobby auto-deploys every
+  // non-production branch and we want every push to produce a preview.
+  // The git-diff check below decides per-app relevance, so an app
+  // whose files don't change still skips its own build, but other
+  // apps in the same push build and deploy normally.
+  console.log(
+    `[info] ${app}: branch ${branch} not in allowedBranches, falling through to diff check`,
+  );
 }
 
 let baseSha = previousSha;
