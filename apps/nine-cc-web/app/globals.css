@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+@import '@17suit/tailwind-config/theme.css';
+@import '@17suit/tailwind-config/suit-tokens.css';
+
+@source '../../../packages/design-system/src';
+@source '../../../packages/ui-web/src';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --suit-font-arvo: var(--font-arvo, 'Arvo'), serif;
+  --suit-font-amaranth: var(--font-amaranth, 'Amaranth'), sans-serif;
+  --suit-font-zilla: var(--font-zilla, 'Zilla Slab'), serif;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--suit-font-amaranth), 'Amaranth', sans-serif;
+    background: var(--color-bg-app, #fefefe);
+    color: var(--color-text, #00171f);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+}
