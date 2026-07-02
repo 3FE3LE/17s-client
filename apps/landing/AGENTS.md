@@ -30,3 +30,10 @@
 <!-- TODO: state mgmt, form lib, validation lib, query lib, test framework -->
 
 - (placeholder)
+
+## Related Context
+
+- **Product agent: `.claude/agents/landing.md`** — single source of truth for the landing product (philosophy, invariants, conventions). Read first for cross-cutting product concerns.
+- **Memory: `/home/fl/.claude/projects/-home-fl-17s-workspace/memory/project/landing.md`** — non-derivable facts (marketing owner, copy decisions, SEO context).
+- **Registry entry: `apps-registry.json#apps.landing`**.
+- **Neighbor apps: (none — landing is web-only on Day 1).**

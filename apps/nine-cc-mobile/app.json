@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Nine Care Companion",
+    "slug": "nine-cc-mobile",
+    "scheme": "nine-cc-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "jsEngine": "hermes",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#0B1020"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.seventeensuit.fifteenac"
+    },
+    "android": {
+      "package": "com.seventeensuit.fifteenac",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon-17suit.png",
+        "backgroundColor": "#0B1020"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "extra": {
+      "sentryDsn": "SENTRY_DSN",
+      "sentryEnvironment": "SENTRY_ENVIRONMENT",
+      "sentryTracesSampleRate": "SENTRY_TRACES_SAMPLE_RATE"
+    }
+  }
+}

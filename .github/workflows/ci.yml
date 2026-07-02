@@ -1,17 +1,20 @@
 name: CI
 
 # Triggers:
-# - pull_request: required status check for branch protection on main and
-#   on the development/preview/production promotion branches.
-# - push to main, production, preview, development: runs after a merge so
-#   the merge commit carries its own CI status. Without the push trigger,
-#   branch-protection rules and downstream consumers (Vercel, status
-#   badges) can block because the workflow never fires on the merge event.
+# - pull_request: required status check for branch protection on any base
+#   branch. Runs the quality job (lint + typecheck + test + verify +
+#   registry). NO build on PRs — per user policy, builds are deferred to
+#   the promotion workflow (push to preview or production).
+# - push to preview/production: runs the same quality job PLUS the build
+#   job, since merging into a promotion branch should compile end-to-end
+#   before Vercel picks up the deployment. Pushes to feat/* or other
+#   short-lived branches do not run the build (they don't get Vercel
+#   deploys anyway).
 # - workflow_dispatch: manual re-run for debugging.
 on:
   pull_request:
   push:
-    branches: [main, production, preview, development]
+    branches: [preview, production]
   workflow_dispatch:
 
 env:
@@ -34,17 +37,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Lint and typecheck affected packages
         run: pnpm exec turbo run lint typecheck --affected
-      # Test gate runs landing for now (the only workspace wired for vitest).
-      # Extend the `test` turbo task to additional apps as they adopt tests.
       - name: Test affected packages
         run: pnpm exec turbo run test --affected
-      # Build gate. Runs the full turbo build pipeline on affected
-      # packages so the PR is guaranteed to compile end-to-end before
-      # landing on development. Vercel no longer auto-deploys on push, so
-      # this is the only build signal we have for PRs targeting the
-      # development/preview/production promotion branches.
-      - name: Build affected packages
-        run: pnpm exec turbo run build --affected
       # API contract drift gate. Fetches the latest openapi.json artifact
       # from 17Suit/17s-server main and diffs the regenerated
       # packages/core/src/api-schema.ts against the committed version. Fails
@@ -56,7 +50,32 @@ jobs:
         run: pnpm verify:api-schema
       # App registry drift gate. Asserts every apps/<slug>/ and
       # packages/modules/<slug>/ referenced in apps-registry.json exists on
-      # disk and vice versa. Fails CI when the registry and the filesystem
-      # disagree.
+      # disk and vice versa. Passes cleanly when the registry is not
+      # reachable (CI on 17s-client alone).
       - name: Verify apps registry
         run: node tooling/scripts/check-registry.mjs
+
+  build:
+    # Only runs on push to preview/production (PRs skip the build per the
+    # promotion policy above). Pushed into a separate job so it doesn't
+    # burn minutes on every PR.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/preview' || github.ref == 'refs/heads/production')
+    runs-on: ubuntu-latest
+    needs: quality
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - run: git fetch origin main:refs/remotes/origin/main
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build gate. Runs the full turbo build pipeline on affected
+      # packages so the promotion branch is guaranteed to compile
+      # end-to-end before Vercel picks up the deployment. Vercel no
+      # longer auto-builds on push; this job is the build signal.
+      - name: Build affected packages
+        run: pnpm exec turbo run build --affected

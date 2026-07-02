@@ -101,8 +101,31 @@ function collectUsedPorts(globSuffix, marker) {
 
 const usedWebPorts = collectUsedPorts('-web', '--port ');
 const usedMobilePorts = collectUsedPorts('-mobile', '--port ');
-const webPort = nextFreePort(3001, usedWebPorts);
-const mobilePort = nextFreePort(8081, usedMobilePorts);
+
+// Optional explicit port flags. Falls back to the lowest-free-port allocator
+// when omitted. Per tooling/INFRA.md, products usually want the formula
+// `3000 + N` for web and `8000 + N` for mobile.
+const explicitWebPort = parsePortFlag(process.argv, '--web-port');
+const explicitMobilePort = parsePortFlag(process.argv, '--mobile-port');
+const webPort =
+  explicitWebPort !== null && !usedWebPorts.has(explicitWebPort)
+    ? explicitWebPort
+    : nextFreePort(3001, usedWebPorts);
+const mobilePort =
+  explicitMobilePort !== null && !usedMobilePorts.has(explicitMobilePort)
+    ? explicitMobilePort
+    : nextFreePort(8081, usedMobilePorts);
+
+function parsePortFlag(argv, flag) {
+  for (let i = 0; i < argv.length; i += 1) {
+    if (argv[i] === flag) {
+      const raw = argv[i + 1];
+      const n = Number.parseInt(raw, 10);
+      return Number.isFinite(n) && n > 0 && n < 65536 ? n : null;
+    }
+  }
+  return null;
+}
 
 const productName = toTitleCaseKebab(moduleSlug);
 const modulePascal = toPascalCaseKebab(moduleSlug);
@@ -275,25 +298,39 @@ function writeJson(path, value) {
 
 const today = new Date().toISOString().slice(0, 10);
 
+function normalizeSubdomain(input) {
+  // Accept either a bare slug ("nine-cc") or a fully-qualified host
+  // ("nine-cc.17suit.com"). Avoid the previous double-suffix bug.
+  const trimmed = input.replace(/\.+$/, '');
+  if (/\.17suit\.com$/i.test(trimmed)) return trimmed.toLowerCase();
+  return `${trimmed.toLowerCase()}.17suit.com`;
+}
+
 function appendRegistryEntries() {
   if (!existsSync(REGISTRY_PATH)) {
     console.warn(`skip registry: ${REGISTRY_PATH} not found`);
     return;
   }
   const reg = readJson(REGISTRY_PATH);
+  const subdomainFinal = normalizeSubdomain(subdomain);
+  // Agent + memory are PER PRODUCT (not per surface). All surfaces of the
+  // same product share a single .claude/agents/<slug>.md and
+  // memory/project/<slug>.md; surface specifics live in each fence file.
+  const agentFile = `.claude/agents/${appSlug}.md`;
+  const memoryFile = `memory/project/${appSlug}.md`;
   reg.apps[`${appSlug}-web`] = {
     kind: 'web',
     product: appSlug,
     appDir: `17s-client/apps/${appSlug}-web`,
     vercelProject: `17s-${appSlug}-web`,
-    subdomain: `${subdomain}.17suit.com`,
+    subdomain: subdomainFinal,
     module: `17s-client/packages/modules/${moduleSlug}`,
     package: `@17suit/${appSlug}-web`,
     devPort: webPort,
     neighborApps: [`${appSlug}-mobile`],
     owner: 'TBD',
-    memoryFile: `memory/project/${appSlug}-web.md`,
-    agentFile: `.claude/agents/${appSlug}-web.md`,
+    memoryFile,
+    agentFile,
     fenceFile: `17s-client/apps/${appSlug}-web/AGENTS.md`,
     createdAt: today,
     active: true,
@@ -303,14 +340,14 @@ function appendRegistryEntries() {
     product: appSlug,
     appDir: `17s-client/apps/${appSlug}-mobile`,
     vercelProject: `17s-${appSlug}-mobile`,
-    subdomain: `${subdomain}.17suit.com`,
+    subdomain: subdomainFinal,
     module: `17s-client/packages/modules/${moduleSlug}`,
     package: `@17suit/${appSlug}-mobile`,
     devPort: mobilePort,
     neighborApps: [`${appSlug}-web`],
     owner: 'TBD',
-    memoryFile: `memory/project/${appSlug}-mobile.md`,
-    agentFile: `.claude/agents/${appSlug}-mobile.md`,
+    memoryFile,
+    agentFile,
     fenceFile: `17s-client/apps/${appSlug}-mobile/AGENTS.md`,
     createdAt: today,
     active: true,
@@ -449,15 +486,13 @@ ${neighbors}
 function writeAgentStubs() {
   const dir = join(workspaceRoot, '.claude', 'agents');
   mkdirSync(dir, { recursive: true });
-  for (const slug of [`${appSlug}-web`, `${appSlug}-mobile`]) {
-    const out = join(dir, `${slug}.md`);
-    if (existsSync(out)) continue;
-    const kind = slug.endsWith('-web') ? 'web' : 'mobile';
-    const content = agentStub(slug, kind);
-    if (!content) continue;
-    writeFileSync(out, content, 'utf8');
-    console.log(`agent: ${out}`);
-  }
+  // Per-product agent (shared by every surface of this product).
+  const out = join(dir, `${appSlug}.md`);
+  if (existsSync(out)) return;
+  const content = agentStub(appSlug, 'product');
+  if (!content) return;
+  writeFileSync(out, content, 'utf8');
+  console.log(`agent: ${out}`);
 }
 
 function memoryStub(slug) {
@@ -485,12 +520,11 @@ function writeMemoryStubs() {
   } catch {
     // already exists
   }
-  for (const slug of [`${appSlug}-web`, `${appSlug}-mobile`]) {
-    const out = join(dir, `${slug}.md`);
-    if (existsSync(out)) continue;
-    writeFileSync(out, memoryStub(slug), 'utf8');
-    console.log(`memory: ${out}`);
-  }
+  // One memory stub per PRODUCT (every surface of this product reads it).
+  const out = join(dir, `${appSlug}.md`);
+  if (existsSync(out)) return;
+  writeFileSync(out, memoryStub(appSlug), 'utf8');
+  console.log(`memory: ${out}`);
 }
 
 appendRegistryEntries();

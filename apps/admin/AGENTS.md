@@ -30,3 +30,10 @@
 <!-- TODO: state mgmt, form lib, validation lib, query lib, test framework -->
 
 - (placeholder)
+
+## Related Context
+
+- **Product agent: `.claude/agents/admin.md`** — single source of truth for the admin product (philosophy, invariants, conventions). Read first for cross-cutting product concerns.
+- **Memory: `/home/fl/.claude/projects/-home-fl-17s-workspace/memory/project/admin.md`** — non-derivable facts (owners, third-party contacts, business rationale).
+- **Registry entry: `apps-registry.json#apps.admin`**.
+- **Neighbor apps: (none — admin is web-only on Day 1).**

@@ -18,6 +18,7 @@ const productModules = {
   'seven-rc': 'packages/modules/seven-reservations-club',
   'eight-dd': 'packages/modules/eight-dream-dishes',
   'nine-nr': 'packages/modules/nine-to-nine-nurse',
+  'nine-cc': 'packages/modules/nine-care-companion',
 };
 
 function appConfig({ app, previewBranch, paths, productionBranch = 'main' }) {
@@ -97,6 +98,7 @@ export const deploymentConfig = {
   ...productAppConfigs('seven-rc'),
   ...productAppConfigs('eight-dd'),
   ...productAppConfigs('nine-nr'),
+  ...productAppConfigs('nine-cc'),
 };
 
 export const previewBranches = [
@@ -110,4 +112,5 @@ export const previewBranches = [
   'preview-seven-rc',
   'preview-eight-dd',
   'preview-nine-nr',
+  'preview-nine-cc',
 ];
