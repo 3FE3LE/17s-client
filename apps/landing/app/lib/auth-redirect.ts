@@ -5,8 +5,9 @@
  * - Relative paths starting with a single `/` are always allowed.
  * - Absolute URLs are allowed only if their origin is in the allow-list
  *   (env: NEXT_PUBLIC_FIFTEEN_AC_WEB_URL, NEXT_PUBLIC_SEVEN_RC_WEB_URL,
- *    NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS) OR, in development, if they point
- *   to localhost/127.0.0.1 (so cross-port product apps work without env setup).
+ *    NEXT_PUBLIC_NINE_CC_WEB_URL, NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS)
+ *   OR, in development, if they point to localhost/127.0.0.1 (so cross-port
+ *   product apps work without env setup).
  * - Anything else falls back to `/`.
  */
 export function resolveRedirectTarget(rawValue: string | string[] | null | undefined): string {
@@ -21,6 +22,7 @@ export function resolveRedirectTarget(rawValue: string | string[] | null | undef
   const allowedOrigins = [
     process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL,
     process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL,
+    process.env.NEXT_PUBLIC_NINE_CC_WEB_URL,
     process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
   ]
     .flatMap((entry) => entry?.split(',') ?? [])

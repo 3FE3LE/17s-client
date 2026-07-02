@@ -19,6 +19,7 @@
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const [appSlug, moduleSlugArg, subdomainArg] = process.argv.slice(2);
 if (!appSlug || !moduleSlugArg) {
@@ -496,6 +497,27 @@ appendRegistryEntries();
 writeFenceFiles();
 writeAgentStubs();
 writeMemoryStubs();
+
+// --- Post-scaffold verification ----------------------------------------
+// Auth-bridge contract: each web app must carry the four redirect stubs
+// that hand the user off to the landing origin (hosting Clerk). Run the
+// verifier now so a broken scaffold fails fast instead of getting caught by
+// CI after the user already invested work.
+try {
+  const verifier = join(root, 'tooling', 'scripts', 'verify-auth-redirects.mjs');
+  const result = spawnSync(process.execPath, [verifier], {
+    stdio: 'inherit',
+    cwd: root,
+  });
+  if (result.status !== 0) {
+    console.error(
+      `\nAuth-bridge verifier failed (exit ${result.status}). Fix the listed web apps before committing.`,
+    );
+    process.exit(result.status ?? 1);
+  }
+} catch (err) {
+  console.warn(`auth-bridge verifier skipped: ${err.message}`);
+}
 
 console.log(
   `\nCreated ${appSlug} (web:${webPort}, mobile:${mobilePort}, providers:on). Registry + fences + agent stubs + memory stubs written.\nNext manual steps:\n  - Fill ## Domain Glossary and ## Invariants in each .claude/agents/<app>.md.\n  - Update fence files branch scope.\n  - Replace owner = TBD in apps-registry.json.\n  - Append a ## ${today} row to CHECKPOINT.md.\n`,
