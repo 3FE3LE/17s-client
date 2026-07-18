@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 // Bootstrap stub `.claude/agents/<app>.md` files for every active app in
-// apps-registry.json. Idempotent: skips files that already have content.
-// Runs from /home/fl/17s-workspace.
+// 17s-client/apps-registry.json. Idempotent: skips files that already have
+// content. Resolves paths from this file's location (co-located with the
+// registry).
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const WORKSPACE_ROOT = '/home/fl/17s-workspace';
-const REGISTRY_PATH = join(WORKSPACE_ROOT, 'apps-registry.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const CLIENT_ROOT = join(__dirname, '..', '..');
+const WORKSPACE_ROOT = join(CLIENT_ROOT, '..');
+const REGISTRY_PATH = join(CLIENT_ROOT, 'apps-registry.json');
 const AGENTS_DIR = join(WORKSPACE_ROOT, '.claude', 'agents');
 
 function readJson(path) {
@@ -56,7 +61,8 @@ function deriveTitle(slug) {
 }
 
 function renderAgent(slug, entry) {
-  const pkgPath = join(WORKSPACE_ROOT, entry.appDir, 'package.json');
+  const rel = (entry.appDir || '').replace(/^17s-client\//, '');
+  const pkgPath = join(CLIENT_ROOT, rel, 'package.json');
   if (!existsSync(pkgPath)) return null;
   const pkg = readJson(pkgPath);
   const title = deriveTitle(slug);
