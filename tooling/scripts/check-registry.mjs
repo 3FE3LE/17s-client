@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Assert every `apps/*` and `packages/modules/*` directory in 17s-client
-// has a matching entry in workspace `apps-registry.json`, and vice versa.
-// Exits 1 on drift.
+// has a matching entry in `apps-registry.json` (co-located at the repo root
+// so CI can read it), and vice versa. Exits 1 on drift.
 //
 // Usage:
 //   node tooling/scripts/check-registry.mjs
@@ -16,9 +16,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const CLIENT_ROOT = join(__dirname, '..', '..');
 const WORKSPACE_ROOT = join(CLIENT_ROOT, '..');
-// Also check the local copy (co-located registry) before falling back to
-// the workspace-root path. This lets the gate pass in either layout
-// (workspace-root or co-located) without configuration drift.
+// Prefer the co-located registry (17s-client/apps-registry.json, readable by
+// CI which only checks out 17s-client) and fall back to the workspace-root
+// copy. Works in either layout without configuration drift.
 const LOCAL_REGISTRY = join(CLIENT_ROOT, 'apps-registry.json');
 const REGISTRY_PATH = existsSync(LOCAL_REGISTRY)
   ? LOCAL_REGISTRY
@@ -52,16 +52,17 @@ function listDirs(root) {
 const onDiskApps = new Set(listDirs(appsRoot));
 const onDiskModules = new Set(listDirs(modulesRoot));
 
-// Build the expected set of app slugs from disk (every dir under apps/* is
-// treated as one app; modules are noted separately).
 const expected = new Set([...onDiskApps]);
 
-// Also flag any registered app whose appDir doesn't actually exist.
 const drift = [];
 for (const slug of [...registered].sort()) {
   const entry = reg.apps[slug];
   if (!entry) continue;
-  const abs = join(WORKSPACE_ROOT, entry.appDir);
+  // entry.appDir is workspace-relative (e.g. "17s-client/apps/admin"); strip
+  // the leading "17s-client/" when resolving against CLIENT_ROOT so the
+  // registry stays portable across repos.
+  const rel = entry.appDir.replace(/^17s-client\//, '');
+  const abs = join(CLIENT_ROOT, rel);
   if (!existsSync(abs)) {
     drift.push(`- registered app "${slug}" points at missing dir ${entry.appDir}`);
   }
@@ -72,8 +73,6 @@ for (const slug of [...expected].sort()) {
   }
 }
 
-// Modules referenced via app.module should exist; modules on disk may not
-// all be registered (they belong to a product via app.module).
 const moduleSlugsFromRegistry = new Set();
 for (const entry of Object.values(reg.apps || {})) {
   if (entry.module) {
