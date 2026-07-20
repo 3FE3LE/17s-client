@@ -4,6 +4,7 @@ import { z } from 'zod';
 export * from './domain/recipe';
 export * from './domain/palettes';
 export * from './domain/presets';
+export * from './domain/lineage-themes';
 export type { PixelBuffer } from './render/pixel-buffer';
 export { renderAsset, totalBorderThickness } from './render/render';
 export { encodePng, encodePngDataUrl, toBase64 } from './export/png';

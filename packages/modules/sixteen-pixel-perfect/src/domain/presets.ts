@@ -1,4 +1,8 @@
-import { BUILT_IN_PALETTES } from './palettes';
+import {
+  LINEAGE_COMPONENT_IDS,
+  makeLineageComponentRecipe,
+  type LineageComponentId,
+} from './lineage-themes';
 import type { AssetRecipe, ComponentState, Palette } from './recipe';
 import { RECIPE_VERSION } from './recipe';
 
@@ -38,14 +42,23 @@ const panelPreset: ComponentPreset = {
 
 export const COMPONENT_PRESETS: readonly ComponentPreset[] = [panelPreset] as const;
 
+export const LINEAGE_COMPONENT_PRESETS = LINEAGE_COMPONENT_IDS.map((id) => ({
+  id,
+  name: id
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' '),
+})) satisfies readonly { id: LineageComponentId; name: string }[];
+
 export function getPreset(id: string): ComponentPreset | undefined {
   return COMPONENT_PRESETS.find((preset) => preset.id === id);
 }
 
 /** A ready-to-render default recipe for the studio's initial state. */
 export function makeDefaultPanelRecipe(): AssetRecipe {
-  return panelPreset.make({
-    palette: BUILT_IN_PALETTES[0]!,
+  return makeLineageComponentRecipe({
+    lineageThemeId: 'ardhen',
+    componentId: 'panel',
     width: 48,
     height: 32,
     seed: 1,

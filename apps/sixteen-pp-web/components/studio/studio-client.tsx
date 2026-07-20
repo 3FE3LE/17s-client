@@ -2,18 +2,26 @@
 
 import {
   BUILT_IN_PALETTES,
+  LINEAGE_COMPONENT_PRESETS,
+  LINEAGE_THEME_PRESETS,
+  applyLineageThemePreset,
   buildGodotExportBundle,
   buildGodotMetadata,
   computeNineSlice,
+  detachRecipeFromLineagePreset,
   encodePng,
   encodePngDataUrl,
   encodeZip,
   getBuiltInPalette,
+  getLineageThemePreset,
   GodotAxisStretch,
   makeDefaultPanelRecipe,
+  makeLineageComponentRecipe,
+  markRecipeManualOverride,
   MVP_STATES,
   parseRecipe,
   renderAsset,
+  resetRecipeToLineagePreset,
   serializeRecipe,
   validateGodotDestination,
   type AssetRecipe,
@@ -21,18 +29,47 @@ import {
   type EdgePattern,
   type FillKind,
   type GodotAxisStretchValue,
-  type GodotContentPadding,
+  type LineageComponentId,
+  type LineageThemeId,
+  type PaddingDefinition,
+  type Rgba,
 } from '@17suit/module-sixteen-pixel-perfect';
 import { useMemo, useState, type ChangeEvent, type CSSProperties } from 'react';
 
 const SCALES = [1, 2, 4, 8] as const;
-const CORNER_MOTIFS: readonly CornerMotif[] = ['square', 'notch', 'bevel', 'round'];
+const CORNER_MOTIFS: readonly CornerMotif[] = [
+  'square',
+  'notch',
+  'bevel',
+  'round',
+  'buttress',
+  'cellular',
+  'rivet',
+  'folded',
+  'compass',
+  'seal',
+  'constellation',
+  'pulse',
+];
 const FILL_KINDS: readonly FillKind[] = ['solid', 'checker', 'diagonal', 'noise'];
 const EDGE_PATTERNS: readonly EdgePattern[] = ['solid', 'dashed', 'dotted'];
 const AXIS_OPTIONS: readonly { value: GodotAxisStretchValue; label: string }[] = [
   { value: GodotAxisStretch.Stretch, label: 'Stretch (0)' },
   { value: GodotAxisStretch.Tile, label: 'Tile (1)' },
   { value: GodotAxisStretch.TileFit, label: 'Tile Fit (2)' },
+];
+const THEME_PREVIEW_COMPONENTS: readonly LineageComponentId[] = [
+  'panel',
+  'button_primary',
+  'button_secondary',
+  'tooltip',
+  'status_bar',
+  'sidebar',
+  'tab',
+  'progress_bar',
+  'resource_chip',
+  'portrait_frame',
+  'icon_container',
 ];
 
 function clampInt(value: number, min: number, max: number): number {
@@ -49,11 +86,46 @@ function downloadBlob(fileName: string, mime: string, data: BlobPart): void {
   URL.revokeObjectURL(url);
 }
 
-/** Copy PNG bytes into a plain ArrayBuffer (a valid BlobPart). */
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   const buffer = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(buffer).set(bytes);
   return buffer;
+}
+
+function rgbaCss(rgba: Rgba): string {
+  return `rgba(${rgba[0]},${rgba[1]},${rgba[2]},${rgba[3] / 255})`;
+}
+
+function paletteToken(recipe: AssetRecipe, tokenId: string): Rgba {
+  return recipe.palette.tokens.find((token) => token.id === tokenId)?.rgba ?? [0, 0, 0, 255];
+}
+
+function relativeLuminance([r, g, b]: Rgba): number {
+  const channel = [r, g, b].map((value) => {
+    const c = value / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channel[0]! + 0.7152 * channel[1]! + 0.0722 * channel[2]!;
+}
+
+function contrastRatio(a: Rgba, b: Rgba): number {
+  const l1 = relativeLuminance(a);
+  const l2 = relativeLuminance(b);
+  const light = Math.max(l1, l2);
+  const dark = Math.min(l1, l2);
+  return (light + 0.05) / (dark + 0.05);
+}
+
+function accessibilityWarnings(recipe: AssetRecipe): string[] {
+  const checks: readonly [string, string, string][] = [
+    ['text_primary', 'surface_base', 'Texto principal bajo contraste sobre superficie base'],
+    ['text_secondary', 'surface_base', 'Texto secundario bajo contraste sobre superficie base'],
+    ['focus', 'surface_base', 'Focus poco visible sobre superficie base'],
+    ['disabled', 'surface_inset', 'Disabled poco distinguible sobre superficie inset'],
+  ];
+  return checks
+    .filter(([fg, bg]) => contrastRatio(paletteToken(recipe, fg), paletteToken(recipe, bg)) < 3)
+    .map(([, , message]) => message);
 }
 
 export function StudioClient() {
@@ -63,11 +135,18 @@ export function StudioClient() {
   const [godotDest, setGodotDest] = useState('res://assets/ui/generated/panel_mine/');
   const [axisH, setAxisH] = useState<GodotAxisStretchValue>(GodotAxisStretch.Tile);
   const [axisV, setAxisV] = useState<GodotAxisStretchValue>(GodotAxisStretch.Tile);
-  const [contentPadding, setContentPadding] = useState<GodotContentPadding | null>(null);
   const [godotError, setGodotError] = useState<string | null>(null);
 
-  // Derived, pure: one PNG data URL per MVP state. Recomputed only when the
-  // recipe changes — no effects, no canvas.
+  const activeLineage = recipe.lineage_theme_id
+    ? getLineageThemePreset(recipe.lineage_theme_id)
+    : undefined;
+  const tokenIds = recipe.palette.tokens.map((token) => token.id);
+  const lineageSlug = recipe.lineage_theme_id ?? 'legacy';
+  const baseName = `${lineageSlug}-${recipe.preset}-${recipe.size.width}x${recipe.size.height}`;
+  const nineSlice = useMemo(() => computeNineSlice(recipe), [recipe]);
+  const recipeJson = useMemo(() => serializeRecipe(recipe), [recipe]);
+  const warnings = useMemo(() => accessibilityWarnings(recipe), [recipe]);
+
   const previews = useMemo(
     () =>
       MVP_STATES.map((state) => ({
@@ -76,21 +155,48 @@ export function StudioClient() {
       })),
     [recipe],
   );
-  const nineSlice = useMemo(() => computeNineSlice(recipe), [recipe]);
-  const recipeJson = useMemo(() => serializeRecipe(recipe), [recipe]);
 
-  const tokenIds = recipe.palette.tokens.map((token) => token.id);
-  const baseName = `${recipe.preset}-${recipe.size.width}x${recipe.size.height}`;
+  const themePreview = useMemo(() => {
+    const lineageThemeId = recipe.lineage_theme_id ?? 'ardhen';
+    return THEME_PREVIEW_COMPONENTS.map((componentId) => {
+      const previewRecipe = makeLineageComponentRecipe({
+        lineageThemeId,
+        componentId,
+        seed: recipe.seed,
+      });
+      return {
+        componentId,
+        label: LINEAGE_COMPONENT_PRESETS.find((preset) => preset.id === componentId)?.name,
+        url: encodePngDataUrl(renderAsset(previewRecipe, 'normal')),
+        size: previewRecipe.size,
+      };
+    });
+  }, [recipe.lineage_theme_id, recipe.seed]);
 
-  const patch = (next: Partial<AssetRecipe>) => setRecipe((prev) => ({ ...prev, ...next }));
+  const patchRecipe = (path: string, next: Partial<AssetRecipe>) =>
+    setRecipe((prev) => markRecipeManualOverride({ ...prev, ...next }, path));
 
   const updateLayer = (index: 0 | 1, key: 'thickness' | 'tokenId' | 'pattern', value: unknown) =>
     setRecipe((prev) => {
       const layers = prev.border.layers.map((layer, i) =>
         i === index ? { ...layer, [key]: value } : layer,
       );
-      return { ...prev, border: { layers } };
+      return markRecipeManualOverride({ ...prev, border: { layers } }, `border.layers.${index}`);
     });
+
+  const updatePadding = (side: keyof PaddingDefinition, value: number) =>
+    setRecipe((prev) =>
+      markRecipeManualOverride(
+        {
+          ...prev,
+          contentPadding: {
+            ...(prev.contentPadding ?? { left: 0, top: 0, right: 0, bottom: 0 }),
+            [side]: value,
+          },
+        },
+        `contentPadding.${side}`,
+      ),
+    );
 
   const exportPng = (state: (typeof MVP_STATES)[number]) =>
     downloadBlob(
@@ -129,10 +235,10 @@ export function StudioClient() {
       destination: godotDest,
       axisStretchHorizontal: axisH,
       axisStretchVertical: axisV,
-      ...(contentPadding ? { contentPadding } : {}),
+      ...(recipe.contentPadding ? { contentPadding: recipe.contentPadding } : {}),
     });
     downloadBlob(
-      `${check.destination.assetName}.zip`,
+      `${lineageSlug}-${check.destination.assetName}.zip`,
       'application/zip',
       toArrayBuffer(encodeZip(bundle.files)),
     );
@@ -152,18 +258,88 @@ export function StudioClient() {
 
   const layer0 = recipe.border.layers[0];
   const layer1 = recipe.border.layers[1];
+  const pageStyle = {
+    ...styles.page,
+    background: rgbaCss(paletteToken(recipe, 'background_deep')),
+    color: rgbaCss(paletteToken(recipe, 'text_primary')),
+  };
 
   return (
-    <main style={styles.page}>
+    <main style={pageStyle}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Sixteen Pixel Perfect — Estudio</h1>
+        <h1 style={styles.title}>Sixteen Pixel Perfect</h1>
         <p style={styles.subtitle}>
-          Generador determinista de assets de UI en pixel-art. Configura, previsualiza y exporta.
+          Generador determinista de assets UI pixel-art para World of Goses.
         </p>
       </header>
 
       <div style={styles.layout}>
         <section style={styles.controls} aria-label="Configuración del asset">
+          <fieldset style={styles.fieldset}>
+            <legend style={styles.legend}>Linaje</legend>
+            <label style={styles.label}>
+              Preset World of Goses
+              <select
+                value={recipe.lineage_theme_id ?? ''}
+                onChange={(e) =>
+                  setRecipe((prev) =>
+                    applyLineageThemePreset(prev, e.target.value as LineageThemeId),
+                  )
+                }
+                style={styles.input}
+              >
+                {LINEAGE_THEME_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label style={styles.label}>
+              Componente
+              <select
+                value={recipe.preset}
+                onChange={(e) => {
+                  const lineageThemeId = recipe.lineage_theme_id ?? 'ardhen';
+                  setRecipe(
+                    makeLineageComponentRecipe({
+                      lineageThemeId,
+                      componentId: e.target.value as LineageComponentId,
+                      width: recipe.size.width,
+                      height: recipe.size.height,
+                      seed: recipe.seed,
+                    }),
+                  );
+                }}
+                style={styles.input}
+              >
+                {LINEAGE_COMPONENT_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p style={styles.hint}>{activeLineage?.description}</p>
+            <div style={styles.relationshipRow}>
+              <span style={styles.badge}>{recipe.preset_relationship ?? 'legacy'}</span>
+              <button
+                type="button"
+                onClick={() => setRecipe(resetRecipeToLineagePreset)}
+                style={styles.smallButton}
+              >
+                Reset to lineage preset
+              </button>
+              <button
+                type="button"
+                onClick={() => setRecipe(detachRecipeFromLineagePreset)}
+                style={styles.smallButton}
+              >
+                Detach from preset
+              </button>
+            </div>
+          </fieldset>
+
           <fieldset style={styles.fieldset}>
             <legend style={styles.legend}>Dimensiones</legend>
             <label style={styles.label}>
@@ -174,7 +350,7 @@ export function StudioClient() {
                 max={1024}
                 value={recipe.size.width}
                 onChange={(e) =>
-                  patch({
+                  patchRecipe('size.width', {
                     size: { ...recipe.size, width: clampInt(e.target.valueAsNumber, 1, 1024) },
                   })
                 }
@@ -189,7 +365,7 @@ export function StudioClient() {
                 max={1024}
                 value={recipe.size.height}
                 onChange={(e) =>
-                  patch({
+                  patchRecipe('size.height', {
                     size: { ...recipe.size, height: clampInt(e.target.valueAsNumber, 1, 1024) },
                   })
                 }
@@ -202,24 +378,27 @@ export function StudioClient() {
                 type="number"
                 min={0}
                 value={recipe.seed}
-                onChange={(e) => patch({ seed: clampInt(e.target.valueAsNumber, 0, 0xffffffff) })}
+                onChange={(e) =>
+                  patchRecipe('seed', { seed: clampInt(e.target.valueAsNumber, 0, 0xffffffff) })
+                }
                 style={styles.input}
               />
             </label>
           </fieldset>
 
           <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Paleta</legend>
+            <legend style={styles.legend}>Paleta semántica</legend>
             <label style={styles.label}>
-              Set de colores
+              Set legacy
               <select
                 value={recipe.palette.id}
                 onChange={(e) => {
                   const palette = getBuiltInPalette(e.target.value);
-                  if (palette) patch({ palette });
+                  if (palette) patchRecipe('palette', { palette });
                 }}
                 style={styles.input}
               >
+                <option value={recipe.palette.id}>{recipe.palette.name}</option>
                 {BUILT_IN_PALETTES.map((palette) => (
                   <option key={palette.id} value={palette.id}>
                     {palette.name}
@@ -232,17 +411,19 @@ export function StudioClient() {
                 <span
                   key={token.id}
                   title={token.id}
-                  style={{
-                    ...styles.swatch,
-                    background: `rgba(${token.rgba[0]},${token.rgba[1]},${token.rgba[2]},${token.rgba[3] / 255})`,
-                  }}
+                  style={{ ...styles.swatch, background: rgbaCss(token.rgba) }}
                 />
               ))}
             </div>
+            {warnings.map((warning) => (
+              <p role="alert" key={warning} style={styles.warn}>
+                {warning}
+              </p>
+            ))}
           </fieldset>
 
           <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Borde (2 capas)</legend>
+            <legend style={styles.legend}>Borde</legend>
             {[layer0, layer1].map((layer, i) =>
               !layer ? null : (
                 <div key={i} style={styles.row}>
@@ -297,13 +478,15 @@ export function StudioClient() {
           </fieldset>
 
           <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Esquina</legend>
+            <legend style={styles.legend}>Esquina y relleno</legend>
             <label style={styles.label}>
               Motivo
               <select
                 value={recipe.corner.motif}
                 onChange={(e) =>
-                  patch({ corner: { ...recipe.corner, motif: e.target.value as CornerMotif } })
+                  patchRecipe('corner.motif', {
+                    corner: { ...recipe.corner, motif: e.target.value as CornerMotif },
+                  })
                 }
                 style={styles.input}
               >
@@ -315,30 +498,28 @@ export function StudioClient() {
               </select>
             </label>
             <label style={styles.label}>
-              Tamaño
+              Tamaño esquina
               <input
                 type="number"
                 min={0}
                 max={64}
                 value={recipe.corner.size}
                 onChange={(e) =>
-                  patch({
+                  patchRecipe('corner.size', {
                     corner: { ...recipe.corner, size: clampInt(e.target.valueAsNumber, 0, 64) },
                   })
                 }
                 style={styles.input}
               />
             </label>
-          </fieldset>
-
-          <fieldset style={styles.fieldset}>
-            <legend style={styles.legend}>Relleno central</legend>
             <label style={styles.label}>
               Patrón
               <select
                 value={recipe.fill.kind}
                 onChange={(e) =>
-                  patch({ fill: { ...recipe.fill, kind: e.target.value as FillKind } })
+                  patchRecipe('fill.kind', {
+                    fill: { ...recipe.fill, kind: e.target.value as FillKind },
+                  })
                 }
                 style={styles.input}
               >
@@ -358,7 +539,9 @@ export function StudioClient() {
                     onChange={(e) => {
                       const tokens = [...recipe.fill.tokenIds];
                       tokens[slot] = e.target.value;
-                      patch({ fill: { ...recipe.fill, tokenIds: tokens } });
+                      patchRecipe(`fill.tokenIds.${slot}`, {
+                        fill: { ...recipe.fill, tokenIds: tokens },
+                      });
                     }}
                     style={styles.inputSmall}
                   >
@@ -368,6 +551,25 @@ export function StudioClient() {
                       </option>
                     ))}
                   </select>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <fieldset style={styles.fieldset}>
+            <legend style={styles.legend}>Padding contenido</legend>
+            <div style={styles.row}>
+              {(['left', 'top', 'right', 'bottom'] as const).map((side) => (
+                <label key={side} style={styles.labelInline}>
+                  {side}
+                  <input
+                    type="number"
+                    min={0}
+                    max={512}
+                    value={recipe.contentPadding?.[side] ?? 0}
+                    onChange={(e) => updatePadding(side, clampInt(e.target.valueAsNumber, 0, 512))}
+                    style={styles.inputSmall}
+                  />
                 </label>
               ))}
             </div>
@@ -409,6 +611,21 @@ export function StudioClient() {
               </figure>
             ))}
           </div>
+
+          <section style={styles.themePreview} aria-label="Lineage theme preview">
+            {themePreview.map((item) => (
+              <figure key={item.componentId} style={styles.themePreviewItem}>
+                <figcaption style={styles.stateCaption}>{item.label}</figcaption>
+                <img
+                  src={item.url}
+                  width={item.size.width * 2}
+                  height={item.size.height * 2}
+                  alt={`${item.label} preview`}
+                  style={styles.pixelImg}
+                />
+              </figure>
+            ))}
+          </section>
 
           <div style={styles.meta}>
             9-slice · left {nineSlice.left} · top {nineSlice.top} · right {nineSlice.right} · bottom{' '}
@@ -459,7 +676,6 @@ export function StudioClient() {
                 ? `Asset: ${destResult.destination?.assetName} · el ZIP refleja ${destResult.destination?.relativeDir}`
                 : destResult.error}
             </p>
-
             <div style={styles.row}>
               <label style={styles.labelInline}>
                 Axis horizontal
@@ -492,45 +708,9 @@ export function StudioClient() {
             </div>
             {tileFitWarning ? (
               <p style={styles.warn}>
-                ⚠ Tile Fit puede distorsionar ligeramente el patrón para encajar tiles completos.
+                Tile Fit puede ajustar el patrón para encajar tiles completos.
               </p>
             ) : null}
-
-            <label style={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                checked={contentPadding !== null}
-                onChange={(e) =>
-                  setContentPadding(
-                    e.target.checked ? { left: 0, top: 0, right: 0, bottom: 0 } : null,
-                  )
-                }
-              />
-              Padding de contenido propio (si se omite, usa los márgenes de textura)
-            </label>
-            {contentPadding ? (
-              <div style={styles.row}>
-                {(['left', 'top', 'right', 'bottom'] as const).map((side) => (
-                  <label key={side} style={styles.labelInline}>
-                    {side}
-                    <input
-                      type="number"
-                      min={0}
-                      max={512}
-                      value={contentPadding[side]}
-                      onChange={(e) =>
-                        setContentPadding((prev) => ({
-                          ...(prev ?? { left: 0, top: 0, right: 0, bottom: 0 }),
-                          [side]: clampInt(e.target.valueAsNumber, 0, 512),
-                        }))
-                      }
-                      style={styles.inputSmall}
-                    />
-                  </label>
-                ))}
-              </div>
-            ) : null}
-
             <button type="button" onClick={exportGodotBundle} style={styles.button}>
               Exportar bundle Godot (.zip)
             </button>
@@ -540,13 +720,8 @@ export function StudioClient() {
               </p>
             ) : null}
             <p style={styles.docNote}>
-              Config del proyecto para pixel-art crudo:{' '}
-              <strong>
-                Rendering › Textures › Canvas Textures › Default Texture Filter = Nearest
-              </strong>
-              . No se generan archivos <code>.import</code> — Godot escribe su propia metadata al
-              copiar los archivos al proyecto. El <code>.stylebox.tres</code> es el export nativo
-              primario; el <code>.preview.tscn</code> (NinePatchRect) es solo previsualización.
+              El <code>.stylebox.tres</code> usa valores resueltos del recipe. No hay lógica de
+              linaje dentro del serializer.
             </p>
           </fieldset>
         </section>
@@ -555,117 +730,150 @@ export function StudioClient() {
   );
 }
 
+const panelChrome = 'rgba(238, 229, 213, 0.24)';
+
 const styles: Record<string, CSSProperties> = {
   page: {
-    maxWidth: 1100,
-    margin: '0 auto',
+    minHeight: '100vh',
     padding: '32px 20px',
-    color: 'var(--color-text, #0b1020)',
+    color: 'var(--color-text)',
   },
-  header: { marginBottom: 24 },
-  title: { fontSize: 26, fontWeight: 700, margin: 0 },
-  subtitle: { fontSize: 14, opacity: 0.75, margin: '6px 0 0' },
+  header: { maxWidth: 1180, margin: '0 auto 24px' },
+  title: {
+    fontSize: 28,
+    fontWeight: 700,
+    margin: 0,
+    letterSpacing: 0,
+  },
+  subtitle: {
+    fontSize: 14,
+    opacity: 0.78,
+    margin: '6px 0 0',
+  },
   layout: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(260px, 360px) 1fr',
+    gridTemplateColumns: 'minmax(280px, 380px) 1fr',
     gap: 24,
     alignItems: 'start',
+    maxWidth: 1180,
+    margin: '0 auto',
   },
   controls: { display: 'flex', flexDirection: 'column', gap: 16 },
   fieldset: {
-    border: '1px solid rgba(120,140,180,0.35)',
-    borderRadius: 10,
+    border: `1px solid ${panelChrome}`,
+    borderRadius: 6,
     padding: '12px 14px',
     display: 'flex',
     flexDirection: 'column',
     gap: 10,
   },
   legend: {
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    opacity: 0.7,
+    fontSize: 18,
+    letterSpacing: 0,
+    opacity: 0.8,
   },
   label: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 },
   labelInline: { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, flex: 1 },
-  row: { display: 'flex', gap: 8 },
+  row: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  relationshipRow: { display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' },
   input: {
     padding: '6px 8px',
-    borderRadius: 6,
-    border: '1px solid rgba(120,140,180,0.5)',
-    background: 'transparent',
+    borderRadius: 4,
+    border: `1px solid ${panelChrome}`,
+    background: 'rgba(0,0,0,0.18)',
     color: 'inherit',
     font: 'inherit',
   },
   inputSmall: {
     padding: '5px 6px',
-    borderRadius: 6,
-    border: '1px solid rgba(120,140,180,0.5)',
-    background: 'transparent',
+    borderRadius: 4,
+    border: `1px solid ${panelChrome}`,
+    background: 'rgba(0,0,0,0.18)',
     color: 'inherit',
     font: 'inherit',
     width: '100%',
+  },
+  badge: {
+    border: `1px solid ${panelChrome}`,
+    borderRadius: 4,
+    padding: '4px 8px',
+    fontSize: 12,
+    textTransform: 'uppercase',
   },
   swatches: { display: 'flex', gap: 6, flexWrap: 'wrap' },
   swatch: {
     width: 22,
     height: 22,
-    borderRadius: 4,
-    border: '1px solid rgba(0,0,0,0.25)',
+    borderRadius: 3,
+    border: '1px solid rgba(0,0,0,0.3)',
     display: 'inline-block',
   },
   preview: { display: 'flex', flexDirection: 'column', gap: 16 },
   scaleRow: { display: 'flex', alignItems: 'center', gap: 8 },
   scaleLabel: {
-    fontSize: 12,
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    opacity: 0.7,
+    fontSize: 18,
+    opacity: 0.8,
     marginRight: 4,
   },
   scaleButton: {
     padding: '4px 12px',
-    borderRadius: 6,
-    border: '1px solid rgba(120,140,180,0.5)',
-    background: 'transparent',
+    borderRadius: 4,
+    border: `1px solid ${panelChrome}`,
+    background: 'rgba(0,0,0,0.18)',
     color: 'inherit',
     cursor: 'pointer',
   },
   scaleButtonActive: {
-    background: 'var(--color-accent, #2f6fed)',
-    color: '#fff',
-    borderColor: 'transparent',
+    background: 'rgba(255,255,255,0.18)',
+    borderColor: 'currentColor',
   },
   states: { display: 'flex', gap: 20, flexWrap: 'wrap' },
   stateCard: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, margin: 0 },
-  stateCaption: { fontSize: 12, fontWeight: 600, textTransform: 'capitalize', opacity: 0.8 },
+  stateCaption: { fontSize: 12, fontWeight: 600, textTransform: 'capitalize', opacity: 0.82 },
   canvasWrap: {
     padding: 12,
-    borderRadius: 10,
-    border: '1px solid rgba(120,140,180,0.35)',
+    borderRadius: 6,
+    border: `1px solid ${panelChrome}`,
     backgroundImage:
-      'linear-gradient(45deg, rgba(120,140,180,0.18) 25%, transparent 25%), linear-gradient(-45deg, rgba(120,140,180,0.18) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(120,140,180,0.18) 75%), linear-gradient(-45deg, transparent 75%, rgba(120,140,180,0.18) 75%)',
+      'linear-gradient(45deg, rgba(255,255,255,0.12) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,0.12) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.12) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.12) 75%)',
     backgroundSize: '16px 16px',
     backgroundPosition: '0 0, 0 8px, 8px -8px, -8px 0',
   },
   pixelImg: { imageRendering: 'pixelated', display: 'block' },
-  meta: { fontSize: 12, opacity: 0.7, fontFamily: 'monospace' },
+  themePreview: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(116px, 1fr))',
+    gap: 12,
+  },
+  themePreviewItem: {
+    minHeight: 86,
+    margin: 0,
+    padding: 8,
+    border: `1px solid ${panelChrome}`,
+    borderRadius: 6,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  meta: { fontSize: 12, opacity: 0.75, fontFamily: 'monospace' },
   exportRow: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
   button: {
     padding: '8px 14px',
-    borderRadius: 8,
-    border: '1px solid rgba(120,140,180,0.5)',
-    background: 'var(--color-accent, #2f6fed)',
-    color: '#fff',
+    borderRadius: 4,
+    border: `1px solid ${panelChrome}`,
+    background: 'rgba(255,255,255,0.18)',
+    color: 'inherit',
     cursor: 'pointer',
     fontWeight: 600,
   },
   smallButton: {
     padding: '4px 10px',
-    borderRadius: 6,
-    border: '1px solid rgba(120,140,180,0.5)',
-    background: 'transparent',
+    borderRadius: 4,
+    border: `1px solid ${panelChrome}`,
+    background: 'rgba(0,0,0,0.18)',
     color: 'inherit',
     cursor: 'pointer',
     fontSize: 12,
@@ -678,9 +886,8 @@ const styles: Record<string, CSSProperties> = {
     cursor: 'pointer',
   },
   fileInput: { fontSize: 12 },
-  error: { color: '#c0392b', fontSize: 13, margin: 0 },
-  hint: { fontSize: 12, opacity: 0.7, margin: 0, fontFamily: 'monospace' },
-  warn: { fontSize: 12, color: '#b8860b', margin: 0 },
-  checkboxRow: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 },
+  error: { color: 'rgb(255, 130, 130)', fontSize: 13, margin: 0 },
+  hint: { fontSize: 12, opacity: 0.75, margin: 0, lineHeight: 1.4 },
+  warn: { fontSize: 12, color: 'rgb(255, 210, 100)', margin: 0 },
   docNote: { fontSize: 12, opacity: 0.75, margin: 0, lineHeight: 1.5 },
 };

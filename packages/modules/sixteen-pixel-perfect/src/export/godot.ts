@@ -39,7 +39,14 @@ export interface GodotNinePatchMetadata {
   axis_stretch_horizontal: string;
   axis_stretch_vertical: string;
   /** Echoed back so the metadata is self-describing / reproducible. */
-  source: { preset: string; seed: number; size: { width: number; height: number } };
+  source: {
+    preset: string;
+    seed: number;
+    size: { width: number; height: number };
+    lineage_theme_id?: string;
+    lineage_theme_version?: number;
+    preset_relationship?: string;
+  };
 }
 
 /** Build Godot-compatible NinePatchRect metadata for a recipe. */
@@ -55,6 +62,15 @@ export function buildGodotMetadata(
     patch_margin: computeNineSlice(recipe),
     axis_stretch_horizontal: settings.axisStretchHorizontal ?? 'stretch',
     axis_stretch_vertical: settings.axisStretchVertical ?? 'stretch',
-    source: { preset: recipe.preset, seed: recipe.seed, size: { width, height } },
+    source: {
+      preset: recipe.preset,
+      seed: recipe.seed,
+      size: { width, height },
+      ...(recipe.lineage_theme_id ? { lineage_theme_id: recipe.lineage_theme_id } : {}),
+      ...(recipe.lineage_theme_version
+        ? { lineage_theme_version: recipe.lineage_theme_version }
+        : {}),
+      ...(recipe.preset_relationship ? { preset_relationship: recipe.preset_relationship } : {}),
+    },
   };
 }

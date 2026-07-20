@@ -41,7 +41,20 @@ export const BorderLayerSchema = z.object({
 });
 export type BorderLayer = z.infer<typeof BorderLayerSchema>;
 
-export const CornerMotifSchema = z.enum(['square', 'notch', 'bevel', 'round']);
+export const CornerMotifSchema = z.enum([
+  'square',
+  'notch',
+  'bevel',
+  'round',
+  'buttress',
+  'cellular',
+  'rivet',
+  'folded',
+  'compass',
+  'seal',
+  'constellation',
+  'pulse',
+]);
 export type CornerMotif = z.infer<typeof CornerMotifSchema>;
 
 export const CornerDefinitionSchema = z.object({
@@ -66,6 +79,14 @@ export const ShadowDefinitionSchema = z.object({
 });
 export type ShadowDefinition = z.infer<typeof ShadowDefinitionSchema>;
 
+export const PaddingDefinitionSchema = z.object({
+  left: nonNegInt.max(512),
+  top: nonNegInt.max(512),
+  right: nonNegInt.max(512),
+  bottom: nonNegInt.max(512),
+});
+export type PaddingDefinition = z.infer<typeof PaddingDefinitionSchema>;
+
 export const BackgroundSchema = z.union([
   z.literal('transparent'),
   z.object({ tokenId: z.string().min(1) }),
@@ -82,17 +103,72 @@ export const ComponentStateSchema = z.enum([
 ]);
 export type ComponentState = z.infer<typeof ComponentStateSchema>;
 
+export const LineageThemeIdSchema = z.enum([
+  'ardhen',
+  'eirune',
+  'kovari',
+  'myrven',
+  'vaelun',
+  'orveth',
+  'caelith',
+  'theryn',
+]);
+export type LineageThemeId = z.infer<typeof LineageThemeIdSchema>;
+
+export const PresetRelationshipSchema = z.enum(['linked', 'modified', 'detached']);
+export type PresetRelationship = z.infer<typeof PresetRelationshipSchema>;
+
+export const OrnamentationPresetSchema = z.object({
+  borderPreset: z.string().min(1),
+  cornerPreset: z.string().min(1),
+  fillPreset: z.string().min(1),
+  shadowPreset: z.string().min(1),
+  contentPadding: PaddingDefinitionSchema,
+  nineSliceMargins: PaddingDefinitionSchema,
+  normalState: z.string().min(1),
+  hoverState: z.string().min(1),
+  pressedState: z.string().min(1),
+  selectedState: z.string().min(1),
+  focusedState: z.string().min(1),
+  disabledState: z.string().min(1),
+  selectionEffect: z.string().min(1),
+});
+export type OrnamentationPreset = z.infer<typeof OrnamentationPresetSchema>;
+
+export const IconTreatmentSchema = z.object({
+  colorTokenId: z.string().min(1),
+  backgroundTokenId: z.string().min(1),
+  borderTokenId: z.string().min(1),
+  selectedTokenId: z.string().min(1),
+  disabledTokenId: z.string().min(1),
+});
+export type IconTreatment = z.infer<typeof IconTreatmentSchema>;
+
+export const ManualOverrideSchema = z.object({
+  path: z.string().min(1),
+  changedAt: z.string().optional(),
+});
+export type ManualOverride = z.infer<typeof ManualOverrideSchema>;
+
 export const AssetRecipeSchema = z.object({
   version: z.literal(1),
   preset: z.string().min(1),
   seed: z.number().int().min(0).max(0xffffffff),
   size: z.object({ width: dimension, height: dimension }),
+  lineage_theme_id: LineageThemeIdSchema.optional(),
+  lineage_theme_version: z.number().int().min(1).optional(),
+  preset_relationship: PresetRelationshipSchema.optional(),
+  resolved_palette: PaletteSchema.optional(),
+  resolved_ornamentation: OrnamentationPresetSchema.optional(),
+  manual_overrides: z.array(ManualOverrideSchema).optional(),
+  icon_treatment: IconTreatmentSchema.optional(),
   palette: PaletteSchema,
   border: z.object({ layers: z.array(BorderLayerSchema).max(8) }),
   corner: CornerDefinitionSchema,
   fill: FillPatternSchema,
   background: BackgroundSchema,
   shadow: ShadowDefinitionSchema.optional(),
+  contentPadding: PaddingDefinitionSchema.optional(),
 });
 export type AssetRecipe = z.infer<typeof AssetRecipeSchema>;
 
