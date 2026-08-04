@@ -84,4 +84,42 @@ describe('fit engine', () => {
     const cornerAlpha = out.data[3];
     expect(cornerAlpha).toBe(0);
   });
+
+  it('cover mode honors focalPoint (top-left)', () => {
+    const a = computeFit({
+      canvas: { w: 100, h: 100 },
+      source: { w: 200, h: 50 },
+      mode: 'cover',
+    });
+    const b = computeFit({
+      canvas: { w: 100, h: 100 },
+      source: { w: 200, h: 50 },
+      mode: 'cover',
+      focalPoint: { x: 0, y: 0 },
+    });
+    // a defaults to (0.5, 0.5) → center crop (cropX around 100).
+    // b anchors at top-left → cropX = 0.
+    if (a.mode === 'stretch' || b.mode === 'stretch') throw new Error('expected non-stretch');
+    expect(b.crop.x).toBe(0);
+    expect(a.crop.x).toBeGreaterThan(0);
+  });
+
+  it('cover mode honors focalPoint (bottom-right)', () => {
+    const a = computeFit({
+      canvas: { w: 100, h: 100 },
+      source: { w: 200, h: 50 },
+      mode: 'cover',
+    });
+    const b = computeFit({
+      canvas: { w: 100, h: 100 },
+      source: { w: 200, h: 50 },
+      mode: 'cover',
+      focalPoint: { x: 1, y: 1 },
+    });
+    if (a.mode === 'stretch' || b.mode === 'stretch') throw new Error('expected non-stretch');
+    // Top-left anchored b is at x=0; bottom-right anchored b = b-a should be positive.
+    const at = a.crop.x;
+    const bt = b.crop.x;
+    expect(bt - at).toBeGreaterThan(0);
+  });
 });

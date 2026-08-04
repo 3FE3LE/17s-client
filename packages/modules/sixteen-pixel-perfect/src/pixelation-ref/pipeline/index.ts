@@ -127,11 +127,13 @@ export function fittedCanvas(input: {
   canvasW: number;
   canvasH: number;
   mode: 'fit' | 'cover' | 'stretch';
+  focalPoint?: { x: number; y: number };
 }): PixelBuffer {
   const fit = computeFit({
     canvas: { w: input.canvasW, h: input.canvasH },
     source: { w: input.source.width, h: input.source.height },
     mode: input.mode,
+    ...(input.focalPoint ? { focalPoint: input.focalPoint } : {}),
   });
   return applyFit(input.source, fit, { w: input.canvasW, h: input.canvasH });
 }
@@ -182,6 +184,7 @@ export function runFullPipeline(input: {
     canvasW: input.config.canvas.w,
     canvasH: input.config.canvas.h,
     mode: input.config.canvas.mode,
+    ...(input.config.canvas.focalPoint ? { focalPoint: input.config.canvas.focalPoint } : {}),
   });
   const forwarded: PipelineInput = {
     canvasFitted: fitted,

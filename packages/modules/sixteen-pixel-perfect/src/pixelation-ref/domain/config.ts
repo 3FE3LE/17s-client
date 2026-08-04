@@ -25,6 +25,14 @@ export type Rgb = z.infer<typeof RGB_SCHEMA>;
 export const FIT_MODE_SCHEMA = z.enum(['fit', 'cover', 'stretch']);
 export type FitMode = z.infer<typeof FIT_MODE_SCHEMA>;
 
+/** Focal point for cover mode crop. (0,0)=top-left, (1,1)=bottom-right. */
+export const FOCAL_POINT_SCHEMA = z.object({
+  x: z.number().min(0).max(1),
+  y: z.number().min(0).max(1),
+});
+export type FocalPoint = z.infer<typeof FOCAL_POINT_SCHEMA>;
+export const DEFAULT_FOCAL_POINT: FocalPoint = { x: 0.5, y: 0.5 };
+
 export const LOGICAL_MODE_SCHEMA = z.enum(['auto', 'manual']);
 export type LogicalMode = z.infer<typeof LOGICAL_MODE_SCHEMA>;
 
@@ -60,6 +68,7 @@ export const PROCESSING_CONFIG_SCHEMA = z.object({
     w: integerDimension(4096),
     h: integerDimension(4096),
     mode: FIT_MODE_SCHEMA,
+    focalPoint: FOCAL_POINT_SCHEMA.optional(),
   }),
   logical: z.object({
     w: integerDimension(2048),

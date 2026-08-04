@@ -11,7 +11,9 @@ import {
 import { WizardStepper } from './WizardStepper';
 import { ConfigStep } from './steps/ConfigStep';
 import { FiltersStep } from './steps/FiltersStep';
-import { ResultStep } from './steps/ResultStep';
+import { ExportStep } from './steps/ExportStep';
+import { PreviewPanel } from './PreviewPanel';
+import { PalettePanel } from './PalettePanel';
 import { getPixelationWorker, type RGBA } from '@/lib/pixelation-ref-client';
 
 const DEFAULT_CONFIG: ProcessingConfig = validateProcessingConfig({
@@ -39,6 +41,10 @@ interface SourceState {
 type PipelineState = 'idle' | 'running' | 'done' | 'error';
 type StepId = 1 | 2 | 3;
 
+/**
+ * Wizard shell. Owns the persistent state (source, config, result) and
+ * the right-column preview + palette. Steps contribute only controls.
+ */
 export function PixelationRefStudio() {
   const [source, setSource] = useState<SourceState | null>(null);
   const [config, setConfig] = useState<ProcessingConfig>(DEFAULT_CONFIG);
@@ -63,18 +69,16 @@ export function PixelationRefStudio() {
         const off = worker.listen((msg) => {
           if (msg.jobId !== jobId) return;
           if (msg.kind === 'decoded') {
-            setSource({
+            const next: SourceState = {
               fileName: file.name,
               originalDataUrl: url,
               width: msg.rgba.width,
               height: msg.rgba.height,
               rgba: msg.rgba,
-            });
+            };
+            setSource(next);
             setError(null);
             setPipelineState('idle');
-            // Once the image lands the user is auto-advanced to step 1 where
-            // they can configure. Step gating inside the stepper prevents
-            // jumping ahead without first picking grid + canvas.
             setStep(1);
             off();
           }
@@ -123,9 +127,8 @@ export function PixelationRefStudio() {
   const onConfigChange = useCallback(
     (cfg: ProcessingConfig) => {
       setConfig(cfg);
-      // Config changes only trigger the pipeline run when on step 2+ —
-      // step 1 is preview-only and stays snappy. This keeps typing in
-      // numeric inputs from flashing the worker on every keystroke.
+      // Pipeline runs only when the user is on step 2 or 3 — step 1 stays
+      // preview-only and snappy for numeric input handling.
       if (step >= 2) runPipeline(cfg);
     },
     [runPipeline, step],
@@ -159,7 +162,6 @@ export function PixelationRefStudio() {
   function goNext() {
     if (step === 1 && canReachStep2) {
       setStep(2);
-      // Fire first pipeline run now that filters are at their defaults.
       runPipeline(config);
     } else if (step === 2 && canReachStep3) {
       setStep(3);
@@ -171,6 +173,15 @@ export function PixelationRefStudio() {
     else if (step === 2) setStep(1);
   }
 
+  const sourceSummary = source
+    ? {
+        fileName: source.fileName,
+        width: source.width,
+        height: source.height,
+        originalDataUrl: source.originalDataUrl,
+      }
+    : null;
+
   return (
     <div className="mx-auto flex max-w-7xl flex-col gap-4 p-6">
       <header className="flex items-end justify-between gap-4">
@@ -180,15 +191,13 @@ export function PixelationRefStudio() {
             Image → pixel-art reference with palette + exports. Frontend-only, deterministic.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onResetAll}
-            className="rounded border border-border bg-background px-2 py-1 text-[11px] hover:border-foreground/40"
-          >
-            reset todo
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={onResetAll}
+          className="rounded border border-border bg-background px-2 py-1 text-[11px] hover:border-foreground/40"
+        >
+          reset todo
+        </button>
       </header>
 
       <WizardStepper
@@ -198,22 +207,42 @@ export function PixelationRefStudio() {
         canReachStep3={canReachStep3}
       />
 
-      <div className="flex flex-col gap-4">
-        {step === 1 && (
-          <ConfigStep config={config} onChange={onConfigChange} source={source} onFile={onFile} />
-        )}
-        {step === 2 && (
-          <FiltersStep config={config} onChange={onConfigChange} onReset={onResetFilters} />
-        )}
-        {step === 3 && (
-          <ResultStep
-            source={source}
+      <PipelineBanner state={pipelineState} warnings={warnings} error={error} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
+        <main className="flex flex-col gap-4">
+          {step === 1 && (
+            <ConfigStep
+              config={config}
+              onChange={onConfigChange}
+              source={sourceSummary}
+              onFile={onFile}
+            />
+          )}
+          {step === 2 && (
+            <FiltersStep config={config} onChange={onConfigChange} onReset={onResetFilters} />
+          )}
+          {step === 3 && <ExportStep result={result} ready={Boolean(result)} />}
+        </main>
+
+        <aside className="flex flex-col gap-4">
+          <PreviewPanel
+            config={config}
+            source={sourceSummary}
             result={result}
-            pipelineState={pipelineState}
-            warnings={warnings}
-            error={error}
+            loading={pipelineState === 'running'}
           />
-        )}
+          {step >= 2 && pipelineState !== 'idle' && (
+            <div className="rounded-md border border-border p-3">
+              <PalettePanel palette={result?.palette ?? []} />
+            </div>
+          )}
+          {step >= 2 && pipelineState === 'idle' && source && (
+            <div className="rounded-md border border-border p-3 text-xs text-muted-foreground">
+              Avanzá a "filtros →" para ejecutar el pipeline y ver la paleta.
+            </div>
+          )}
+        </aside>
       </div>
 
       <footer className="sticky bottom-0 z-30 flex items-center justify-between rounded-md border border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/75">
@@ -260,4 +289,47 @@ export function PixelationRefStudio() {
       </footer>
     </div>
   );
+}
+
+function PipelineBanner({
+  state,
+  warnings,
+  error,
+}: {
+  state: PipelineState;
+  warnings: readonly string[];
+  error: string | null;
+}) {
+  if (state === 'running') {
+    return (
+      <div className="flex items-center gap-2 rounded border border-sky-500/40 bg-sky-500/10 px-3 py-1.5 text-xs text-sky-700">
+        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-sky-500" />
+        pipeline corriendo…
+      </div>
+    );
+  }
+  if (state === 'done' && warnings.length === 0) {
+    return (
+      <div className="rounded border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-700">
+        pipeline listo.
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded border border-red-500/40 bg-red-500/10 p-3 text-xs text-red-700 dark:text-red-300">
+        {error}
+      </div>
+    );
+  }
+  if (warnings.length > 0) {
+    return (
+      <ul className="rounded border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
+        {warnings.map((w, i) => (
+          <li key={i}>{w}</li>
+        ))}
+      </ul>
+    );
+  }
+  return null;
 }

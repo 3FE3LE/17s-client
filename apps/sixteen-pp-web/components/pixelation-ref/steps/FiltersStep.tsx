@@ -45,14 +45,14 @@ const NORM_OPTIONS: ReadonlyArray<{
 ];
 
 /**
- * Step 2 — Filtros y transformaciones. Pipeline parameters that affect the
- * pixel-art result but not the canvas grid.
+ * Step 2 — Filtros. Tuning knobs that transform the canvas-fitted source
+ * into the final pixel-art. Preview + palette are owned by the persistent
+ * right column in the wizard shell.
  */
 export function FiltersStep({ config, onChange, onReset }: FiltersStepProps) {
   const auto = maxColorsAutoForLogical(config.logical.w, config.logical.h);
-
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div className="flex flex-col gap-4">
       <Card title="Modo de bloque (resample)">
         <RadioRow
           options={BLOCK_MODES}
@@ -83,7 +83,10 @@ export function FiltersStep({ config, onChange, onReset }: FiltersStepProps) {
               const raw = Number(e.target.value);
               if (!Number.isFinite(raw)) return;
               const clamped = Math.min(256, Math.max(2, Math.round(raw)));
-              onChange({ ...config, quantization: { ...config.quantization, maxColors: clamped } });
+              onChange({
+                ...config,
+                quantization: { ...config.quantization, maxColors: clamped },
+              });
             }}
             className="w-20 rounded border border-border bg-background px-2 py-1 text-xs"
           />
@@ -124,8 +127,7 @@ export function FiltersStep({ config, onChange, onReset }: FiltersStepProps) {
           />
         )}
         <p className="text-[11px] text-muted-foreground">
-          Reduce la paleta a múltiplos de N fusionando los pares más cercanos. Nunca inventa
-          colores.
+          Reduce la paleta a múltiplos de N fusionando los pares más cercanos.
         </p>
       </Card>
 
@@ -137,23 +139,18 @@ export function FiltersStep({ config, onChange, onReset }: FiltersStepProps) {
         />
         {config.dithering.mode !== 'none' && (
           <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-300">
-            Dithering produce gradientes texturados. Útil para look 16-bit.
+            Dithering produce gradientes texturados.
           </div>
         )}
-        <p className="text-[11px] text-muted-foreground">
-          Apagado por default. Préndelo explícitamente si querés el efecto texturado.
-        </p>
       </Card>
 
-      <div className="lg:col-span-2">
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded border border-border bg-background px-3 py-1.5 text-xs hover:border-foreground/40"
-        >
-          Restablecer filtros a default
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onReset}
+        className="self-start rounded border border-border bg-background px-3 py-1.5 text-xs hover:border-foreground/40"
+      >
+        Restablecer filtros a default
+      </button>
     </div>
   );
 }

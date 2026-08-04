@@ -1,4 +1,5 @@
-import type { FitMode } from '../domain/config';
+import type { FitMode, FocalPoint } from '../domain/config';
+import { DEFAULT_FOCAL_POINT } from '../domain/config';
 import type { PixelBuffer } from '../../render/pixel-buffer';
 
 /**
@@ -11,7 +12,7 @@ import type { PixelBuffer } from '../../render/pixel-buffer';
  *  - Output canvas always equals `canvas` dimensions.
  *  - `scale` is computed so neither axis ever overflows (fit) or so the
  *    smaller axis exactly fills (cover).
- *  - For `cover`, excess pixels along the longer axis are cropped centrally.
+ *  - For `cover`, the crop window is offset by `focalPoint` (default center).
  *  - For `stretch`, the source is resampled freely; UI warns about distortion.
  */
 
@@ -19,6 +20,7 @@ export interface FitSpec {
   readonly canvas: { readonly w: number; readonly h: number };
   readonly source: { readonly w: number; readonly h: number };
   readonly mode: FitMode;
+  readonly focalPoint?: FocalPoint;
 }
 
 export type FitResult =
@@ -74,16 +76,28 @@ export function computeFit(spec: FitSpec): FitResult {
   const offsetX = Math.floor((canvas.w - placedW) / 2);
   const offsetY = Math.floor((canvas.h - placedH) / 2);
   // For cover, also report the source crop rectangle that feeds the placement.
+  // The crop window is anchored at `focalPoint` (default center) so cover-mode
+  // users decide what stays in frame rather than getting arbitrary center-crop.
+  const focal = mode === 'cover' ? (spec.focalPoint ?? DEFAULT_FOCAL_POINT) : DEFAULT_FOCAL_POINT;
   const cropSourceW = canvas.w / scale;
   const cropSourceH = canvas.h / scale;
-  const cropX = Math.floor((source.w - cropSourceW) / 2);
-  const cropY = Math.floor((source.h - cropSourceH) / 2);
+  const focalX = focal.x * source.w;
+  const focalY = focal.y * source.h;
+  const cropX = Math.round(focalX - cropSourceW * focal.x);
+  const cropY = Math.round(focalY - cropSourceH * focal.y);
+  const clampX = Math.min(Math.max(cropX, 0), Math.max(0, source.w - cropSourceW));
+  const clampY = Math.min(Math.max(cropY, 0), Math.max(0, source.h - cropSourceH));
   return {
     mode: 'fit' === mode ? 'fit' : 'cover',
     scale,
     offsetX,
     offsetY,
-    crop: { x: cropX, y: cropY, w: Math.round(cropSourceW), h: Math.round(cropSourceH) },
+    crop: {
+      x: clampX,
+      y: clampY,
+      w: Math.round(cropSourceW),
+      h: Math.round(cropSourceH),
+    },
     placedW,
     placedH,
   };

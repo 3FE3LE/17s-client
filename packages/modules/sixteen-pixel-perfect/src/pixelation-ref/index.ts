@@ -10,6 +10,7 @@ export type {
   ProcessingConfig,
   Normalization,
   FitMode,
+  FocalPoint,
   LogicalMode,
   BlockMode,
   QuantAlgorithm,
@@ -17,6 +18,7 @@ export type {
   Rgb,
 } from './domain/config';
 export {
+  DEFAULT_FOCAL_POINT,
   LOGICAL_PRESETS,
   LOGICAL_PRESETS_16_9,
   LOGICAL_PRESETS_1_1,
