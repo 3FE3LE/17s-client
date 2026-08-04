@@ -54,6 +54,13 @@ export function PixelationRefStudio() {
   const [pipelineState, setPipelineState] = useState<PipelineState>('idle');
   const [step, setStep] = useState<StepId>(1);
   const inFlightRef = useRef<string | null>(null);
+  /**
+   * Cache of probe dimensions keyed by file name. Both the main-thread
+   * `Image` probe and the worker decode populate this; whichever lands
+   * first wins for display, the other becomes a sanity cross-check.
+   * Refs (not state) so callback ordering can't lose updates.
+   */
+  const probeDimsRef = useRef<Map<string, { width: number; height: number }>>(new Map());
 
   const worker = useMemo(() => getPixelationWorker(), []);
 
@@ -61,31 +68,43 @@ export function PixelationRefStudio() {
     (file: File) => {
       const url = URL.createObjectURL(file);
 
-      // Capture natural dimensions immediately on the main thread so the
-      // footer / preview panel show the real source size without waiting for
-      // the worker decode round-trip. The worker still re-validates pixels.
+      // 1. Main-thread probe — fastest path to display dims. onload fires
+      //    for blob URLs within milliseconds for local files; onerror
+      //    clears the way for the worker to populate dims.
       const probe = new Image();
       probe.onload = () => {
-        const w = probe.naturalWidth || 0;
-        const h = probe.naturalHeight || 0;
+        const w = probe.naturalWidth;
+        const h = probe.naturalHeight;
         if (w > 0 && h > 0) {
-          setSource({
-            fileName: file.name,
-            originalDataUrl: url,
-            width: w,
-            height: h,
-            rgba: {
+          probeDimsRef.current.set(file.name, { width: w, height: h });
+          setSource((prev) => {
+            if (prev && prev.fileName === file.name) {
+              return prev.rgba.data.length > 0 ? prev : { ...prev, width: w, height: h };
+            }
+            return {
+              fileName: file.name,
+              originalDataUrl: url,
               width: w,
               height: h,
-              data: new Uint8ClampedArray(0), // placeholder; real rgba arrives below
-            },
+              rgba: {
+                width: w,
+                height: h,
+                data: new Uint8ClampedArray(0),
+              },
+            };
           });
           setError(null);
           setStep(1);
         }
       };
+      probe.onerror = () => {
+        // Worker is the fallback for native dim reads.
+      };
       probe.src = url;
 
+      // 2. Worker decode — provides the full RGBA buffer for the pipeline.
+      //    Dimensions from the worker are merged with the probe dims so a
+      //    buggy worker can never overwrite a known-good 0 → nonzero.
       const reader = new FileReader();
       reader.onload = () => {
         const buf = reader.result as ArrayBuffer;
@@ -95,17 +114,17 @@ export function PixelationRefStudio() {
         const off = worker.listen((msg) => {
           if (msg.jobId !== jobId) return;
           if (msg.kind === 'decoded') {
-            setSource((prev) =>
-              prev && prev.fileName === file.name
-                ? { ...prev, rgba: msg.rgba }
-                : {
-                    fileName: file.name,
-                    originalDataUrl: url,
-                    width: msg.rgba.width,
-                    height: msg.rgba.height,
-                    rgba: msg.rgba,
-                  },
-            );
+            const probed = probeDimsRef.current.get(file.name);
+            const w = probed?.width ?? msg.rgba.width;
+            const h = probed?.height ?? msg.rgba.height;
+            probeDimsRef.current.set(file.name, { width: w, height: h });
+            setSource({
+              fileName: file.name,
+              originalDataUrl: url,
+              width: w,
+              height: h,
+              rgba: msg.rgba,
+            });
             setPipelineState('idle');
             off();
           }
