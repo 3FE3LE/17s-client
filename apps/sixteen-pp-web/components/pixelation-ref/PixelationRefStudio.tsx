@@ -60,6 +60,32 @@ export function PixelationRefStudio() {
   const onFile = useCallback(
     (file: File) => {
       const url = URL.createObjectURL(file);
+
+      // Capture natural dimensions immediately on the main thread so the
+      // footer / preview panel show the real source size without waiting for
+      // the worker decode round-trip. The worker still re-validates pixels.
+      const probe = new Image();
+      probe.onload = () => {
+        const w = probe.naturalWidth || 0;
+        const h = probe.naturalHeight || 0;
+        if (w > 0 && h > 0) {
+          setSource({
+            fileName: file.name,
+            originalDataUrl: url,
+            width: w,
+            height: h,
+            rgba: {
+              width: w,
+              height: h,
+              data: new Uint8ClampedArray(0), // placeholder; real rgba arrives below
+            },
+          });
+          setError(null);
+          setStep(1);
+        }
+      };
+      probe.src = url;
+
       const reader = new FileReader();
       reader.onload = () => {
         const buf = reader.result as ArrayBuffer;
@@ -69,17 +95,18 @@ export function PixelationRefStudio() {
         const off = worker.listen((msg) => {
           if (msg.jobId !== jobId) return;
           if (msg.kind === 'decoded') {
-            const next: SourceState = {
-              fileName: file.name,
-              originalDataUrl: url,
-              width: msg.rgba.width,
-              height: msg.rgba.height,
-              rgba: msg.rgba,
-            };
-            setSource(next);
-            setError(null);
+            setSource((prev) =>
+              prev && prev.fileName === file.name
+                ? { ...prev, rgba: msg.rgba }
+                : {
+                    fileName: file.name,
+                    originalDataUrl: url,
+                    width: msg.rgba.width,
+                    height: msg.rgba.height,
+                    rgba: msg.rgba,
+                  },
+            );
             setPipelineState('idle');
-            setStep(1);
             off();
           }
           if (msg.kind === 'error') {

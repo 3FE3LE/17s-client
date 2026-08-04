@@ -59,13 +59,14 @@ export function WizardStepper({
               }
               className={[
                 'flex w-full flex-col items-start gap-0.5 rounded-md border px-3 py-2 text-left transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40',
                 active
-                  ? 'border-foreground bg-foreground text-background'
+                  ? 'border-foreground bg-foreground text-background shadow-inner'
                   : past
-                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700'
+                    ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:border-emerald-500/70'
                     : reachable
-                      ? 'border-border text-foreground hover:border-foreground/40'
-                      : 'cursor-not-allowed border-border/50 bg-muted/30 text-muted-foreground/60',
+                      ? 'border-border bg-background text-foreground hover:border-foreground hover:bg-foreground/5'
+                      : 'cursor-not-allowed border-border/40 bg-muted/20 text-muted-foreground/50',
               ].join(' ')}
             >
               <span className="flex w-full items-center justify-between">

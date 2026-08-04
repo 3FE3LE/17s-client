@@ -43,8 +43,10 @@ export function FocalPointPicker({ value, onChange }: FocalPointPickerProps) {
               title={c.label}
               onClick={() => onChange({ x: c.x, y: c.y })}
               className={[
-                'flex items-center justify-center transition-colors',
-                active ? 'bg-foreground text-background' : 'hover:bg-foreground/10',
+                'flex items-center justify-center border-r border-b border-border/40 transition-colors last:border-r-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/40',
+                active
+                  ? 'bg-foreground text-background'
+                  : 'hover:bg-foreground/15 active:bg-foreground/25',
               ].join(' ')}
             >
               <span className="block h-1.5 w-1.5 rounded-full bg-current opacity-50" />

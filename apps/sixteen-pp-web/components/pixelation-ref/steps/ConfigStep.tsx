@@ -4,7 +4,7 @@ import type { FitMode, ProcessingConfig } from '@17suit/module-sixteen-pixel-per
 
 import { ImageDropzone } from '../ImageDropzone';
 import { Step1Dropzone } from './Step1Dropzone';
-import { NumField } from '../form/NumField';
+import { DimensionField } from '../form/DimensionField';
 import { RadioRow } from '../form/RadioRow';
 import { SmallButton } from '../form/SmallButton';
 import { AspectRatio } from '../AspectRatio';
@@ -42,6 +42,14 @@ const CANVAS_LOGICAL_PAIRS: ReadonlyArray<{
   { label: '256×256 / 128×128', cw: 256, ch: 256, lw: 128, lh: 128 },
   { label: '256×256 / 64×64', cw: 256, ch: 256, lw: 64, lh: 64 },
 ];
+
+/**
+ * Round-and-clamp helper. Inputs stay on multiples of 8 within their
+ * declared range so dimensions never land in arbitrary territory.
+ */
+function snapValue(v: number, min: number, max: number, step: number): number {
+  return Math.min(max, Math.max(min, Math.round(v / step) * step));
+}
 
 const FIT_MODES: ReadonlyArray<{ value: FitMode; label: string; hint: string }> = [
   { value: 'fit', label: 'Fit', hint: 'encaja con padding transparente' },
@@ -114,22 +122,37 @@ export function ConfigStep({ config, onChange, source, onFile }: ConfigStepProps
       </Card>
 
       <Card title="Canvas (preview)">
-        <div className="grid grid-cols-2 gap-2">
-          <NumField
+        <div className="grid grid-cols-2 gap-3">
+          <DimensionField
             label="W"
             value={config.canvas.w}
             min={64}
             max={4096}
-            onChange={(v) => onChange({ ...config, canvas: { ...config.canvas, w: v } })}
+            step={8}
+            onChange={(v) =>
+              onChange({
+                ...config,
+                canvas: { ...config.canvas, w: snapValue(v, 64, 4096, 8) },
+              })
+            }
           />
-          <NumField
+          <DimensionField
             label="H"
             value={config.canvas.h}
             min={64}
             max={4096}
-            onChange={(v) => onChange({ ...config, canvas: { ...config.canvas, h: v } })}
+            step={8}
+            onChange={(v) =>
+              onChange({
+                ...config,
+                canvas: { ...config.canvas, h: snapValue(v, 64, 4096, 8) },
+              })
+            }
           />
         </div>
+        <p className="font-mono text-[11px] text-muted-foreground">
+          step 8 px · rango 64 → 4096 · ajustá con − / + o tipeá (se redondea a múltiplos de 8)
+        </p>
         <RadioRow
           label="Fit"
           options={FIT_MODES}
@@ -148,20 +171,32 @@ export function ConfigStep({ config, onChange, source, onFile }: ConfigStepProps
       </Card>
 
       <Card title="Logical (grid de píxeles)">
-        <div className="grid grid-cols-2 gap-2">
-          <NumField
+        <div className="grid grid-cols-2 gap-3">
+          <DimensionField
             label="W"
             value={config.logical.w}
             min={8}
             max={2048}
-            onChange={(v) => onChange({ ...config, logical: { ...config.logical, w: v } })}
+            step={8}
+            onChange={(v) =>
+              onChange({
+                ...config,
+                logical: { ...config.logical, w: snapValue(v, 8, 2048, 8) },
+              })
+            }
           />
-          <NumField
+          <DimensionField
             label="H"
             value={config.logical.h}
             min={8}
             max={2048}
-            onChange={(v) => onChange({ ...config, logical: { ...config.logical, h: v } })}
+            step={8}
+            onChange={(v) =>
+              onChange({
+                ...config,
+                logical: { ...config.logical, h: snapValue(v, 8, 2048, 8) },
+              })
+            }
           />
         </div>
         <ScaleReadout
