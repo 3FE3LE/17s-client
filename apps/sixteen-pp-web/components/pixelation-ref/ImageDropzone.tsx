@@ -6,14 +6,16 @@ interface ImageDropzoneProps {
   onFile: (file: File) => void;
   filename?: string;
   hasImage: boolean;
+  /** Optional dim helper for showing "nuevo" affordance while image is loaded. */
+  compact?: boolean;
 }
 
 /**
- * Drag-and-drop image picker. Accepts PNG/JPG/WebP; rejected types trigger
- * a UI hint without leaving any global state. The component is fully
- * event-driven — no `useEffect` is used.
+ * Compact dropzone used in the side rail once an image is already loaded.
+ * Replaces the file with a click; shows the active filename and a "change"
+ * affordance to make it obvious the widget is still interactive.
  */
-export function ImageDropzone({ onFile, filename, hasImage }: ImageDropzoneProps) {
+export function ImageDropzone({ onFile, filename, hasImage, compact = false }: ImageDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
 
@@ -48,18 +50,29 @@ export function ImageDropzone({ onFile, filename, hasImage }: ImageDropzoneProps
         role="button"
         tabIndex={0}
         className={[
-          'flex h-32 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed',
+          'flex cursor-pointer flex-col items-stretch gap-2 rounded-md border border-dashed px-3 py-2',
           hasImage ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-border bg-muted/30',
-          'text-xs text-muted-foreground transition-colors hover:border-foreground/40',
+          compact ? 'min-h-12' : 'min-h-20',
+          'transition-colors hover:border-foreground/40',
         ].join(' ')}
       >
-        {hasImage ? (
-          <span className="font-medium text-foreground">{filename ?? 'image loaded'}</span>
-        ) : (
-          <>
-            <span>Drop PNG/JPG/WebP here</span>
-            <span className="text-[10px] opacity-60">or click to pick (≤ 32 MP)</span>
-          </>
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-xs font-medium text-foreground" title={filename ?? ''}>
+            {hasImage ? (filename ?? 'imagen cargada') : 'Drop / click'}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClickPick();
+            }}
+            className="rounded border border-border px-2 py-0.5 text-[11px] hover:border-foreground/40"
+          >
+            Cambiar
+          </button>
+        </div>
+        {!hasImage && (
+          <span className="text-[10px] text-muted-foreground">PNG · JPG · WebP · ≤ 32 MP</span>
         )}
       </div>
       <input
