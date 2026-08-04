@@ -4,10 +4,9 @@ import type { FitMode, ProcessingConfig } from '@17suit/module-sixteen-pixel-per
 
 import { ImageDropzone } from '../ImageDropzone';
 import { Step1Dropzone } from './Step1Dropzone';
-import { DimensionField } from '../form/DimensionField';
 import { RadioRow } from '../form/RadioRow';
 import { SmallButton } from '../form/SmallButton';
-import { AspectRatio } from '../AspectRatio';
+import { CanvasPresetPicker } from '../CanvasPresetPicker';
 import { FocalPointPicker } from '../FocalPointPicker';
 import {
   deriveLogicalPresets,
@@ -26,10 +25,6 @@ interface ConfigStepProps {
     originalDataUrl: string;
   } | null;
   onFile: (file: File) => void;
-}
-
-function snapValue(v: number, min: number, max: number, step: number): number {
-  return Math.min(max, Math.max(min, Math.round(v / step) * step));
 }
 
 const FIT_MODES: ReadonlyArray<{ value: FitMode; label: string; hint: string }> = [
@@ -85,37 +80,15 @@ export function ConfigStep({ config, onChange, source, onFile }: ConfigStepProps
     <div className="flex flex-col gap-4">
       <Card title="Lienzo (frame de preview)">
         <p className="font-mono text-[11px] text-muted-foreground">
-          definí el marco donde se va a mostrar el pixel-art. No depende de la imagen — la imagen se
-          adapta.
+          definí el marco donde se va a mostrar el pixel-art. Solo presets — no se admiten medidas
+          arbitrarias. El aspect + tamaño + orientación definen el W×H.
         </p>
-        <AspectRatio config={config} onChange={onChange} />
-        <div className="grid grid-cols-2 gap-3">
-          <DimensionField
-            label="W"
-            value={config.canvas.w}
-            min={64}
-            max={4096}
-            step={8}
-            onChange={(v) =>
-              onChange({
-                ...config,
-                canvas: { ...config.canvas, w: snapValue(v, 64, 4096, 8) },
-              })
-            }
-          />
-          <DimensionField
-            label="H"
-            value={config.canvas.h}
-            min={64}
-            max={4096}
-            step={8}
-            onChange={(v) =>
-              onChange({
-                ...config,
-                canvas: { ...config.canvas, h: snapValue(v, 64, 4096, 8) },
-              })
-            }
-          />
+        <CanvasPresetPicker config={config} onChange={onChange} />
+        <div className="flex items-baseline justify-between rounded-md border border-border bg-background px-3 py-2 text-xs">
+          <span className="font-mono text-[10px] text-muted-foreground">dimensiones elegidas</span>
+          <span className="font-mono text-[11px] font-semibold text-foreground">
+            {config.canvas.w} × {config.canvas.h}
+          </span>
         </div>
       </Card>
 
