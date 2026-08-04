@@ -37,6 +37,9 @@ export {
 export { encodeZip, type ZipEntry } from './export/zip';
 export { encodeUtf8 } from './export/utf8';
 
+// --- Pixelation Reference Tool (web feature) ----------------------------
+export * from './pixelation-ref';
+
 /**
  * Sixteen Pixel Perfect — shared business module.
  *
