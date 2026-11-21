@@ -12,5 +12,5 @@ export default function OAuthNativeCallback() {
   // `router.replace` call throws.
   useReplaceOnceReady({ ready: isNavigationReady, href: '/' });
 
-  return <AppFrame appName="Seven Reservations Club" subtitle="Procesando autenticacion..." />;
+  return <AppFrame appName="Seven Reservations Club" subtitle="Procesando inicio de sesión…" />;
 }

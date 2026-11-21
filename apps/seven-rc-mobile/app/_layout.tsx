@@ -2,10 +2,10 @@ import 'react-native-gesture-handler';
 import '../global.css';
 import * as Sentry from '@sentry/react-native';
 import { ExpoAuthProvider } from '@17suit/core/auth/expo';
-import { AppProviders, type ThemeModePreference } from '@17suit/ui';
+import { AppProviders, useAppTheme, type ThemeModePreference } from '@17suit/ui';
 import { useStoredState } from '@17suit/ui-native';
 import Constants from 'expo-constants';
-import { Slot } from 'expo-router';
+import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SevenRcClientProviders } from '../components/seven-rc-client-providers';
 import * as SecureStore from 'expo-secure-store';
@@ -36,6 +36,20 @@ if (sentryDsn) {
   });
 }
 
+function RootStack() {
+  const { theme } = useAppTheme();
+  // Native stack so auth pushes (sign-in -> sign-up -> verify) get the
+  // platform push transition and iOS edge-swipe back.
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.background },
+      }}
+    />
+  );
+}
+
 function Layout() {
   const [themeMode, setThemeMode] = useStoredState<ThemeModePreference>({
     defaultValue: 'system',
@@ -54,7 +68,7 @@ function Layout() {
               void SecureStore.setItemAsync(THEME_STORAGE_KEY, mode);
             }}
           >
-            <Slot />
+            <RootStack />
           </AppProviders>
         </SevenRcClientProviders>
       </ExpoAuthProvider>

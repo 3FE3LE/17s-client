@@ -1,11 +1,11 @@
 import { useClerk, useUser } from '@clerk/clerk-expo';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppButton, AppProfile, GapView, useAppTheme } from '@17suit/ui';
+import { AppBadge, AppProfile, GapView, useAppTheme } from '@17suit/ui';
 import { useAnimatedValue } from '@17suit/ui-native';
 import { Animated, Pressable, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { AuthTabScreen } from '../../components/auth-tab-screen';
+import { Screen } from '../../../components/screen';
 import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
 
@@ -19,7 +19,7 @@ export default function ProfileScreen() {
   const { mode, setMode, theme } = useAppTheme();
   const [selectorWidth, setSelectorWidth] = useState(0);
 
-  const roleBadgeLabel = role === 'OWNER' ? 'Cuenta OWNER' : 'Cuenta PLAYER';
+  const roleBadgeLabel = role === 'OWNER' ? 'Administras un complejo' : 'Reservas como jugador';
 
   const options = [
     { key: 'system', label: 'Sistema', icon: 'smartphone' },
@@ -45,16 +45,13 @@ export default function ProfileScreen() {
   };
 
   return (
-    <AuthTabScreen
-      appName="Perfil"
-      subtitle="Informacion del usuario logueado y acciones de sesion"
-      role={role}
-      swipeRoutes={{ right: '/home' }}
-    >
+    <Screen title="Perfil" subtitle="Tu cuenta y preferencias" back={false}>
       <GapView gap="md">
-        <AppButton variant={role === 'OWNER' ? 'success' : 'info'} disabled>
-          {roleBadgeLabel}
-        </AppButton>
+        {role ? (
+          <View style={{ flexDirection: 'row' }}>
+            <AppBadge variant={role === 'OWNER' ? 'success' : 'info'}>{roleBadgeLabel}</AppBadge>
+          </View>
+        ) : null}
         <View
           style={{
             width: '100%',
@@ -106,15 +103,19 @@ export default function ProfileScreen() {
                 }}
               />
             ) : null}
-            <View style={{ flexDirection: 'row' }}>
+            <View style={{ flexDirection: 'row' }} accessibilityRole="radiogroup">
               {options.map((item, index) => {
                 const isActive = index === activeIndex;
                 return (
                   <Pressable
                     key={item.key}
                     onPress={() => setMode(item.key)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Tema ${item.label.toLowerCase()}`}
+                    accessibilityState={{ checked: isActive }}
                     style={{
                       flex: 1,
+                      minHeight: 44,
                       paddingVertical: theme.spacing.sm,
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -149,6 +150,6 @@ export default function ProfileScreen() {
           onSignOut={handleSignOut}
         />
       </GapView>
-    </AuthTabScreen>
+    </Screen>
   );
 }
