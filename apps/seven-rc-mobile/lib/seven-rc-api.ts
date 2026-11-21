@@ -35,6 +35,10 @@ function deriveLanApiBaseUrlFromExpoHost(): string | null {
   return `http://${host}:4000/api`;
 }
 
+function isDevBuild(): boolean {
+  return typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+}
+
 export function resolveApiBaseUrls(): string[] {
   const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
     ?.env;
@@ -47,8 +51,9 @@ export function resolveApiBaseUrls(): string[] {
     env?.EXPO_PUBLIC_API_BASE_URL,
     deriveLanApiBaseUrlFromExpoHost(),
     ...extraFallbacks,
-    'http://10.0.2.2:4000/api',
-    'http://localhost:4000/api',
+    // Emulator/localhost fallbacks are dev-only: a release build must never send
+    // requests (or retry reads) against hosts that only exist on a developer machine.
+    ...(isDevBuild() ? ['http://10.0.2.2:4000/api', 'http://localhost:4000/api'] : []),
   ].filter((value): value is string => Boolean(value && value.length > 0));
 
   const unique: string[] = [];

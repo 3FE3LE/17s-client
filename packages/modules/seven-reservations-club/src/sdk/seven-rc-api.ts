@@ -130,6 +130,17 @@ function toError(error: unknown, fallbackMessage: string): Error {
   return error instanceof Error ? error : new Error(fallbackMessage);
 }
 
+/** HTTP error returned by the 7RC API. `status` lets callers map errors without parsing text. */
+export class SevenRcApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'SevenRcApiError';
+    this.status = status;
+  }
+}
+
 function createRequest(options: SevenRcApiClientOptions) {
   const apiBaseUrls = normalizeApiBaseUrls(options.apiBaseUrls);
   const { getAccessToken, timeoutMs = 8_000 } = options;
@@ -140,11 +151,19 @@ function createRequest(options: SevenRcApiClientOptions) {
       throw new Error('Unauthorized');
     }
 
+    // Fail over to the next base URL only when no HTTP response arrived (network
+    // error / timeout), and only for idempotent reads. Any HTTP response — 4xx or
+    // 5xx — is the server's answer and must surface as-is; re-sending a POST to
+    // another host risks a duplicate write.
+    const method = (init.method ?? 'GET').toUpperCase();
+    const canFailOver = method === 'GET' || method === 'HEAD';
+    const candidates = canFailOver ? apiBaseUrls : apiBaseUrls.slice(0, 1);
     let lastError: unknown = null;
 
-    for (const baseUrl of apiBaseUrls) {
+    for (const baseUrl of candidates) {
+      let response: Response;
       try {
-        const response = await fetchWithTimeout(
+        response = await fetchWithTimeout(
           `${baseUrl}${path}`,
           {
             ...init,
@@ -156,23 +175,20 @@ function createRequest(options: SevenRcApiClientOptions) {
           },
           timeoutMs,
         );
-
-        if (response.ok) {
-          return (await response.json()) as T;
-        }
-
-        const payload = await parseJsonSafe(response);
-        const error = new Error(
-          extractErrorMessage(payload, `Request failed (${response.status})`),
-        );
-        lastError = error;
-
-        if (response.status >= 400 && response.status < 500 && response.status !== 404) {
-          throw error;
-        }
       } catch (error) {
         lastError = error;
+        continue;
       }
+
+      if (response.ok) {
+        return (await response.json()) as T;
+      }
+
+      const payload = await parseJsonSafe(response);
+      throw new SevenRcApiError(
+        extractErrorMessage(payload, `Request failed (${response.status})`),
+        response.status,
+      );
     }
 
     throw toError(lastError, 'Unable to reach API');
