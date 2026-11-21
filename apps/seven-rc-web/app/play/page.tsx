@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   useCurrentUserRoleQuery,
   useRoleGate,
@@ -63,6 +63,13 @@ export default function PlayPage() {
 
   const isRoleAllowed = !isLoading && role === 'PLAYER';
 
+  const selectedPitch = pitches.find((pitch) => pitch.id === selectedPitchId);
+  const slotDuration = selectedPitch?.slotDurationMinutes ?? 60;
+  const estimatedStartAt = toIsoFromDateTime(reservationDate, reservationTime);
+  const estimatedEndAt = estimatedStartAt
+    ? addMinutes(estimatedStartAt, slotDuration * Math.max(1, Number(slotCount) || 1))
+    : null;
+
   if (!isRoleAllowed) {
     return (
       <AppFrame appName="Player Dashboard" subtitle="Verificando tu rol...">
@@ -70,9 +77,6 @@ export default function PlayPage() {
       </AppFrame>
     );
   }
-
-  const selectedPitch = pitches.find((pitch) => pitch.id === selectedPitchId);
-  const slotDuration = selectedPitch?.slotDurationMinutes ?? 60;
 
   async function onCreateReservation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,13 +126,6 @@ export default function PlayPage() {
       setCancelReservationId(null);
     }
   }
-
-  const estimatedEndAt = useMemo(() => {
-    const start = toIsoFromDateTime(reservationDate, reservationTime);
-    if (!start) return null;
-    const slots = Math.max(1, Number(slotCount) || 1);
-    return addMinutes(start, slotDuration * slots);
-  }, [reservationDate, reservationTime, slotCount, slotDuration]);
 
   return (
     <AppFrame appName="Player Dashboard" subtitle="Busca complejos y gestiona tus reservas.">
@@ -207,7 +204,10 @@ export default function PlayPage() {
             {estimatedEndAt ? (
               <p style={{ margin: 0 }}>Fin estimado: {new Date(estimatedEndAt).toLocaleString()}</p>
             ) : null}
-            <AppButton disabled={createReservationMutation.isPending || !selectedPitchId}>
+            <AppButton
+              type="submit"
+              disabled={createReservationMutation.isPending || !selectedPitchId}
+            >
               {createReservationMutation.isPending ? 'Reservando...' : 'Confirmar reserva'}
             </AppButton>
           </form>

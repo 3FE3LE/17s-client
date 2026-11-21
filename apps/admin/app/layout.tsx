@@ -1,3 +1,4 @@
+import { WebAuthProvider } from '@17suit/core/auth/next';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import type { ReactNode } from 'react';
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
       <body>
-        <AppProviders>{children}</AppProviders>
+        <WebAuthProvider>
+          <AppProviders>{children}</AppProviders>
+        </WebAuthProvider>
       </body>
     </html>
   );

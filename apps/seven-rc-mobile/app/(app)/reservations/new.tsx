@@ -15,6 +15,7 @@ import {
 } from '@17suit/ui';
 import {
   usePlayerVenuePitchesQuery,
+  usePlayerVenuesQuery,
   useCreateReservationMutation,
 } from '../../../lib/player-queries';
 import { Text } from 'react-native';
@@ -43,8 +44,62 @@ function formatTime(value: Date) {
   return value.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function buildUtcDate(date: Date, time: Date) {
+const FALLBACK_TIMEZONE = 'America/Bogota';
+
+function resolveTimeZone(timeZone?: string | null) {
+  if (!timeZone) return FALLBACK_TIMEZONE;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(0);
+    return timeZone;
+  } catch {
+    return FALLBACK_TIMEZONE;
+  }
+}
+
+/**
+ * Wall-clock fields of `instant` in `timeZone`, packed into a device-local Date
+ * so the pickers and `toLocale*String` show the venue's local time.
+ */
+function toVenueWallClock(instant: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(instant);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value ?? '0');
   return new Date(
+    get('year'),
+    get('month') - 1,
+    get('day'),
+    get('hour') % 24,
+    get('minute'),
+    get('second'),
+  );
+}
+
+/** Offset (ms) of `timeZone` from UTC at `instantMs`. */
+function timeZoneOffsetMs(instantMs: number, timeZone: string) {
+  const wall = toVenueWallClock(new Date(instantMs), timeZone);
+  const wallAsUtc = Date.UTC(
+    wall.getFullYear(),
+    wall.getMonth(),
+    wall.getDate(),
+    wall.getHours(),
+    wall.getMinutes(),
+    wall.getSeconds(),
+  );
+  return wallAsUtc - Math.floor(instantMs / 1000) * 1000;
+}
+
+/** Combine a venue-local date and time (wall-clock Dates) into a real UTC instant. */
+function buildVenueInstant(date: Date, time: Date, timeZone: string) {
+  const wallAsUtc = Date.UTC(
     date.getFullYear(),
     date.getMonth(),
     date.getDate(),
@@ -53,6 +108,20 @@ function buildUtcDate(date: Date, time: Date) {
     0,
     0,
   );
+  const firstGuess = wallAsUtc - timeZoneOffsetMs(wallAsUtc, timeZone);
+  return new Date(wallAsUtc - timeZoneOffsetMs(firstGuess, timeZone));
+}
+
+/** Next slot boundary (multiples of `slotMinutes` from venue midnight) after `wallNow`. */
+function nextSlotBoundary(wallNow: Date, slotMinutes: number) {
+  const step = Math.max(1, slotMinutes);
+  const minutesOfDay = wallNow.getHours() * 60 + wallNow.getMinutes();
+  const next = Math.floor(minutesOfDay / step) * step + step;
+  return new Date(wallNow.getFullYear(), wallNow.getMonth(), wallNow.getDate(), 0, next, 0, 0);
+}
+
+function startOfDay(value: Date) {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
 }
 
 function addMinutes(value: Date, minutes: number) {
@@ -73,9 +142,15 @@ export default function NewReservationScreen() {
   const pitchIdParam = Array.isArray(params.pitchId) ? params.pitchId[0] : params.pitchId;
 
   const pitchesQuery = usePlayerVenuePitchesQuery(venueId ?? null);
+  // Same query key as the home venue list, so this is normally a cache hit.
+  const venuesQuery = usePlayerVenuesQuery();
+  const venueTimeZone = resolveTimeZone(
+    venuesQuery.data?.find((venue) => venue.id === venueId)?.timezone,
+  );
   const createReservation = useCreateReservationMutation();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [startTime, setStartTime] = useState<Date>(new Date());
+  // null = not picked yet; the default is derived from "now" in the venue timezone.
+  const [pickedDate, setPickedDate] = useState<Date | null>(null);
+  const [pickedStartTime, setPickedStartTime] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<'date' | 'start' | null>(null);
 
   const pitchOptions = useMemo(
@@ -107,20 +182,40 @@ export default function NewReservationScreen() {
   const slotDuration = selectedPitch?.slotDurationMinutes ?? 60;
   const slotCountValue = Number(selectedSlotCount || '1');
 
+  const now = new Date();
+  const venueToday = startOfDay(toVenueWallClock(now, venueTimeZone));
+  const defaultStart = nextSlotBoundary(toVenueWallClock(now, venueTimeZone), slotDuration);
+  const selectedDate = pickedDate ?? defaultStart;
+  const startTime = pickedStartTime ?? defaultStart;
+  const startAtDate = buildVenueInstant(selectedDate, startTime, venueTimeZone);
+  const endAtDate = addMinutes(startAtDate, Math.max(1, slotCountValue) * slotDuration);
+  const estimatedEndWall = addMinutes(
+    new Date(
+      selectedDate.getFullYear(),
+      selectedDate.getMonth(),
+      selectedDate.getDate(),
+      startTime.getHours(),
+      startTime.getMinutes(),
+    ),
+    Math.max(1, slotCountValue) * slotDuration,
+  );
+  const isStartInPast = startAtDate.getTime() <= now.getTime();
+
   const onSubmit = handleSubmit(async (values) => {
     if (!venueId) {
-      toast.error('Error', 'Complejo invalido.');
+      toast.error('Error', 'Complejo inválido.');
       return;
     }
 
-    const startAtDate = buildUtcDate(selectedDate, startTime);
-    const endAtDate = addMinutes(startAtDate, Math.max(1, slotCountValue) * slotDuration);
+    if (startAtDate.getTime() <= Date.now()) {
+      return;
+    }
 
     const startAtIso = startAtDate.toISOString();
     const endAtIso = endAtDate.toISOString();
 
     if (endAtDate <= startAtDate) {
-      toast.error('Horario invalido', 'La hora fin debe ser posterior a la hora de inicio.');
+      toast.error('Horario inválido', 'La hora fin debe ser posterior a la hora de inicio.');
       return;
     }
 
@@ -180,6 +275,9 @@ export default function NewReservationScreen() {
         >
           {`Inicio: ${formatTime(startTime)}`}
         </AppButton>
+        <Text style={{ color: theme.colors.muted, fontSize: 12, lineHeight: 18 }}>
+          {`Hora del complejo (${venueTimeZone})`}
+        </Text>
         <Controller
           control={control}
           name="slotCount"
@@ -207,12 +305,7 @@ export default function NewReservationScreen() {
           )}
         />
         <Text style={{ color: theme.colors.muted, fontSize: 12 }}>
-          {`Fin estimado: ${formatTime(
-            addMinutes(
-              buildUtcDate(selectedDate, startTime),
-              Math.max(1, slotCountValue) * slotDuration,
-            ),
-          )} · ${slotDuration} min por turno`}
+          {`Fin estimado: ${formatTime(estimatedEndWall)} · ${slotDuration} min por turno`}
         </Text>
         <Controller
           control={control}
@@ -237,7 +330,19 @@ export default function NewReservationScreen() {
             />
           )}
         />
-        <AppButton onPress={onSubmit} disabled={!formState.isValid || formState.isSubmitting}>
+        {isStartInPast ? (
+          <Text
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+            style={{ color: theme.colors.error, fontSize: 12, lineHeight: 18 }}
+          >
+            Ese horario ya pasó. Elige una hora de inicio posterior.
+          </Text>
+        ) : null}
+        <AppButton
+          onPress={onSubmit}
+          disabled={!formState.isValid || formState.isSubmitting || isStartInPast}
+        >
           {formState.isSubmitting ? 'Reservando...' : 'Confirmar reserva'}
         </AppButton>
         <AppButton variant="neutral" onPress={() => router.back()}>
@@ -249,15 +354,16 @@ export default function NewReservationScreen() {
         <DateTimePicker
           value={pickerMode === 'date' ? selectedDate : startTime}
           mode={pickerMode === 'date' ? 'date' : 'time'}
+          {...(pickerMode === 'date' ? { minimumDate: venueToday } : {})}
           onChange={(event, value) => {
             if (!value) {
               setPickerMode(null);
               return;
             }
             if (pickerMode === 'date') {
-              setSelectedDate(value);
+              setPickedDate(value);
             } else if (pickerMode === 'start') {
-              setStartTime(value);
+              setPickedStartTime(value);
             }
             setPickerMode(null);
           }}

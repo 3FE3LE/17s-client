@@ -100,13 +100,13 @@ export default function HomePage() {
         </header>
 
         <section className="mb-[var(--spacing-xl)] grid grid-cols-1 gap-[var(--spacing-md)] lg:grid-cols-[minmax(0,1.22fr)_minmax(0,0.78fr)]">
-          <div className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/80 p-[clamp(24px,4vw,44px)] backdrop-blur-sm">
+          <div className="@container rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/80 p-[clamp(24px,4vw,44px)] backdrop-blur-sm">
             <div className="mb-[var(--spacing-lg)] inline-flex items-center gap-[var(--spacing-sm)] rounded-full bg-brand-primary/15 px-3 py-[var(--spacing-sm)] text-xs font-light uppercase tracking-plus1_5 text-brand-dark">
               <Image src="/icon-17suit.png" alt="17Suit Icon" width={20} height={20} />
               <span>Una cuenta para todo el ecosistema 17Suit</span>
             </div>
 
-            <h1 className="m-0 max-w-[16ch] font-arvo text-[clamp(48px,8vw,96px)] leading-[1.08] [letter-spacing:-0.015em] text-text">
+            <h1 className="m-0 max-w-full text-balance break-words font-arvo text-[clamp(32px,13cqi,72px)] leading-[1.08] [letter-spacing:-0.015em] text-text">
               Herramientas listas para facilitar tu día, en una sola suite.
             </h1>
 
