@@ -34,6 +34,8 @@ export interface Product {
   summary: string;
   highlights: readonly string[];
   steps: readonly [ProductStep, ProductStep, ProductStep];
+  /** Shows the "Tus datos" block under the steps, linking to this /privacidad anchor. */
+  privacyAnchor?: string;
   /** Env var holding the product web origin (only for products with an app). */
   appUrlEnv?: string;
   /** Production subdomain from apps-registry.json, used when the env var is missing. */
@@ -50,6 +52,7 @@ export const products: readonly Product[] = [
     name: 'Fifteen Account Check',
     shortName: 'Fifteen',
     status: 'live',
+    privacyAnchor: 'acceso-a-gmail',
     tagline: 'Tus gastos, tarjetas y pagos fijos, ordenados desde los correos de tu banco.',
     headline: 'Sabe en qué se fue tu dinero este mes sin pasar movimientos a mano.',
     summary:

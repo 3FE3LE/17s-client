@@ -30,6 +30,16 @@ export function isAlreadySignedInError(error: unknown): boolean {
   );
 }
 
+// Messages that send the user to /contacto. AuthFormError renders a link next to them.
+const CONTACT_ACCESS_MESSAGE =
+  'Este correo no tiene acceso. Usa otro o escríbenos desde la página de contacto.';
+
+const contactMessages: ReadonlySet<string> = new Set([CONTACT_ACCESS_MESSAGE]);
+
+export function needsContactLink(message: string): boolean {
+  return contactMessages.has(message);
+}
+
 const messagesByCode: Record<string, string> = {
   form_identifier_not_found:
     'No encontramos una cuenta con ese correo. Revísalo o crea una cuenta.',
@@ -52,7 +62,7 @@ const messagesByCode: Record<string, string> = {
   rate_limit_exceeded: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
   captcha_invalid:
     'No pudimos validar que eres una persona. Recarga la página e inténtalo de nuevo.',
-  not_allowed_access: 'Este correo no tiene acceso. Usa otro o contacta a soporte.',
+  not_allowed_access: CONTACT_ACCESS_MESSAGE,
 };
 
 export function getClerkErrorMessage(error: unknown, fallback: string): string {

@@ -3,6 +3,12 @@ import Link from 'next/link';
 import { products } from '../lib/products';
 import { primaryButtonClass, secondaryButtonClass } from './landing-ui';
 
+const legalLinks = [
+  { href: '/privacidad', label: 'Privacidad' },
+  { href: '/terminos', label: 'Términos' },
+  { href: '/contacto', label: 'Contacto' },
+] as const;
+
 /*
  * Landing-owned footer. Replaces the shared AppProductFooter here because the
  * landing needs token-based colors (dark mode), 44px tap targets and the
@@ -62,7 +68,23 @@ export function SiteFooter({ isSignedIn }: { isSignedIn: boolean }) {
           </ul>
         </nav>
 
-        <p className="m-0 text-sm leading-[1.5] text-muted">© 2026 17Suit</p>
+        <div className="flex flex-wrap items-center justify-between gap-x-[var(--spacing-md)] gap-y-[var(--spacing-xs)] border-t border-line pt-[var(--spacing-md)]">
+          <p className="m-0 text-sm leading-[1.5] text-muted">© 2026 17Suit</p>
+          <nav aria-label="Legal y contacto">
+            <ul className="m-0 flex list-none flex-wrap gap-x-[var(--spacing-md)] p-0">
+              {legalLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="inline-flex min-h-11 items-center text-sm text-muted no-underline hover:text-text hover:underline"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
       </div>
     </footer>
   );

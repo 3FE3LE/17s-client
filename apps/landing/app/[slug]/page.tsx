@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import {
+  ArrowRightIcon,
   ArrowUpRightIcon,
   SiteHeader,
   StatusBadge,
@@ -80,6 +81,39 @@ function ProductCta({ product, appUrl }: { product: Product; appUrl: string | nu
         </Link>
       </div>
     </div>
+  );
+}
+
+/*
+ * Neutral pointer to the privacy policy for products that ask for account access
+ * (Fifteen's Gmail step). Make no claims here about scopes, storage or retention:
+ * that text belongs to the owner-written /privacidad page.
+ */
+function DataNotice({ anchor }: { anchor: string }) {
+  return (
+    <aside
+      aria-labelledby="data-notice-title"
+      className="mt-[var(--spacing-md)] flex flex-wrap items-center justify-between gap-x-[var(--spacing-lg)] gap-y-[var(--spacing-xs)] rounded-[var(--radius-lg)] border border-line bg-surface px-[var(--spacing-lg)] py-[var(--spacing-sm)]"
+    >
+      <div className="min-w-0">
+        <h3
+          id="data-notice-title"
+          className="m-0 font-arvo text-md font-bold leading-[1.3] text-text"
+        >
+          Tus datos
+        </h3>
+        <p className="m-0 mt-[2px] text-md leading-[1.5] text-muted">
+          Antes de conectar tu correo, revisa cómo tratamos tus datos.
+        </p>
+      </div>
+      <Link
+        href={`/privacidad#${anchor}`}
+        className="inline-flex min-h-11 items-center gap-2 font-bold text-product underline underline-offset-4"
+      >
+        Leer la política de privacidad
+        <ArrowRightIcon />
+      </Link>
+    </aside>
   );
 }
 
@@ -162,6 +196,7 @@ export default async function ProductLandingPage({ params }: PageProps) {
               </li>
             ))}
           </ol>
+          {product.privacyAnchor ? <DataNotice anchor={product.privacyAnchor} /> : null}
         </section>
 
         <section
