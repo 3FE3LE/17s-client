@@ -44,6 +44,19 @@ export type ApiResponse<P extends ApiPath, M extends ApiMethodsOf<P>> =
 export type ApiRequestBody<P extends ApiPath, M extends ApiMethodsOf<P>> =
   ApiOperation<P, M> extends { requestBody?: infer Body } ? JsonContent<NonNullable<Body>> : never;
 
+type OptionalKeys<T> = {
+  [K in keyof T]-?: Record<never, never> extends Pick<T, K> ? K : never;
+}[keyof T];
+
+/**
+ * Request-body shape for callers compiled with `exactOptionalPropertyTypes`:
+ * optional fields also accept an explicit `undefined` (dropped by
+ * JSON.stringify, so the wire format is identical).
+ */
+export type ApiInput<T> = Omit<T, OptionalKeys<T>> & {
+  [K in OptionalKeys<T>]?: T[K] | undefined;
+};
+
 export type ApiPathParams<P extends ApiPath, M extends ApiMethodsOf<P>> =
   ApiOperation<P, M> extends { parameters: { path?: infer Params } } ? NonNullable<Params> : never;
 

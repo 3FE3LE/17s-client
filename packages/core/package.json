@@ -20,6 +20,9 @@
     },
     "./query-client": {
       "default": "./src/query-client.ts"
+    },
+    "./api-types": {
+      "default": "./src/api-types.ts"
     }
   },
   "scripts": {

@@ -1475,9 +1475,9 @@ export interface components {
       clerkUserId: string;
       role?: components['schemas']['UserRole'] | null;
       /** @example owner@17suit.com */
-      email?: Record<string, never> | null;
+      email?: string | null;
       /** @example Owner User */
-      name?: Record<string, never> | null;
+      name?: string | null;
       /**
        * Format: date-time
        * @example 2026-02-18T20:00:00.000Z
@@ -1535,19 +1535,19 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** Format: uuid */
-      ownerUserId?: Record<string, never> | null;
+      ownerUserId?: string | null;
       name: string;
-      address?: Record<string, never> | null;
+      address?: string | null;
       timezone: string;
       /** @example cancha-la-70 */
-      slug?: Record<string, never> | null;
+      slug?: string | null;
       isPublished: boolean;
       /** @example CO */
       countryCode: string;
       /** @example COP */
       currency: string;
-      contactPhone?: Record<string, never> | null;
-      paymentInstructions?: Record<string, never> | null;
+      contactPhone?: string | null;
+      paymentInstructions?: string | null;
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
@@ -1565,19 +1565,19 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** Format: uuid */
-      ownerUserId?: Record<string, never> | null;
+      ownerUserId?: string | null;
       name: string;
-      address?: Record<string, never> | null;
+      address?: string | null;
       timezone: string;
       /** @example cancha-la-70 */
-      slug?: Record<string, never> | null;
+      slug?: string | null;
       isPublished: boolean;
       /** @example CO */
       countryCode: string;
       /** @example COP */
       currency: string;
-      contactPhone?: Record<string, never> | null;
-      paymentInstructions?: Record<string, never> | null;
+      contactPhone?: string | null;
+      paymentInstructions?: string | null;
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
@@ -1939,7 +1939,7 @@ export interface components {
        * Format: uuid
        * @description Null for guest and walk-in bookings
        */
-      userId?: Record<string, never> | null;
+      userId?: string | null;
       status: components['schemas']['ReservationStatus'];
       source: components['schemas']['ReservationSource'];
       /** Format: date-time */
@@ -1947,9 +1947,9 @@ export interface components {
       /** Format: date-time */
       endAt: string;
       invitedCount: number;
-      notes?: Record<string, never> | null;
-      customerName?: Record<string, never> | null;
-      customerPhone?: Record<string, never> | null;
+      notes?: string | null;
+      customerName?: string | null;
+      customerPhone?: string | null;
       /** Format: uuid */
       publicToken: string;
       priceMinor: number;
@@ -1958,14 +1958,18 @@ export interface components {
       /** @example COP */
       currency: string;
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
-      holdExpiresAt?: Record<string, never> | null;
+      /** Format: date-time */
+      holdExpiresAt?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      confirmedAt?: Record<string, never> | null;
-      rejectedAt?: Record<string, never> | null;
-      cancelledAt?: Record<string, never> | null;
+      /** Format: date-time */
+      confirmedAt?: string | null;
+      /** Format: date-time */
+      rejectedAt?: string | null;
+      /** Format: date-time */
+      cancelledAt?: string | null;
     };
     ReservationWithVenuePitchResponseDto: {
       /** Format: uuid */
@@ -1978,7 +1982,7 @@ export interface components {
        * Format: uuid
        * @description Null for guest and walk-in bookings
        */
-      userId?: Record<string, never> | null;
+      userId?: string | null;
       status: components['schemas']['ReservationStatus'];
       source: components['schemas']['ReservationSource'];
       /** Format: date-time */
@@ -1986,9 +1990,9 @@ export interface components {
       /** Format: date-time */
       endAt: string;
       invitedCount: number;
-      notes?: Record<string, never> | null;
-      customerName?: Record<string, never> | null;
-      customerPhone?: Record<string, never> | null;
+      notes?: string | null;
+      customerName?: string | null;
+      customerPhone?: string | null;
       /** Format: uuid */
       publicToken: string;
       priceMinor: number;
@@ -1997,22 +2001,26 @@ export interface components {
       /** @example COP */
       currency: string;
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
-      holdExpiresAt?: Record<string, never> | null;
+      /** Format: date-time */
+      holdExpiresAt?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      confirmedAt?: Record<string, never> | null;
-      rejectedAt?: Record<string, never> | null;
-      cancelledAt?: Record<string, never> | null;
+      /** Format: date-time */
+      confirmedAt?: string | null;
+      /** Format: date-time */
+      rejectedAt?: string | null;
+      /** Format: date-time */
+      cancelledAt?: string | null;
       pitch: components['schemas']['PitchResponseDto'];
       venue: components['schemas']['VenueResponseDto'];
     };
     ReservationOwnerUserResponseDto: {
       /** Format: uuid */
       id: string;
-      name?: Record<string, never> | null;
-      email?: Record<string, never> | null;
+      name?: string | null;
+      email?: string | null;
       clerkUserId: string;
       role?: components['schemas']['UserRole'] | null;
     };
@@ -2029,7 +2037,7 @@ export interface components {
       method: components['schemas']['ReservationPaymentMethod'];
       amountMinor: number;
       currency: string;
-      note?: Record<string, never> | null;
+      note?: string | null;
       /** Format: date-time */
       createdAt: string;
     };
@@ -2044,7 +2052,7 @@ export interface components {
        * Format: uuid
        * @description Null for guest and walk-in bookings
        */
-      userId?: Record<string, never> | null;
+      userId?: string | null;
       status: components['schemas']['ReservationStatus'];
       source: components['schemas']['ReservationSource'];
       /** Format: date-time */
@@ -2052,9 +2060,9 @@ export interface components {
       /** Format: date-time */
       endAt: string;
       invitedCount: number;
-      notes?: Record<string, never> | null;
-      customerName?: Record<string, never> | null;
-      customerPhone?: Record<string, never> | null;
+      notes?: string | null;
+      customerName?: string | null;
+      customerPhone?: string | null;
       /** Format: uuid */
       publicToken: string;
       priceMinor: number;
@@ -2063,14 +2071,18 @@ export interface components {
       /** @example COP */
       currency: string;
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
-      holdExpiresAt?: Record<string, never> | null;
+      /** Format: date-time */
+      holdExpiresAt?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
       updatedAt: string;
-      confirmedAt?: Record<string, never> | null;
-      rejectedAt?: Record<string, never> | null;
-      cancelledAt?: Record<string, never> | null;
+      /** Format: date-time */
+      confirmedAt?: string | null;
+      /** Format: date-time */
+      rejectedAt?: string | null;
+      /** Format: date-time */
+      cancelledAt?: string | null;
       pitch: components['schemas']['PitchResponseDto'];
       user?: components['schemas']['ReservationOwnerUserResponseDto'] | null;
       payments: components['schemas']['ReservationPaymentResponseDto'][];
@@ -2116,11 +2128,11 @@ export interface components {
       id: string;
       slug: string;
       name: string;
-      address?: Record<string, never> | null;
+      address?: string | null;
       timezone: string;
       countryCode: string;
       currency: string;
-      contactPhone?: Record<string, never> | null;
+      contactPhone?: string | null;
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
@@ -2176,11 +2188,11 @@ export interface components {
     };
     PublicReservationVenueResponseDto: {
       name: string;
-      slug?: Record<string, never> | null;
-      address?: Record<string, never> | null;
+      slug?: string | null;
+      address?: string | null;
       timezone: string;
-      contactPhone?: Record<string, never> | null;
-      paymentInstructions?: Record<string, never> | null;
+      contactPhone?: string | null;
+      paymentInstructions?: string | null;
     };
     PublicReservationPitchResponseDto: {
       name: string;
@@ -2194,13 +2206,14 @@ export interface components {
       startAt: string;
       /** Format: date-time */
       endAt: string;
-      customerName?: Record<string, never> | null;
+      customerName?: string | null;
       priceMinor: number;
       depositMinor: number;
       paidMinor: number;
       currency: string;
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
-      holdExpiresAt?: Record<string, never> | null;
+      /** Format: date-time */
+      holdExpiresAt?: string | null;
       /** Format: date-time */
       cancellableUntil: string;
       venue: components['schemas']['PublicReservationVenueResponseDto'];

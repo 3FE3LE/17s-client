@@ -1,6 +1,12 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import { apiPath, type ApiRequestBody, type ApiResponse, type ApiSchema } from './api-types';
+import {
+  apiPath,
+  type ApiInput,
+  type ApiRequestBody,
+  type ApiResponse,
+  type ApiSchema,
+} from './api-types';
 
 describe('apiPath', () => {
   it('fills and encodes path parameters', () => {
@@ -20,5 +26,13 @@ describe('contract types', () => {
     expectTypeOf<ApiRequestBody<'/platform/onboarding/role', 'post'>>().toEqualTypeOf<
       ApiSchema<'SetRoleDto'>
     >();
+  });
+});
+
+describe('ApiInput', () => {
+  it('lets optional fields take explicit undefined and keeps required ones required', () => {
+    type Body = ApiInput<{ id: string; note?: string }>;
+    expectTypeOf<{ id: 'x'; note: undefined }>().toMatchTypeOf<Body>();
+    expectTypeOf<{ note: string }>().not.toMatchTypeOf<Body>();
   });
 });

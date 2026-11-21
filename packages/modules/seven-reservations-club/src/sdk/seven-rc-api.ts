@@ -1,4 +1,10 @@
-import { apiPath, type ApiRequestBody, type ApiResponse, type ApiSchema } from '@17suit/core';
+import {
+  apiPath,
+  type ApiInput,
+  type ApiRequestBody,
+  type ApiResponse,
+  type ApiSchema,
+} from '@17suit/core/api-types';
 
 // Response and input shapes come from the server OpenAPI contract
 // (packages/core/src/api-schema.ts). Do not hand-write DTOs here: drift
@@ -11,10 +17,12 @@ export type ReservationBase = ApiSchema<'ReservationResponseDto'>;
 export type ReservationWithVenuePitch = ApiSchema<'ReservationWithVenuePitchResponseDto'>;
 export type VenueReservation = ApiSchema<'VenueReservationResponseDto'>;
 
-export type CreateVenueInput = ApiRequestBody<'/7rc/venues', 'post'>;
-export type CreateReservationInput = ApiRequestBody<'/7rc/reservations', 'post'>;
-export type CreatePitchInput = ApiRequestBody<'/7rc/venues/{venueId}/pitches', 'post'>;
-export type ConfigurePitchSlotsInput = ApiRequestBody<'/7rc/pitches/{pitchId}/slots', 'put'>;
+export type CreateVenueInput = ApiInput<ApiRequestBody<'/7rc/venues', 'post'>>;
+export type CreateReservationInput = ApiInput<ApiRequestBody<'/7rc/reservations', 'post'>>;
+export type CreatePitchInput = ApiInput<ApiRequestBody<'/7rc/venues/{venueId}/pitches', 'post'>>;
+export type ConfigurePitchSlotsInput = ApiInput<
+  ApiRequestBody<'/7rc/pitches/{pitchId}/slots', 'put'>
+>;
 type ConfigurePitchSlotsResult = ApiSchema<'ConfigurePitchSlotsResponseDto'>;
 
 export interface SevenRcApiClientOptions {
