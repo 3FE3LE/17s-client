@@ -35,24 +35,43 @@
     "gen:api-schema": "openapi-typescript ../../../17s-server/openapi.json -o src/api-schema.ts"
   },
   "dependencies": {
-    "@clerk/clerk-expo": "^2.19.24",
-    "@clerk/nextjs": "^6.30.5",
     "@tanstack/react-query": "^5.90.3",
-    "expo-secure-store": "~14.2.3",
-    "react": "19.1.0",
     "zod": "^3.24.1"
   },
   "peerDependencies": {
-    "react": "19.1.0",
+    "@clerk/clerk-expo": "^2.19.24",
+    "@clerk/nextjs": "^6.30.5",
+    "expo-secure-store": "~58.0.3",
+    "react": "19.3.0",
     "react-native-safe-area-context": "*"
+  },
+  "peerDependenciesMeta": {
+    "@clerk/clerk-expo": {
+      "optional": true
+    },
+    "@clerk/nextjs": {
+      "optional": true
+    },
+    "expo-secure-store": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
-    "@types/react": "~19.1.10",
+    "@clerk/clerk-expo": "^2.19.24",
+    "@clerk/nextjs": "^6.30.5",
+    "@types/react": "~19.3.0",
     "@vitest/coverage-v8": "^4.1.9",
+    "expo": "~58.0.26",
+    "expo-secure-store": "~58.0.3",
     "openapi-typescript": "^7.13.0",
-    "typescript": "^5.8.2",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "typescript": "~6.0.3",
     "vitest": "^4.1.9"
   }
 }

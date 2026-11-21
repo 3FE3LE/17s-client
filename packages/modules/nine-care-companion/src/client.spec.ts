@@ -96,17 +96,15 @@ describe('nine-care-companion zod schemas', () => {
       status: 'PENDING',
       instructions: 'Losartán, 50mg.',
     };
-    expect(MedicationBlockInstructionsSchema.parse(dto).slotLabelEs).toBe(
-      'la toma de la mañana',
-    );
+    expect(MedicationBlockInstructionsSchema.parse(dto).slotLabelEs).toBe('la toma de la mañana');
     expect(validateMedicationBlockInstructions(dto).instructions).toBe('Losartán, 50mg.');
   });
 
   it('validates CreateConfirmation inputs', () => {
     expect(CreateConfirmationSchema.parse({ status: 'taken' }).status).toBe('taken');
-    expect(
-      CreateConfirmationSchema.parse({ status: 'skipped', notes: 'pospuesta' }).notes,
-    ).toBe('pospuesta');
+    expect(CreateConfirmationSchema.parse({ status: 'skipped', notes: 'pospuesta' }).notes).toBe(
+      'pospuesta',
+    );
     expect(() => CreateConfirmationSchema.parse({ status: 'nope' })).toThrow();
     expect(() =>
       CreateConfirmationSchema.parse({ status: 'taken', notes: 'x'.repeat(501) }),
@@ -221,14 +219,12 @@ describe('createBffNineCcDataSource', () => {
   });
 
   it('recordConfirmation POSTs and parses', async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify(summaryNext), {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        }),
-      ) as unknown as typeof fetch;
+    globalThis.fetch = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify(summaryNext), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
     const ds = createBffNineCcDataSource();
     const result = await ds.recordConfirmation('b-1', { status: 'taken' });
     expect(result.id).toBe(summaryNext.id);
@@ -239,9 +235,7 @@ describe('createBffNineCcDataSource', () => {
 
   it('recordConfirmationBySlot validates the slot', async () => {
     const ds = createBffNineCcDataSource();
-    await expect(
-      ds.recordConfirmationBySlot('p-1', 'dawn', { status: 'taken' }),
-    ).rejects.toThrow();
+    await expect(ds.recordConfirmationBySlot('p-1', 'dawn', { status: 'taken' })).rejects.toThrow();
   });
 
   it('rejects malformed server payloads', async () => {

@@ -1,3 +1,4 @@
+import '../global.css';
 import * as Sentry from '@sentry/react-native';
 import { ExpoAuthProvider } from '@17suit/core/auth/expo';
 import { AppProviders } from '@17suit/ui';
