@@ -1,3 +1,4 @@
+import { Inbox } from 'lucide-react';
 import type { CSSProperties, PropsWithChildren, ReactNode } from 'react';
 import { useAppTheme } from '../theme/theme-context';
 import { AppButton } from './AppButton';
@@ -55,7 +56,7 @@ export function AppEmpty({
           fontWeight: subtitleType.fontWeight,
         }}
       >
-        {icon ?? '...'}
+        {icon ?? <Inbox size={20} strokeWidth={2} aria-hidden />}
       </span>
       <p
         style={{

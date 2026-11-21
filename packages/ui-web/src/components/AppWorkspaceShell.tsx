@@ -76,7 +76,7 @@ export function AppWorkspaceShell({
       />
 
       <div className={pageContainerRecipe({ kind: 'workspace' })}>
-        <aside className="border-b border-border-default bg-surface-panel px-[var(--spacing-md)] py-[var(--spacing-md)] backdrop-blur-sm lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:px-[var(--spacing-lg)] lg:py-[var(--spacing-lg)]">
+        <aside className="min-w-0 border-b border-border-default bg-surface-panel px-[var(--spacing-md)] py-[var(--spacing-md)] backdrop-blur-sm lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:px-[var(--spacing-lg)] lg:py-[var(--spacing-lg)]">
           <div className="flex items-center justify-between gap-[var(--spacing-md)] lg:block">
             <LinkComponent href={homeHref} className="inline-flex flex-col no-underline">
               <span className="text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
@@ -140,21 +140,25 @@ export function AppWorkspaceShell({
           </nav>
 
           {onSignOut ? (
-            <button
-              type="button"
-              onClick={onSignOut}
-              className={cx(
-                buttonRecipe({ intent: 'secondary', size: 'sm', platform: 'web' }),
-                'mt-[var(--spacing-md)] hidden gap-2 lg:flex',
-              )}
-            >
-              <LogOut size={16} strokeWidth={2.2} aria-hidden />
-              {signOutLabel}
-            </button>
+            // Wrapper owns visibility: the button recipe sets its own display, which would
+            // override `hidden` on the button itself and duplicate the mobile sign-out.
+            <div className="mt-[var(--spacing-md)] hidden lg:block">
+              <button
+                type="button"
+                onClick={onSignOut}
+                className={cx(
+                  buttonRecipe({ intent: 'secondary', size: 'sm', platform: 'web' }),
+                  'gap-2',
+                )}
+              >
+                <LogOut size={16} strokeWidth={2.2} aria-hidden />
+                {signOutLabel}
+              </button>
+            </div>
           ) : null}
         </aside>
 
-        <section className="grid content-start gap-[var(--spacing-lg)] px-[var(--spacing-md)] py-[var(--spacing-lg)] md:px-[var(--spacing-xl)] lg:px-[var(--spacing-x2l)]">
+        <section className="grid min-w-0 content-start gap-[var(--spacing-lg)] px-[var(--spacing-md)] py-[var(--spacing-lg)] md:px-[var(--spacing-xl)] lg:px-[var(--spacing-x2l)]">
           <header
             style={{ '--app-hdr': shrink } as CSSProperties}
             className={cx(
@@ -162,9 +166,11 @@ export function AppWorkspaceShell({
               'app-workspace-header-sticky',
             )}
           >
-            <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
-              {eyebrow}
-            </p>
+            {eyebrow ? (
+              <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+                {eyebrow}
+              </p>
+            ) : null}
             <h1 className="m-0 mt-[var(--spacing-xs)] max-w-[980px] font-arvo text-[clamp(38px,5vw,64px)] font-bold leading-[1.06] tracking-minus1_5 text-text">
               {title}
             </h1>

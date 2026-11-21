@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, View, type ViewStyle } from 'react-native';
 import { useAppTheme } from '../theme/theme-context';
@@ -61,7 +62,7 @@ export function AppEmpty({
             lineHeight: 22,
           }}
         >
-          {icon ?? '...'}
+          {icon ?? <Feather name="inbox" size={20} color={theme.colors.brandPrimary} />}
         </Text>
       </View>
       <Text
