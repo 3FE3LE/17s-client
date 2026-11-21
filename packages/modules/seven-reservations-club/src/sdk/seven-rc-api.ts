@@ -1,100 +1,21 @@
-export interface OwnerVenue {
-  id: string;
-  name: string;
-  address?: string | null;
-  timezone: string;
-  _count?: {
-    pitches: number;
-    reservations: number;
-  };
-}
+import { apiPath, type ApiRequestBody, type ApiResponse, type ApiSchema } from '@17suit/core';
 
-export interface PublicVenue {
-  id: string;
-  name: string;
-  address?: string | null;
-  timezone: string;
-  createdAt?: string;
-}
+// Response and input shapes come from the server OpenAPI contract
+// (packages/core/src/api-schema.ts). Do not hand-write DTOs here: drift
+// between these and the server is what the generated types prevent.
+export type OwnerVenue = ApiSchema<'OwnerVenueResponseDto'>;
+export type PublicVenue = ApiResponse<'/7rc/venues', 'get'>[number];
+export type Pitch = ApiSchema<'PitchResponseDto'>;
+export type ReservationStatus = ApiSchema<'ReservationStatus'>;
+export type ReservationBase = ApiSchema<'ReservationResponseDto'>;
+export type ReservationWithVenuePitch = ApiSchema<'ReservationWithVenuePitchResponseDto'>;
+export type VenueReservation = ApiSchema<'VenueReservationResponseDto'>;
 
-export interface Pitch {
-  id: string;
-  venueId: string;
-  name: string;
-  sportType: string;
-  capacity: number;
-  slotDurationMinutes: number;
-}
-
-export type ReservationStatus =
-  | 'pending_confirmation'
-  | 'confirmed'
-  | 'rejected'
-  | 'cancelled'
-  | 'completed';
-
-export interface ReservationBase {
-  id: string;
-  venueId: string;
-  pitchId: string;
-  userId: string;
-  status: ReservationStatus;
-  startAt: string;
-  endAt: string;
-  invitedCount: number;
-  notes?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  confirmedAt?: string | null;
-  rejectedAt?: string | null;
-  cancelledAt?: string | null;
-}
-
-export interface ReservationWithVenuePitch extends ReservationBase {
-  pitch: Pitch;
-  venue: OwnerVenue;
-}
-
-export interface VenueReservation extends ReservationBase {
-  pitch: Pitch;
-  user: {
-    id: string;
-    name?: string | null;
-    email?: string | null;
-    clerkUserId: string;
-    role?: string | null;
-  };
-}
-
-export interface CreateVenueInput {
-  name: string;
-  location?: string | undefined;
-  timezone?: string | undefined;
-}
-
-export interface CreateReservationInput {
-  pitchId: string;
-  startAt: string;
-  endAt: string;
-  invitedCount?: number | undefined;
-  notes?: string | undefined;
-}
-
-export interface CreatePitchInput {
-  name: string;
-  sportType?: string | undefined;
-  capacity?: number | undefined;
-  slotDurationMinutes?: number | undefined;
-}
-
-export interface ConfigurePitchSlotsInput {
-  slotDurationMinutes?: number | undefined;
-  openingHours: Array<{
-    dayOfWeek: number;
-    openTime: string;
-    closeTime: string;
-  }>;
-}
+export type CreateVenueInput = ApiRequestBody<'/7rc/venues', 'post'>;
+export type CreateReservationInput = ApiRequestBody<'/7rc/reservations', 'post'>;
+export type CreatePitchInput = ApiRequestBody<'/7rc/venues/{venueId}/pitches', 'post'>;
+export type ConfigurePitchSlotsInput = ApiRequestBody<'/7rc/pitches/{pitchId}/slots', 'put'>;
+type ConfigurePitchSlotsResult = ApiSchema<'ConfigurePitchSlotsResponseDto'>;
 
 export interface SevenRcApiClientOptions {
   apiBaseUrls: string[];
@@ -110,7 +31,7 @@ export interface SevenRcOwnerApi {
   configurePitchSlots: (
     pitchId: string,
     input: ConfigurePitchSlotsInput,
-  ) => Promise<{ id: string }>;
+  ) => Promise<ConfigurePitchSlotsResult>;
   listVenueReservations: (
     venueId: string,
     dateFrom: string,
@@ -265,13 +186,13 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
       });
     },
     listOwnerVenuePitches(venueId) {
-      return request<Pitch[]>(`/7rc/owner/venues/${venueId}/pitches`, {
+      return request<Pitch[]>(apiPath('/7rc/owner/venues/{venueId}/pitches', { venueId }), {
         method: 'GET',
         cache: 'no-store',
       });
     },
     createPitchForVenue(venueId, input) {
-      return request<Pitch>(`/7rc/venues/${venueId}/pitches`, {
+      return request<Pitch>(apiPath('/7rc/venues/{venueId}/pitches', { venueId }), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -280,33 +201,45 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
       });
     },
     configurePitchSlots(pitchId, input) {
-      return request<{ id: string }>(`/7rc/pitches/${pitchId}/slots`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
+      return request<ConfigurePitchSlotsResult>(
+        apiPath('/7rc/pitches/{pitchId}/slots', { pitchId }),
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(input),
         },
-        body: JSON.stringify(input),
-      });
+      );
     },
     listVenueReservations(venueId, dateFrom, dateTo, cacheBuster) {
       const query = new URLSearchParams({ dateFrom, dateTo });
       if (cacheBuster) {
         query.set('_', cacheBuster);
       }
-      return request<VenueReservation[]>(`/7rc/venues/${venueId}/reservations?${query}`, {
-        method: 'GET',
-        cache: 'no-store',
-      });
+      return request<VenueReservation[]>(
+        `${apiPath('/7rc/venues/{venueId}/reservations', { venueId })}?${query}`,
+        {
+          method: 'GET',
+          cache: 'no-store',
+        },
+      );
     },
     confirmReservation(reservationId) {
-      return request<ReservationBase>(`/7rc/reservations/${reservationId}/confirm`, {
-        method: 'PATCH',
-      });
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/confirm', { id: reservationId }),
+        {
+          method: 'PATCH',
+        },
+      );
     },
     rejectReservation(reservationId) {
-      return request<ReservationBase>(`/7rc/reservations/${reservationId}/reject`, {
-        method: 'PATCH',
-      });
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/reject', { id: reservationId }),
+        {
+          method: 'PATCH',
+        },
+      );
     },
   };
 }
@@ -323,7 +256,7 @@ export function createSevenRcPlayerApi(options: SevenRcApiClientOptions): SevenR
       });
     },
     listVenuePitches(venueId) {
-      return request<Pitch[]>(`/7rc/venues/${venueId}/pitches`, {
+      return request<Pitch[]>(apiPath('/7rc/venues/{venueId}/pitches', { venueId }), {
         method: 'GET',
         cache: 'no-store',
       });
@@ -344,9 +277,12 @@ export function createSevenRcPlayerApi(options: SevenRcApiClientOptions): SevenR
       });
     },
     cancelReservation(reservationId) {
-      return request<ReservationBase>(`/7rc/reservations/${reservationId}/cancel`, {
-        method: 'POST',
-      });
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/cancel', { id: reservationId }),
+        {
+          method: 'POST',
+        },
+      );
     },
   };
 }
