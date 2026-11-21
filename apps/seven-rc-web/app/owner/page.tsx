@@ -237,7 +237,10 @@ export default function OwnerPage() {
               onChangeText={setNewVenueTimezone}
               placeholder="Timezone (opcional, ej: America/Bogota)"
             />
-            <AppButton disabled={createVenueMutation.isPending || newVenueName.trim().length < 3}>
+            <AppButton
+              type="submit"
+              disabled={createVenueMutation.isPending || newVenueName.trim().length < 3}
+            >
               {createVenueMutation.isPending ? 'Guardando...' : 'Guardar complejo'}
             </AppButton>
           </form>
@@ -292,6 +295,7 @@ export default function OwnerPage() {
               required
             />
             <AppButton
+              type="submit"
               disabled={
                 createPitchMutation.isPending || !selectedVenueId || newPitchName.trim().length < 2
               }
@@ -341,7 +345,10 @@ export default function OwnerPage() {
               onChangeText={setSlotDurationMinutes}
               placeholder="Duracion por turno (min)"
             />
-            <AppButton disabled={configureSlotsMutation.isPending || !selectedPitchId}>
+            <AppButton
+              type="submit"
+              disabled={configureSlotsMutation.isPending || !selectedPitchId}
+            >
               {configureSlotsMutation.isPending ? 'Guardando...' : 'Guardar horarios'}
             </AppButton>
           </form>

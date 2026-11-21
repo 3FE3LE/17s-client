@@ -196,11 +196,11 @@ export default async function ProductLandingPage({ params }: PageProps) {
         </header>
 
         <section className="grid grid-cols-1 gap-[var(--spacing-md)] lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <article className="rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/80 p-[clamp(24px,4vw,44px)] backdrop-blur-sm">
+          <article className="@container rounded-[var(--radius-xl)] border border-[rgba(0,23,31,0.12)] bg-white/80 p-[clamp(24px,4vw,44px)] backdrop-blur-sm">
             <p className="mb-[var(--spacing-sm)] inline-flex w-fit items-center rounded-full bg-brand-primary/15 px-3 py-[var(--spacing-xs)] text-xs font-light uppercase tracking-plus1_5 text-brand-dark">
               17Suit / {slug}
             </p>
-            <h1 className="m-0 max-w-[16ch] font-arvo text-[clamp(42px,7.2vw,84px)] leading-[1.08] [letter-spacing:-0.015em] text-text">
+            <h1 className="m-0 max-w-full text-balance break-words font-arvo text-[clamp(32px,13cqi,72px)] leading-[1.08] [letter-spacing:-0.015em] text-text">
               {product.name}
             </h1>
             <p className="mt-[var(--spacing-md)] max-w-[50ch] font-amaranth text-[clamp(22px,3.4vw,34px)] leading-[1.2] tracking-plus0_25 text-brand-dark">
