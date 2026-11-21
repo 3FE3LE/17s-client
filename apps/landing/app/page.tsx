@@ -92,7 +92,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/sign-up"
-              className={`${buttonBaseClass} flex-1 border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] md:flex-none`}
+              className={`${buttonBaseClass} flex-1 border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] md:flex-none`}
             >
               Registrarse
             </Link>
@@ -118,7 +118,7 @@ export default function HomePage() {
             <div className="mt-[var(--spacing-xl)] flex flex-wrap items-center gap-[var(--spacing-sm)]">
               <Link
                 href="/sign-up"
-                className={`${buttonBaseClass} border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-5 py-[13px] text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)]`}
+                className={`${buttonBaseClass} border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-5 py-[13px] text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)]`}
               >
                 Crear cuenta
               </Link>

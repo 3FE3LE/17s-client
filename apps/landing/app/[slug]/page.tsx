@@ -188,7 +188,7 @@ export default async function ProductLandingPage({ params }: PageProps) {
             </Link>
             <Link
               href={`/sign-up?redirect_url=${encodeURIComponent(redirectTarget)}`}
-              className="inline-flex flex-1 items-center justify-center rounded-full border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-[var(--spacing-md)] py-[10px] text-md font-bold leading-[1.4] tracking-plus1_25 text-white no-underline shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px md:flex-none"
+              className="inline-flex flex-1 items-center justify-center rounded-full border border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-[var(--spacing-md)] py-[10px] text-md font-bold leading-[1.4] tracking-plus1_25 text-white no-underline shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px md:flex-none"
             >
               Crear cuenta
             </Link>
@@ -212,7 +212,7 @@ export default async function ProductLandingPage({ params }: PageProps) {
             <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-sm)]">
               <Link
                 href={`/sign-up?redirect_url=${encodeURIComponent(redirectTarget)}`}
-                className="inline-flex items-center justify-center rounded-full border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-5 py-[13px] text-md font-bold leading-[1.4] tracking-plus1_25 text-white no-underline shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px"
+                className="inline-flex items-center justify-center rounded-full border border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-5 py-[13px] text-md font-bold leading-[1.4] tracking-plus1_25 text-white no-underline shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px"
               >
                 Probar este producto
               </Link>

@@ -3,7 +3,7 @@
 import { cx, inputRecipe } from '@17suit/design-system';
 import { Eye, EyeOff } from 'lucide-react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 export interface AppInputProps extends Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -41,11 +41,14 @@ export function AppInput({
   autoCapitalize,
   secureTextEntry,
   type,
+  id,
   ...rest
 }: AppInputProps) {
   void keyboardType;
   void autoCapitalize;
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const isPasswordField = secureTextEntry || type === 'password';
   const shouldShowPasswordToggle = isPasswordField && showPasswordToggle;
   const resolvedType = shouldShowPasswordToggle
@@ -67,7 +70,11 @@ export function AppInput({
 
   return (
     <div className={inputClasses.root}>
-      {resolvedLabel ? <label className={inputClasses.fieldLabel}>{resolvedLabel}</label> : null}
+      {resolvedLabel ? (
+        <label htmlFor={inputId} className={inputClasses.fieldLabel}>
+          {resolvedLabel}
+        </label>
+      ) : null}
       <div className="relative w-full">
         {leftIcon ? (
           <span className="absolute left-3 top-1/2 inline-flex -translate-y-1/2 items-center text-muted">
@@ -76,6 +83,7 @@ export function AppInput({
         ) : null}
         <input
           {...rest}
+          id={inputId}
           value={value}
           placeholder={placeholder}
           disabled={disabled}
@@ -97,7 +105,7 @@ export function AppInput({
             type="button"
             onClick={() => setIsPasswordVisible((current) => !current)}
             className="absolute right-[10px] top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
-            aria-label={isPasswordVisible ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+            aria-label={isPasswordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
             {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
@@ -108,7 +116,7 @@ export function AppInput({
             onClick={onRightIconPress}
             className="absolute right-[10px] top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
             style={{ cursor: onRightIconPress ? 'pointer' : 'default' }}
-            aria-label="Input action"
+            aria-label="Acción del campo"
           >
             {rightIcon}
           </button>
