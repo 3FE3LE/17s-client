@@ -13,8 +13,6 @@ export interface AppFrameProps extends PropsWithChildren {
   refreshing?: boolean;
 }
 
-const APP_FRAME_BADGE = '17SUIT';
-
 export function AppFrame({
   appName,
   subtitle,
@@ -45,20 +43,17 @@ export function AppFrame({
       keyboardShouldPersistTaps="handled"
     >
       <View className="w-full">
-        <View className="flex-row items-center">
-          {typeof onBack === 'function' ? (
-            <Pressable
-              onPress={onBack}
-              className="items-center justify-center rounded-md border border-black/20 bg-surface px-sm py-xs"
-            >
-              <Feather name="chevron-left" size={20} color={theme.colors.text} />
-            </Pressable>
-          ) : null}
-          {typeof onBack === 'function' ? <View className="w-sm" /> : null}
-          <Text className="font-zilla text-xs font-light uppercase leading-[17px] tracking-plus1_5 text-info">
-            {APP_FRAME_BADGE}
-          </Text>
-        </View>
+        {typeof onBack === 'function' ? (
+          <Pressable
+            onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
+            hitSlop={8}
+            className="h-11 w-11 items-center justify-center self-start rounded-md border border-black/20 bg-surface"
+          >
+            <Feather name="chevron-left" size={20} color={theme.colors.text} />
+          </Pressable>
+        ) : null}
         <AppTitle text={appName} />
         {subtitle ? (
           <Text className="font-zilla text-md leading-[24px] tracking-normal text-muted">

@@ -166,7 +166,7 @@ export function AppProductFooter({
                         ...baseButtonStyle,
                         color: '#ffffff',
                         border: '1px solid #01695b',
-                        background: 'linear-gradient(95deg, #00916e, #007666)',
+                        background: 'linear-gradient(95deg, #007f60, #007666)',
                         boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
                       }}
                     >
