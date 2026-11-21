@@ -44,6 +44,7 @@ const colorVars: Array<[string, ColorKey]> = [
   ['warning', 'warning'],
   ['caution', 'caution'],
   ['info', 'info'],
+  ['neutral', 'neutral'],
 ];
 const brandVars: Array<[string, ColorKey]> = [
   ['brand-primary', 'brandPrimary'],
@@ -59,16 +60,41 @@ function cssFontStack(stack: string): string {
   return [`'${family.replace(/^["']|["']$/g, '')}'`, ...fallbacks].join(', ');
 }
 
-const fonts = {
+interface FontSet {
+  arvo: string;
+  amaranth: string;
+  zilla: string;
+  arvoBold: string;
+  amaranthBold: string;
+  zillaLight: string;
+  zillaBold: string;
+}
+
+const webArvo = cssFontStack(theme.fontFamilies.web.arvo);
+const webAmaranth = cssFontStack(theme.fontFamilies.web.amaranth);
+const webZilla = cssFontStack(theme.fontFamilies.web.zillaSlab);
+const native = (name: string) => `'${name}'`;
+
+const fonts: { web: FontSet; native: FontSet } = {
+  // Web: weighted families alias the base family; weight comes from font-*.
   web: {
-    arvo: cssFontStack(theme.fontFamilies.web.arvo),
-    amaranth: cssFontStack(theme.fontFamilies.web.amaranth),
-    zilla: cssFontStack(theme.fontFamilies.web.zillaSlab),
+    arvo: webArvo,
+    amaranth: webAmaranth,
+    zilla: webZilla,
+    arvoBold: webArvo,
+    amaranthBold: webAmaranth,
+    zillaLight: webZilla,
+    zillaBold: webZilla,
   },
+  // Native: one font file per weight, so weight is part of the family.
   native: {
-    arvo: `'${theme.fontFamilies.native.arvoRegular}'`,
-    amaranth: `'${theme.fontFamilies.native.amaranthRegular}'`,
-    zilla: `'${theme.fontFamilies.native.zillaSlabRegular}'`,
+    arvo: native(theme.fontFamilies.native.arvoRegular),
+    amaranth: native(theme.fontFamilies.native.amaranthRegular),
+    zilla: native(theme.fontFamilies.native.zillaSlabRegular),
+    arvoBold: native(theme.fontFamilies.native.arvoBold),
+    amaranthBold: native(theme.fontFamilies.native.amaranthBold),
+    zillaLight: native(theme.fontFamilies.native.zillaSlabLight),
+    zillaBold: native(theme.fontFamilies.native.zillaSlabBold),
   },
 };
 
@@ -93,7 +119,7 @@ function colorBlock(colors: Colors, indent: string, { splitBrand }: { splitBrand
 
 function scaleBlock(
   indent: string,
-  fontSet: { arvo: string; amaranth: string; zilla: string },
+  fontSet: FontSet,
   radiusControl: string,
   { annotateRadiusControl }: { annotateRadiusControl: boolean },
 ) {
@@ -101,6 +127,10 @@ function scaleBlock(
     decl(indent, 'font-arvo', fontSet.arvo),
     decl(indent, 'font-amaranth', fontSet.amaranth),
     decl(indent, 'font-zilla', fontSet.zilla),
+    decl(indent, 'font-arvo-bold', fontSet.arvoBold),
+    decl(indent, 'font-amaranth-bold', fontSet.amaranthBold),
+    decl(indent, 'font-zilla-light', fontSet.zillaLight),
+    decl(indent, 'font-zilla-bold', fontSet.zillaBold),
     '',
     ...Object.entries(theme.spacing).map(([k, v]) => decl(indent, `spacing-${k}`, px(v))),
     '',

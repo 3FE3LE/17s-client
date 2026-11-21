@@ -8,6 +8,10 @@
     --suit-font-arvo: 'Arvo_400Regular';
     --suit-font-amaranth: 'Amaranth_400Regular';
     --suit-font-zilla: 'ZillaSlab_400Regular';
+    --suit-font-arvo-bold: 'Arvo_700Bold';
+    --suit-font-amaranth-bold: 'Amaranth_700Bold';
+    --suit-font-zilla-light: 'ZillaSlab_300Light';
+    --suit-font-zilla-bold: 'ZillaSlab_700Bold';
 
     --suit-spacing-xs: 4px;
     --suit-spacing-sm: 8px;
@@ -63,6 +67,7 @@
       --suit-color-warning: #f3863d;
       --suit-color-caution: #edd83d;
       --suit-color-info: #1e91d6;
+      --suit-color-neutral: #cfcfcf;
       --suit-color-brand-primary: #35a7ff;
       --suit-color-brand-secondary: #00916e;
       --suit-color-brand-accent: #ff495c;
@@ -84,6 +89,7 @@
       --suit-color-warning: #f3863d;
       --suit-color-caution: #edd83d;
       --suit-color-info: #1e91d6;
+      --suit-color-neutral: #cfcfcf;
       --suit-color-brand-primary: #35a7ff;
       --suit-color-brand-secondary: #00916e;
       --suit-color-brand-accent: #ff495c;

@@ -193,6 +193,8 @@ const darkColors = {
   warning: '#f3863d',
   caution: '#edd83d',
   info: '#1e91d6',
+  // grayscale[3]; neutral chips/badges, identical in both themes.
+  neutral: '#cfcfcf',
   brandPrimary: '#35a7ff',
   brandSecondary: '#00916e',
   brandAccent: '#ff495c',
@@ -215,6 +217,8 @@ const lightColors = {
   warning: '#f3863d',
   caution: '#edd83d',
   info: '#1e91d6',
+  // grayscale[3]; neutral chips/badges, identical in both themes.
+  neutral: '#cfcfcf',
   brandPrimary: '#35a7ff',
   brandSecondary: '#00916e',
   brandAccent: '#ff495c',

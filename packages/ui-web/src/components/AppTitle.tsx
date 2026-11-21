@@ -1,26 +1,11 @@
-import { useAppTheme } from '../theme/theme-context';
+import { titleRecipe } from '@17suit/design-system';
 
 export interface AppTitleProps {
   text: string;
+  className?: string;
 }
 
-export function AppTitle({ text }: AppTitleProps) {
-  const { theme } = useAppTheme();
-  const titleType = theme.typography.styles.subtitle1;
-  return (
-    <p
-      style={{
-        color: theme.colors.text,
-        marginTop: theme.spacing.sm,
-        marginBottom: theme.spacing.sm,
-        fontSize: titleType.fontSize,
-        fontFamily: titleType.webFamily,
-        lineHeight: titleType.lineHeightRecommended,
-        letterSpacing: titleType.letterSpacingEm,
-        fontWeight: titleType.fontWeight,
-      }}
-    >
-      {text}
-    </p>
-  );
+/** Web renderer of the shared title contract (subtitle1 + vertical rhythm). */
+export function AppTitle({ text, className }: AppTitleProps) {
+  return <p className={titleRecipe({ platform: 'web', className })}>{text}</p>;
 }
