@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { AppThemeToggle } from './AppThemeToggle';
+
 export interface AppProductFooterLink {
   label: string;
   href: string;
@@ -21,11 +23,14 @@ export interface AppProductFooterProps {
   productLinkControls?: ReactNode;
   legalLinks?: AppProductFooterLink[];
   legalLinkControls?: ReactNode;
+  /** Theme control rendered in the footer; defaults to AppThemeToggle, `false` hides it. */
+  themeControl?: ReactNode | false;
 }
 
 const containerStyle: CSSProperties = {
   width: '100%',
-  background: 'rgba(255, 255, 255, 0.88)',
+  // Theme-reactive: follows the `dark` class on <html> via token vars.
+  background: 'color-mix(in srgb, var(--suit-color-surface) 88%, transparent)',
   borderTop: '1px solid rgba(0, 23, 31, 0.12)',
 };
 
@@ -107,6 +112,7 @@ export function AppProductFooter({
   productLinkControls,
   legalLinks = [],
   legalLinkControls,
+  themeControl,
 }: AppProductFooterProps) {
   const year = new Date().getFullYear();
 
@@ -118,7 +124,7 @@ export function AppProductFooter({
             <p
               style={{
                 margin: 0,
-                color: 'var(--color-brand-dark, #00171f)',
+                color: 'var(--color-text, #00151c)',
                 fontFamily: '"Arvo", serif',
                 fontSize: 24,
                 lineHeight: 1.25,
@@ -195,17 +201,28 @@ export function AppProductFooter({
           </div>
         ) : null}
 
-        <p
+        <div
           style={{
-            margin: 0,
-            color: 'var(--color-muted, #394448)',
-            fontFamily: '"Zilla Slab", serif',
-            fontSize: 14,
-            lineHeight: 1.5,
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
           }}
         >
-          {year} {suiteName}. Todos los derechos reservados.
-        </p>
+          <p
+            style={{
+              margin: 0,
+              color: 'var(--color-muted, #394448)',
+              fontFamily: '"Zilla Slab", serif',
+              fontSize: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            {year} {suiteName}. Todos los derechos reservados.
+          </p>
+          {themeControl === false ? null : (themeControl ?? <AppThemeToggle />)}
+        </div>
       </div>
     </footer>
   );

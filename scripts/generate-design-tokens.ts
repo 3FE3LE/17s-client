@@ -8,10 +8,9 @@
  * Outputs (all fully generated — do not edit by hand):
  *   - variables.css    web: light on :root, dark under `.dark`
  *   - native-theme.css Uniwind: `@variant light` / `@variant dark`
- *   - suit-tokens.css  web legacy subset resolved by prefers-color-scheme
+ *   - suit-tokens.css  web base styles + `--suit-color-bg` legacy alias
  *
- * The emitted values intentionally reproduce the previous hand-written
- * files, so adopting the generator changes no rendered style.
+ * Web has one theme mechanism: the `dark` class on <html>.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -128,12 +127,14 @@ function scaleBlock(
 function variablesCss(): string {
   return [
     HEADER + ':root {',
+    '  color-scheme: light;',
     ...colorBlock(suitThemeLight.colors, '  ', { splitBrand: true }),
     '',
     ...scaleBlock('  ', fonts.web, 'var(--suit-radius-md)', { annotateRadiusControl: true }),
     '}',
     '',
     '.dark {',
+    '  color-scheme: dark;',
     ...colorBlock(suitThemeDark.colors, '  ', { splitBrand: true }),
     '}',
     '',
@@ -165,31 +166,17 @@ function nativeThemeCss(): string {
 }
 
 function suitTokensCss(): string {
-  const subset = (colors: Colors, indent: string) => [
-    `${indent}--suit-color-bg: ${colors.background};`,
-    `${indent}--suit-color-surface: ${colors.surface};`,
-    `${indent}--suit-color-accent: ${colors.accent};`,
-    `${indent}--suit-color-text: ${colors.text};`,
-    `${indent}--suit-color-muted: ${colors.muted};`,
-  ];
   return [
-    HEADER + '/* Suit design-system theme tokens — web only.',
+    HEADER + '/* Web base styles + legacy alias.',
     ' *',
-    ' * Theme is resolved by the browser via `prefers-color-scheme`, so server',
-    ' * and first client render produce the same DOM. No `useEffect`, no',
-    ' * inline `<style>`, no hydration mismatch.',
-    ' *',
-    ' * Mobile keeps the JS theme (`@17suit/ui-native`) because it supports a',
-    ' * user-controlled toggle; CSS-only would not handle the override.',
+    ' * Colors are NOT defined here: they come from variables.css and switch',
+    ' * with the single web theme mechanism, the `dark` class on <html>',
+    ' * (set before paint by ThemeScript from @17suit/ui-web). This file used',
+    ' * to re-declare four colors via prefers-color-scheme, which fought that',
+    ' * mechanism.',
     ' */',
     ':root {',
-    ...subset(suitThemeDark.colors, '  '),
-    '}',
-    '',
-    '@media (prefers-color-scheme: light) {',
-    '  :root {',
-    ...subset(suitThemeLight.colors, '    '),
-    '  }',
+    '  --suit-color-bg: var(--suit-color-background);',
     '}',
     '',
     'html,',

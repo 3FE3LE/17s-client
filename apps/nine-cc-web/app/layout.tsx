@@ -3,6 +3,7 @@ import {
   AppProductFooter,
   appProductFooterButtonStyle,
   appProductFooterTextLinkStyle,
+  ThemeScript,
 } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
 import { SignOutButton } from '@clerk/nextjs';
@@ -57,7 +58,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   ];
 
   return (
-    <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
+    <html
+      lang="es"
+      className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
+      // ThemeScript sets the `dark` class before hydration.
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>
         <WebAuthProvider>
           <AppProviders>
