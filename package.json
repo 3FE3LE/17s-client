@@ -16,6 +16,8 @@
     "format:fix": "prettier --write .",
     "clean": "turbo run clean && rm -rf node_modules",
     "verify:api-schema": "tsx scripts/verify-api-schema.ts",
+    "tokens:generate": "tsx scripts/generate-design-tokens.ts",
+    "tokens:check": "tsx scripts/generate-design-tokens.ts --check",
     "prepare": "husky",
     "dev:product": "pnpm --filter @17suit/tooling run dev:product",
     "product": "pnpm --filter @17suit/tooling run dev:product",
