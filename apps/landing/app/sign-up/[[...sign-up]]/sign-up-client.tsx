@@ -120,7 +120,7 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
         {!needsVerification ? (
-          <form className="grid gap-sm" onSubmit={handleCreateAccount}>
+          <form method="post" className="grid gap-sm" onSubmit={handleCreateAccount}>
             <AppInput
               type="email"
               name="email"
@@ -173,7 +173,7 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
         )}
 
         {needsVerification ? (
-          <form className="grid gap-sm" onSubmit={handleVerifyEmail}>
+          <form method="post" className="grid gap-sm" onSubmit={handleVerifyEmail}>
             <AppInput
               type="text"
               name="code"
