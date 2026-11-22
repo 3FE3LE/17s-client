@@ -22,6 +22,7 @@ import {
   ConfirmDialog,
   InlineError,
   ListSkeleton,
+  RefreshControl,
   SectionHeader,
 } from '@/components/seven-rc-ui';
 import { describeError, isSlotConflict } from '@/lib/seven-rc-errors';
@@ -35,6 +36,7 @@ import {
   formatSlotWhen,
   formatTime,
   formatTimeRange,
+  hourInTimeZone,
   minutesBetween,
   reservationStatus,
   safeTimeZone,
@@ -54,10 +56,20 @@ import {
   type ReservationBase,
   type ReservationWithVenuePitch,
 } from '@/lib/player-queries';
+import { useNow } from '@/lib/use-now';
 
 const SEARCH_DEBOUNCE_MS = 350;
 const DATE_STRIP_DAYS = 14;
 const MAX_VENUE_RESULTS = 12;
+const PENDING_POLL_MS = 30_000;
+const RESERVE_FORM_ID = 'reserva-form';
+
+/** Part-of-day buckets by venue-local start hour. */
+const DAY_PARTS = [
+  { key: 'manana', label: 'Mañana', from: 0, to: 12 },
+  { key: 'tarde', label: 'Tarde', from: 12, to: 18 },
+  { key: 'noche', label: 'Noche', from: 18, to: 24 },
+] as const;
 
 const SLOT_UNAVAILABLE_LABEL: Record<string, string> = {
   RESERVED: 'reservado',
@@ -78,7 +90,7 @@ export default function PlayPage() {
 
   if (isLoading || role !== 'PLAYER') {
     return (
-      <AppFrame appName="Mis reservas" subtitle="Cargando tu cuenta…">
+      <AppFrame appName="Reservar cancha" subtitle="Cargando tu cuenta…">
         <ListSkeleton rows={3} label="Cargando tu cuenta" />
       </AppFrame>
     );
@@ -180,11 +192,11 @@ function PlayerWorkspace() {
 
   return (
     <AppFrame
-      appName="Mis reservas"
+      appName="Reservar cancha"
       subtitle="Elige complejo, cancha, día y horario. Solo ves los turnos que están libres."
     >
       <section aria-labelledby="reservar-title" className="grid gap-lg">
-        <SectionHeader id="reservar-title" title="Reservar cancha" />
+        <SectionHeader id="reservar-title" title="Nueva reserva" />
 
         {completedBooking ? (
           <BookingSuccess
@@ -318,6 +330,7 @@ function PlayerWorkspace() {
             </div>
 
             <form
+              id={RESERVE_FORM_ID}
               onSubmit={onReserve}
               aria-labelledby="resumen-title"
               className="grid gap-md rounded-[var(--radius-lg)] border border-border-strong bg-background p-md lg:sticky lg:top-md"
@@ -367,6 +380,20 @@ function PlayerWorkspace() {
             </form>
           </div>
         )}
+
+        {!completedBooking && selectedSlot ? (
+          <MobileBookingBar
+            when={formatTimeRange(selectedSlot.startAt, selectedSlot.endAt, timeZone)}
+            pitchName={selectedPitch?.name ?? ''}
+            price={
+              selectedSlot.priceMinor > 0
+                ? formatMoneyMinor(selectedSlot.priceMinor, currency)
+                : 'Sin costo'
+            }
+            isPending={createReservationMutation.isPending}
+            error={bookingError}
+          />
+        ) : null}
       </section>
 
       <MyReservations />
@@ -571,49 +598,121 @@ function SlotPicker({
             {availableCount === 1 ? '1 horario libre' : `${availableCount} horarios libres`} · hora
             del complejo
           </p>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-sm">
-            {slots.map((slot) => {
-              const isAvailable = slot.status === 'AVAILABLE';
-              const start = formatTime(slot.startAt, timeZone);
-              const unavailable = SLOT_UNAVAILABLE_LABEL[slot.status] ?? 'no disponible';
-              return (
-                <ChoiceChip
-                  key={slot.startAt}
-                  name="horario"
-                  value={slot.startAt}
-                  checked={slot.startAt === selectedStart}
-                  disabled={!isAvailable}
-                  onSelect={onSelect}
-                  ariaLabel={
-                    isAvailable
-                      ? `${start}, ${formatMoneyMinor(slot.priceMinor, currency)}`
-                      : `${start}, ${unavailable}`
-                  }
-                  className="items-center text-center"
+          {DAY_PARTS.map((part) => {
+            const partSlots = slots.filter((slot) => {
+              const hour = hourInTimeZone(slot.startAt, timeZone);
+              return hour >= part.from && hour < part.to;
+            });
+            if (partSlots.length === 0) return null;
+            const headingId = `horario-${part.key}`;
+            return (
+              <div key={part.key} role="group" aria-labelledby={headingId} className="grid gap-xs">
+                <h3
+                  id={headingId}
+                  className="m-0 mt-xs text-sm font-bold leading-[18px] text-muted"
                 >
-                  <span
-                    className={
-                      isAvailable
-                        ? 'font-bold tabular-nums leading-[1.3]'
-                        : 'tabular-nums leading-[1.3] line-through'
-                    }
-                  >
-                    {start}
-                  </span>
-                  <span className="text-xs leading-[1.3] text-muted">
-                    {isAvailable
-                      ? slot.priceMinor > 0
-                        ? formatMoneyMinor(slot.priceMinor, currency)
-                        : 'Libre'
-                      : unavailable}
-                  </span>
-                </ChoiceChip>
-              );
-            })}
-          </div>
+                  {part.label}
+                </h3>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-sm">
+                  {partSlots.map((slot) => (
+                    <SlotChip
+                      key={slot.startAt}
+                      slot={slot}
+                      timeZone={timeZone}
+                      currency={currency}
+                      checked={slot.startAt === selectedStart}
+                      onSelect={onSelect}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </>
       )}
     </fieldset>
+  );
+}
+
+function SlotChip({
+  slot,
+  timeZone,
+  currency,
+  checked,
+  onSelect,
+}: {
+  slot: AvailabilitySlot;
+  timeZone: string;
+  currency: string;
+  checked: boolean;
+  onSelect: (startAt: string) => void;
+}) {
+  const isAvailable = slot.status === 'AVAILABLE';
+  const start = formatTime(slot.startAt, timeZone);
+  const unavailable = SLOT_UNAVAILABLE_LABEL[slot.status] ?? 'no disponible';
+  const price = slot.priceMinor > 0 ? formatMoneyMinor(slot.priceMinor, currency) : 'Sin costo';
+  return (
+    <ChoiceChip
+      name="horario"
+      value={slot.startAt}
+      checked={checked}
+      disabled={!isAvailable}
+      onSelect={onSelect}
+      ariaLabel={isAvailable ? `${start}, ${price}` : `${start}, ${unavailable}`}
+      className="items-center text-center"
+    >
+      <span
+        className={
+          isAvailable
+            ? 'font-bold tabular-nums leading-[1.3]'
+            : 'tabular-nums leading-[1.3] line-through'
+        }
+      >
+        {start}
+      </span>
+      <span className="text-xs leading-[1.3] text-muted">{isAvailable ? price : unavailable}</span>
+    </ChoiceChip>
+  );
+}
+
+/**
+ * Below `lg` the summary form sits after the slot grid, out of thumb reach. This bar
+ * appears when a slot is chosen (the visible confirmation of the tap) and submits the
+ * same form: guests and note are optional, so nothing else is required.
+ */
+function MobileBookingBar({
+  when,
+  pitchName,
+  price,
+  isPending,
+  error,
+}: {
+  when: string;
+  pitchName: string;
+  price: string;
+  isPending: boolean;
+  error: string | null;
+}) {
+  return (
+    <>
+      <div aria-hidden className="h-28 lg:hidden" />
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border-strong bg-surface px-md pt-sm pb-[max(12px,env(safe-area-inset-bottom))] shadow-panel-strong transition-transform duration-300 ease-out starting:translate-y-full motion-reduce:transition-none lg:hidden">
+        <div className="mx-auto grid max-w-[640px] gap-xs">
+          <div className="flex items-center gap-md">
+            <div className="grid min-w-0 flex-1">
+              <p className="m-0 truncate font-bold leading-[1.3] tabular-nums text-text">{when}</p>
+              <p className="m-0 truncate text-sm leading-[18px] text-muted">
+                {pitchName} · {price}
+              </p>
+            </div>
+            <AppButton type="submit" form={RESERVE_FORM_ID} fullWidth={false} disabled={isPending}>
+              {isPending ? 'Enviando…' : 'Reservar'}
+            </AppButton>
+          </div>
+          {error ? <p className="m-0 text-sm leading-[18px] text-text">{error}</p> : null}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -726,7 +825,8 @@ function BookingSuccess({
               </p>
             ) : null}
             <p className="m-0 text-muted">
-              El estado se actualiza en “Mis próximas reservas”, más abajo.
+              Mientras tengas esta página abierta, revisamos el estado cada 30 segundos en “Mis
+              próximas reservas”, más abajo. También puedes tocar “Actualizar”.
             </p>
           </>
         ) : (
@@ -753,14 +853,26 @@ function BookingSuccess({
 }
 
 function MyReservations() {
-  const myReservationsQuery = useMyReservationsQuery();
+  // Refetch on focus, and poll every 30 s only while a request awaits the venue and
+  // the tab is visible; settled lists cost no background requests.
+  const myReservationsQuery = useMyReservationsQuery({
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchInterval: (query) =>
+      query.state.data?.some((reservation) => reservation.status === 'pending_confirmation')
+        ? PENDING_POLL_MS
+        : false,
+    refetchIntervalInBackground: false,
+  });
   const cancelReservationMutation = useCancelReservationMutation();
   const invalidateAvailability = useInvalidatePitchAvailability();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const [cancelTarget, setCancelTarget] = useState<ReservationWithVenuePitch | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [cancelledNotice, setCancelledNotice] = useState<string | null>(null);
-  const [now] = useState(() => Date.now());
+  const [mountedAt] = useState(() => Date.now());
+  const tick = useNow();
+  const now = tick || mountedAt;
 
   const reservations = myReservationsQuery.data ?? [];
   const upcoming = reservations
@@ -794,7 +906,17 @@ function MyReservations() {
 
   return (
     <section aria-labelledby="mis-reservas-title" className="mt-lg grid gap-md">
-      <SectionHeader id="mis-reservas-title" title="Mis próximas reservas" />
+      <SectionHeader
+        id="mis-reservas-title"
+        title="Mis próximas reservas"
+        aside={
+          <RefreshControl
+            dataUpdatedAt={myReservationsQuery.dataUpdatedAt}
+            isFetching={myReservationsQuery.isFetching}
+            onRefresh={() => void myReservationsQuery.refetch()}
+          />
+        }
+      />
       <p aria-live="polite" className="m-0 text-sm leading-[18px] text-muted">
         {cancelledNotice ?? ''}
       </p>

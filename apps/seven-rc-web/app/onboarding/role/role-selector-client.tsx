@@ -31,13 +31,18 @@ const ROLE_OPTIONS: ReadonlyArray<{
   },
 ];
 
-export function RoleSelectorClient() {
+export function RoleSelectorClient({ preferredRole = null }: { preferredRole?: AppRole | null }) {
   const router = useRouter();
   const { error: roleError, refetch } = useCurrentUserRoleQuery();
   const setRoleMutation = useSetCurrentUserRoleMutation();
   const [submittingRole, setSubmittingRole] = useState<AppRole | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const orderedOptions = preferredRole
+    ? [...ROLE_OPTIONS].sort(
+        (a, b) => Number(b.role === preferredRole) - Number(a.role === preferredRole),
+      )
+    : ROLE_OPTIONS;
 
   async function handleSetRole(role: AppRole) {
     setSubmitError(null);
@@ -68,17 +73,21 @@ export function RoleSelectorClient() {
       ) : null}
 
       <ul className="m-0 grid list-none gap-md p-0 md:grid-cols-2">
-        {ROLE_OPTIONS.map((option) => (
+        {orderedOptions.map((option) => (
           <li
             key={option.role}
-            className="grid content-between gap-md rounded-[var(--radius-lg)] border border-border-strong bg-background p-lg"
+            className={
+              option.role === preferredRole
+                ? 'grid content-between gap-md rounded-[var(--radius-lg)] border-2 border-action-primary bg-action-primary-soft p-lg'
+                : 'grid content-between gap-md rounded-[var(--radius-lg)] border border-border-strong bg-background p-lg'
+            }
           >
             <div className="grid gap-xs">
               <h2 className="m-0 font-arvo text-lg leading-[1.3] text-text">{option.title}</h2>
               <p className="m-0 text-md leading-[1.5] text-muted">{option.description}</p>
             </div>
             <AppButton
-              variant="primary"
+              variant={preferredRole && option.role !== preferredRole ? 'neutral' : 'primary'}
               disabled={submittingRole !== null}
               onPress={() => void handleSetRole(option.role)}
             >

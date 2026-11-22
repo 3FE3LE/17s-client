@@ -1,7 +1,9 @@
 'use client';
 
-import { AppButton, AppSkeleton, cx, inputRecipe } from '@17suit/ui';
+import { AppButton, AppSkeleton, RefreshCcw, cx, inputRecipe } from '@17suit/ui';
 import { useId, type ReactNode, type RefObject } from 'react';
+import { formatUpdatedAgo } from '@/lib/seven-rc-format';
+import { useNow } from '@/lib/use-now';
 
 /**
  * App-local form and feedback primitives for seven-rc-web.
@@ -251,5 +253,49 @@ export function ChoiceChip({
       />
       {children}
     </label>
+  );
+}
+
+/**
+ * "Actualizado hace X min" + manual refresh, for lists that poll in the background.
+ * The label is not a live region: it ticks every few seconds and would be noise.
+ */
+export function RefreshControl({
+  dataUpdatedAt,
+  isFetching,
+  onRefresh,
+  label = 'Actualizar',
+}: {
+  dataUpdatedAt: number;
+  isFetching: boolean;
+  onRefresh: () => void;
+  label?: string;
+}) {
+  const now = useNow();
+  return (
+    <div className="flex flex-wrap items-center gap-sm">
+      <p className="m-0 text-sm leading-[18px] text-muted tabular-nums">
+        {isFetching ? 'Actualizando…' : formatUpdatedAgo(dataUpdatedAt, now || dataUpdatedAt)}
+      </p>
+      <AppButton
+        variant="neutral"
+        compact
+        fullWidth={false}
+        aria-busy={isFetching}
+        onPress={() => {
+          // Stay enabled while fetching so the button keeps keyboard focus.
+          if (!isFetching) onRefresh();
+        }}
+      >
+        <span className="inline-flex items-center gap-xs">
+          <RefreshCcw
+            size={14}
+            aria-hidden
+            className={isFetching ? 'motion-safe:animate-spin' : ''}
+          />
+          {label}
+        </span>
+      </AppButton>
+    </div>
   );
 }

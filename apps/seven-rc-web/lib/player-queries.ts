@@ -9,6 +9,7 @@ import {
   type PublicVenue,
   type ReservationWithVenuePitch,
   type ReservationBase,
+  type SevenRcRefreshOptions,
   sevenRcQueryKeys,
   useSevenRcCancelReservationMutation,
   useSevenRcCreateReservationMutation,
@@ -63,9 +64,11 @@ export function useCreateReservationMutation() {
   return useSevenRcCreateReservationMutation(api);
 }
 
-export function useMyReservationsQuery() {
+export function useMyReservationsQuery(
+  options?: SevenRcRefreshOptions<ReservationWithVenuePitch[]>,
+) {
   const api = usePlayerApi();
-  return useSevenRcMyReservationsQuery(api);
+  return useSevenRcMyReservationsQuery(api, options);
 }
 
 export function useCancelReservationMutation() {
