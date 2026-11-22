@@ -104,7 +104,7 @@ export function AppInput({
           <button
             type="button"
             onClick={() => setIsPasswordVisible((current) => !current)}
-            className="absolute right-[10px] top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
+            className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
             aria-label={isPasswordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
           >
             {isPasswordVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -114,7 +114,7 @@ export function AppInput({
           <button
             type="button"
             onClick={onRightIconPress}
-            className="absolute right-[10px] top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
+            className="absolute right-0 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center border-0 bg-transparent p-0 text-muted"
             style={{ cursor: onRightIconPress ? 'pointer' : 'default' }}
             aria-label="Acción del campo"
           >

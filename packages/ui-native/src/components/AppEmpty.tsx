@@ -45,6 +45,8 @@ export function AppEmpty({
       ]}
     >
       <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         style={{
           width: 44,
           height: 44,
@@ -54,16 +56,7 @@ export function AppEmpty({
           justifyContent: 'center',
         }}
       >
-        <Text
-          style={{
-            color: theme.colors.brandPrimary,
-            fontFamily: subtitleType.nativeFamily,
-            fontSize: 18,
-            lineHeight: 22,
-          }}
-        >
-          {icon ?? <Feather name="inbox" size={20} color={theme.colors.brandPrimary} />}
-        </Text>
+        {icon ?? <Feather name="inbox" size={20} color={theme.colors.brandPrimary} />}
       </View>
       <Text
         style={{

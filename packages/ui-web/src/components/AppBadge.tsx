@@ -19,8 +19,14 @@ export function AppBadge({
   style,
   ...rest
 }: AppBadgeProps) {
-  const { theme } = useAppTheme();
+  const { theme, resolvedMode } = useAppTheme();
   const captionType = theme.typography.styles.caption;
+  // Text on the saturated destructive/info fills (WCAG AA, 4.5:1 for caption text):
+  // light #e10812 / #1876ae need pure white (4.95:1; brandLight #f0f0f0 was 4.34:1).
+  // dark #f8333c / #1e91d6 fail with any light text (white 3.80 / 3.46:1), so they
+  // take brandDark (4.84 / 5.32:1). The other fills already pass with brandDark
+  // (primary 7.11, success 6.64, warning 7.26, neutral 11.8:1).
+  const onSaturatedFill = resolvedMode === 'light' ? '#ffffff' : theme.colors.brandDark;
   const variantStyles: Record<AppBadgeVariant, { backgroundColor: string; color: string }> = {
     primary: {
       backgroundColor: theme.colors.brandPrimary,
@@ -32,7 +38,7 @@ export function AppBadge({
     },
     destructive: {
       backgroundColor: theme.colors.destructive,
-      color: theme.colors.brandLight,
+      color: onSaturatedFill,
     },
     warning: {
       backgroundColor: theme.colors.warning,
@@ -40,7 +46,7 @@ export function AppBadge({
     },
     info: {
       backgroundColor: theme.colors.info,
-      color: theme.colors.brandLight,
+      color: onSaturatedFill,
     },
     neutral: {
       backgroundColor: theme.grayscale[3],
