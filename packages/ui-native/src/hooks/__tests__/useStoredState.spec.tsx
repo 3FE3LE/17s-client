@@ -20,9 +20,7 @@ describe('useStoredState', () => {
         resolveLoad = resolve;
       });
 
-    const hook = renderHook(() =>
-      useStoredState({ load, defaultValue: 'guest' as 'guest' | 'admin' }),
-    );
+    const hook = renderHook(() => useStoredState({ load, defaultValue: 'guest' }));
 
     expect(hook.result.current[0]).toBe('guest');
     // Resolving on a later tick (out of band) is safe; we just exit.
@@ -37,9 +35,7 @@ describe('useStoredState', () => {
         resolveLoad = resolve;
       });
 
-    const hook = renderHook(() =>
-      useStoredState({ load, defaultValue: 'guest' as 'guest' | 'admin' }),
-    );
+    const hook = renderHook(() => useStoredState({ load, defaultValue: 'guest' }));
 
     await hook.act(async () => {
       resolveLoad('admin');
@@ -60,9 +56,7 @@ describe('useStoredState', () => {
         resolveLoad = resolve;
       });
 
-    const hook = renderHook(() =>
-      useStoredState({ load, defaultValue: 'guest' as 'guest' | 'admin' }),
-    );
+    const hook = renderHook(() => useStoredState({ load, defaultValue: 'guest' }));
 
     await hook.act(async () => {
       resolveLoad(null);
@@ -86,7 +80,7 @@ describe('useStoredState', () => {
     const hook = renderHook(() =>
       useStoredState({
         load,
-        defaultValue: 'guest' as 'guest' | 'admin',
+        defaultValue: 'guest',
         applyWhen,
       }),
     );
@@ -113,7 +107,7 @@ describe('useStoredState', () => {
     const hook = renderHook(() =>
       useStoredState({
         load,
-        defaultValue: 'guest' as 'guest' | 'admin',
+        defaultValue: 'guest',
         applyWhen,
       }),
     );
@@ -135,9 +129,7 @@ describe('useStoredState', () => {
         rejectLoad = reject;
       });
 
-    const hook = renderHook(() =>
-      useStoredState({ load, defaultValue: 'guest' as 'guest' | 'admin' }),
-    );
+    const hook = renderHook(() => useStoredState({ load, defaultValue: 'guest' }));
 
     await hook.act(async () => {
       rejectLoad(new Error('store offline'));
@@ -151,9 +143,9 @@ describe('useStoredState', () => {
 
   it('returns a setter that mutates the value', async () => {
     const hook = renderHook(() =>
-      useStoredState({
+      useStoredState<'guest' | 'admin'>({
         load: () => Promise.resolve(null),
-        defaultValue: 'guest' as 'guest' | 'admin',
+        defaultValue: 'guest',
       }),
     );
 

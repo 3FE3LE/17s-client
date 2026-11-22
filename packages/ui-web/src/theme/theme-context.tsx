@@ -1,7 +1,7 @@
 'use client';
 
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState, useSyncExternalStore } from 'react';
 import { getSuitTheme } from '@17suit/design-system';
 import type { SuitTheme, ThemeMode } from '@17suit/design-system';
 
@@ -22,13 +22,27 @@ interface ThemeProviderProps extends PropsWithChildren {
   onModeChange?: (mode: ThemeModePreference) => void;
 }
 
+// The resolved scheme follows the `.dark` class on <html> (the same switch the CSS
+// tokens use), so inline JS styles never disagree with Tailwind/CSS tokens.
+// Server and first client render both report 'light' (the CSS default).
 function getSystemScheme(): ThemeMode {
-  if (typeof window === 'undefined') {
-    return 'dark';
+  if (typeof document === 'undefined') {
+    return 'light';
   }
-  return window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
-    ? 'light'
-    : 'dark';
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
+
+function getServerScheme(): ThemeMode {
+  return 'light';
+}
+
+function subscribeToSystemScheme(onChange: () => void) {
+  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
+    return () => {};
+  }
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  return () => observer.disconnect();
 }
 
 export function ThemeProvider({
@@ -38,21 +52,14 @@ export function ThemeProvider({
   children,
 }: ThemeProviderProps) {
   const [internalMode, setInternalMode] = useState<ThemeModePreference>(initialMode);
-  const [systemMode, setSystemMode] = useState<ThemeMode>(() => getSystemScheme());
+  const systemMode = useSyncExternalStore(
+    subscribeToSystemScheme,
+    getSystemScheme,
+    getServerScheme,
+  );
   const effectiveMode = mode ?? internalMode;
   const resolvedMode: ThemeMode = effectiveMode === 'system' ? systemMode : effectiveMode;
   const theme = useMemo(() => getSuitTheme(resolvedMode), [resolvedMode]);
-
-  // eslint-disable-next-line no-restricted-syntax -- matchMedia listener; React cannot subscribe to media queries declaratively
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const media = window.matchMedia('(prefers-color-scheme: light)');
-    const onChange = (event: MediaQueryListEvent) => {
-      setSystemMode(event.matches ? 'light' : 'dark');
-    };
-    media.addEventListener?.('change', onChange);
-    return () => media.removeEventListener?.('change', onChange);
-  }, []);
 
   const setMode = (nextMode: ThemeModePreference) => {
     if (mode) {
@@ -73,9 +80,9 @@ export function useAppTheme() {
   const context = useContext(ThemeContext);
   if (!context) {
     return {
-      theme: getSuitTheme('dark'),
+      theme: getSuitTheme('light'),
       mode: 'system' as ThemeModePreference,
-      resolvedMode: 'dark' as ThemeMode,
+      resolvedMode: 'light' as ThemeMode,
       setMode: () => {},
     };
   }

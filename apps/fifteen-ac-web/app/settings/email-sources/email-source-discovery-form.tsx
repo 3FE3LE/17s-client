@@ -116,7 +116,7 @@ export function EmailSourceDiscoveryForm() {
       <button
         type="submit"
         disabled={disabled}
-        className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70 md:mt-[22px]"
+        className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-70 md:mt-[22px]"
       >
         <Search size={16} strokeWidth={2.2} aria-hidden />
         {disabled ? 'Discovering' : 'Discover'}

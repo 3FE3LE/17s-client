@@ -35,10 +35,10 @@ test.describe('Landing page smoke', () => {
 
     // Known DOM markers from app/page.tsx hero + nav.
     await expect(
-      page.getByRole('heading', { level: 1, name: /Herramientas listas/i }),
+      page.getByRole('heading', { level: 1, name: /Una app para cada pendiente/i }),
     ).toBeVisible();
     await expect(page.getByRole('link', { name: /Iniciar sesión/i }).first()).toBeVisible();
-    await expect(page.getByRole('link', { name: /Registrarse/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Crear cuenta/i }).first()).toBeVisible();
 
     // Allow async chunks (fonts, hydration) to flush before asserting no errors.
     await page.waitForLoadState('networkidle').catch(() => {

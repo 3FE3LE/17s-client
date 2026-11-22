@@ -29,9 +29,7 @@ describe('useSwipeTransition', () => {
       useSwipeTransition({
         translateX: translateX as unknown as Parameters<typeof useSwipeTransition>[0]['translateX'],
         consumeLastDirection,
-        setExitAnimator: setExitAnimator as unknown as Parameters<
-          typeof useSwipeTransition
-        >[0]['setExitAnimator'],
+        setExitAnimator: setExitAnimator,
         replace,
       }),
     );
@@ -55,9 +53,7 @@ describe('useSwipeTransition', () => {
       useSwipeTransition({
         translateX: translateX as unknown as Parameters<typeof useSwipeTransition>[0]['translateX'],
         consumeLastDirection,
-        setExitAnimator: setExitAnimator as unknown as Parameters<
-          typeof useSwipeTransition
-        >[0]['setExitAnimator'],
+        setExitAnimator: setExitAnimator,
         replace,
       }),
     );
@@ -78,9 +74,7 @@ describe('useSwipeTransition', () => {
       useSwipeTransition({
         translateX: translateX as unknown as Parameters<typeof useSwipeTransition>[0]['translateX'],
         consumeLastDirection,
-        setExitAnimator: setExitAnimator as unknown as Parameters<
-          typeof useSwipeTransition
-        >[0]['setExitAnimator'],
+        setExitAnimator: setExitAnimator,
         replace,
       }),
     );
