@@ -13,6 +13,7 @@ import {
   isAlreadySignedInError,
   type AuthErrorField,
 } from '../../lib/clerk-errors';
+import { afterAuthPath } from '../../lib/session-handoff';
 
 const GENERIC_ERROR = 'No pudimos iniciar sesión. Inténtalo de nuevo en unos minutos.';
 const ERROR_ID = 'sign-in-error';
@@ -55,7 +56,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
 
@@ -65,7 +66,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
       setErrorField(null);
     } catch (err) {
       if (isAlreadySignedInError(err)) {
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
       fail(err, GENERIC_ERROR);
@@ -85,12 +86,12 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: `/sso-callback?redirect_url=${encodeURIComponent(redirectTarget)}`,
-        redirectUrlComplete: redirectTarget,
+        redirectUrlComplete: afterAuthPath(redirectTarget),
       });
     } catch (err) {
       // Session already active: skip SSO and continue to the product home.
       if (isAlreadySignedInError(err)) {
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
       fail(err, GENERIC_ERROR);
