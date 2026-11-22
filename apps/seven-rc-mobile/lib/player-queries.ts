@@ -5,6 +5,7 @@ import {
   type PitchAvailability,
   type PublicVenue,
   type ReservationWithVenuePitch,
+  type SevenRcRefreshOptions,
   useSevenRcCancelReservationMutation,
   useSevenRcCreateReservationMutation,
   useSevenRcMyReservationsQuery,
@@ -36,9 +37,11 @@ function usePlayerApi() {
   );
 }
 
-export function useMyReservationsQuery() {
+export function useMyReservationsQuery(
+  options?: SevenRcRefreshOptions<ReservationWithVenuePitch[]>,
+) {
   const api = usePlayerApi();
-  return useSevenRcMyReservationsQuery(api);
+  return useSevenRcMyReservationsQuery(api, options);
 }
 
 export function usePlayerVenuesQuery(query?: string) {

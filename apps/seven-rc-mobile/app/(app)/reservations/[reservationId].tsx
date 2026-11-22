@@ -2,13 +2,13 @@ import { Feather } from '@expo/vector-icons';
 import {
   AppAlert,
   AppBadge,
-  AppButton,
   AppEmpty,
   AppSkeleton,
   GapView,
   useAppTheme,
   useAppToast,
 } from '@17suit/ui';
+import { AppButton } from '@17suit/ui-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { Screen } from '../../../components/screen';
@@ -22,6 +22,9 @@ import {
   reservationBadgeVariant,
   reservationStatusLabel,
 } from '../../../lib/reservation-format';
+import { venueTimeLabel } from '../../../lib/timezone-label';
+
+const PENDING_POLL_MS = 30_000;
 
 function DetailRow({
   icon,
@@ -80,7 +83,14 @@ export default function ReservationDetailScreen() {
   const reservationId = Array.isArray(params.reservationId)
     ? params.reservationId[0]
     : params.reservationId;
-  const reservationsQuery = useMyReservationsQuery();
+  // Refresh on return to the app, and poll while the venue has not answered yet.
+  const reservationsQuery = useMyReservationsQuery({
+    refetchOnWindowFocus: true,
+    refetchInterval: (query) =>
+      query.state.data?.find((item) => item.id === reservationId)?.status === 'pending_confirmation'
+        ? PENDING_POLL_MS
+        : false,
+  });
   const cancelMutation = useCancelReservationMutation();
   const reservation = reservationsQuery.data?.find((item) => item.id === reservationId);
 
@@ -146,6 +156,13 @@ export default function ReservationDetailScreen() {
     }
   };
 
+  const bookAgain = () => {
+    router.push({
+      pathname: '/reservations/new',
+      params: { venueId: reservation.venueId, pitchId: reservation.pitchId },
+    });
+  };
+
   const confirmCancel = () => {
     confirmDestructive(
       {
@@ -167,15 +184,25 @@ export default function ReservationDetailScreen() {
         void reservationsQuery.refetch();
       }}
       refreshing={reservationsQuery.isFetching && !reservationsQuery.isLoading}
-      {...(canCancel
-        ? {
-            footer: (
-              <AppButton variant="destructive" onPress={confirmCancel} disabled={isCancelling}>
-                {isCancelling ? 'Cancelando…' : 'Cancelar reserva'}
-              </AppButton>
-            ),
-          }
-        : {})}
+      footer={
+        canCancel ? (
+          <AppButton
+            variant="destructive"
+            onPress={confirmCancel}
+            disabled={isCancelling}
+            busy={isCancelling}
+          >
+            {isCancelling ? 'Cancelando…' : 'Cancelar reserva'}
+          </AppButton>
+        ) : (
+          <AppButton
+            onPress={bookAgain}
+            accessibilityHint="Abre una reserva nueva en la misma cancha"
+          >
+            Reservar de nuevo
+          </AppButton>
+        )
+      }
     >
       <GapView gap="md">
         <View style={{ flexDirection: 'row' }}>
@@ -193,7 +220,8 @@ export default function ReservationDetailScreen() {
               lineHeight: 22,
             }}
           >
-            El complejo aún debe confirmar tu reserva. El estado se actualiza aquí cuando responda.
+            El complejo aún debe confirmar tu reserva. Revisamos el estado cada 30 segundos mientras
+            tengas esta pantalla abierta, y al volver a la app.
           </Text>
         ) : null}
 
@@ -213,11 +241,7 @@ export default function ReservationDetailScreen() {
             label="Fecha"
             value={formatVenueLongDay(reservation.startAt, timeZone)}
           />
-          <DetailRow
-            icon="clock"
-            label={timeZone ? `Hora del complejo (${timeZone})` : 'Hora'}
-            value={timeRange}
-          />
+          <DetailRow icon="clock" label={venueTimeLabel(timeZone)} value={timeRange} />
           {reservation.venue?.address ? (
             <DetailRow icon="map-pin" label="Dirección" value={reservation.venue.address} />
           ) : null}

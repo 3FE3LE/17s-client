@@ -1,13 +1,18 @@
 import { useClerk, useUser } from '@clerk/clerk-expo';
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppBadge, AppProfile, GapView, useAppTheme } from '@17suit/ui';
-import { useAnimatedValue } from '@17suit/ui-native';
-import { Animated, Pressable, Text, View } from 'react-native';
+import {
+  useCurrentUserRoleQuery,
+  useSetCurrentUserRoleMutation,
+} from '@17suit/module-seven-reservations-club/client';
+import { AppBadge, AppProfile, GapView, useAppTheme, useAppToast } from '@17suit/ui';
+import { AppButton, useAnimatedValue } from '@17suit/ui-native';
+import { Alert, Animated, Platform, Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Screen } from '../../../components/screen';
 import { useQueryClient } from '@tanstack/react-query';
 import * as SecureStore from 'expo-secure-store';
+import { humanizeError } from '../../../lib/error-messages';
 
 const THEME_STORAGE_KEY = '17suit.theme.mode';
 
@@ -15,11 +20,46 @@ export default function ProfileScreen() {
   const { signOut } = useClerk();
   const { user } = useUser();
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const toast = useAppToast();
   const { role } = useCurrentUserRoleQuery({ userId: user?.id, enabled: Boolean(user?.id) });
+  const setRoleMutation = useSetCurrentUserRoleMutation();
   const { mode, setMode, theme } = useAppTheme();
   const [selectorWidth, setSelectorWidth] = useState(0);
 
   const roleBadgeLabel = role === 'OWNER' ? 'Administras un complejo' : 'Reservas como jugador';
+  const nextRole = role === 'OWNER' ? 'PLAYER' : 'OWNER';
+  const nextRoleLabel = nextRole === 'OWNER' ? 'Administrar un complejo' : 'Reservar como jugador';
+
+  const switchRole = async () => {
+    try {
+      await setRoleMutation.mutateAsync(nextRole);
+      toast.success(
+        'Modo cambiado',
+        nextRole === 'OWNER' ? 'Ahora administras complejos.' : 'Ahora reservas como jugador.',
+      );
+      router.replace('/home');
+    } catch (error) {
+      toast.error('No se pudo cambiar el modo', humanizeError(error, 'save'));
+    }
+  };
+
+  const askSwitchRole = () => {
+    const title = '¿Cambiar de modo?';
+    const message =
+      nextRole === 'OWNER'
+        ? 'Verás tus complejos y las reservas que reciben. Tus reservas como jugador se mantienen.'
+        : 'Verás los complejos disponibles y tus reservas. Tus complejos se mantienen.';
+    if (Platform.OS === 'web') {
+      const confirmFn = (globalThis as { confirm?: (text: string) => boolean }).confirm;
+      if (confirmFn?.(`${title}\n\n${message}`)) void switchRole();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: 'Volver', style: 'cancel' },
+      { text: 'Cambiar', onPress: () => void switchRole() },
+    ]);
+  };
 
   const options = [
     { key: 'system', label: 'Sistema', icon: 'smartphone' },
@@ -48,8 +88,19 @@ export default function ProfileScreen() {
     <Screen title="Perfil" subtitle="Tu cuenta y preferencias" back={false}>
       <GapView gap="md">
         {role ? (
-          <View style={{ flexDirection: 'row' }}>
-            <AppBadge variant={role === 'OWNER' ? 'success' : 'info'}>{roleBadgeLabel}</AppBadge>
+          <View style={{ gap: theme.spacing.sm }}>
+            <View style={{ flexDirection: 'row' }}>
+              <AppBadge variant={role === 'OWNER' ? 'success' : 'info'}>{roleBadgeLabel}</AppBadge>
+            </View>
+            <AppButton
+              variant="neutral"
+              onPress={askSwitchRole}
+              disabled={setRoleMutation.isPending}
+              busy={setRoleMutation.isPending}
+              accessibilityLabel={`Cambiar modo: ${nextRoleLabel}`}
+            >
+              {setRoleMutation.isPending ? 'Cambiando…' : `Cambiar modo · ${nextRoleLabel}`}
+            </AppButton>
           </View>
         ) : null}
         <View
@@ -146,7 +197,6 @@ export default function ProfileScreen() {
         <AppProfile
           fullName={user?.fullName ?? null}
           email={user?.primaryEmailAddress?.emailAddress ?? null}
-          userId={user?.id ?? null}
           onSignOut={handleSignOut}
         />
       </GapView>

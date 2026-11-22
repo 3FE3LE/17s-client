@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppButton, AppInput, AppSelect, useAppToast, GapView, useAppTheme } from '@17suit/ui';
+import { useAppToast, GapView, useAppTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppSelect } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
@@ -9,6 +10,7 @@ import { z } from 'zod';
 import { Screen } from '../../../components/screen';
 import { humanizeError } from '../../../lib/error-messages';
 import { IANA_TIMEZONES } from '../../../lib/iana-timezones';
+import { timeZoneCity } from '../../../lib/timezone-label';
 import { useCreateVenueMutation } from '../../../lib/owner-queries';
 import { Text } from 'react-native';
 
@@ -49,7 +51,7 @@ export default function CreateComplexScreen() {
     const unique = new Set<string>([detectedTimezone, ...IANA_TIMEZONES]);
     return Array.from(unique).map((value) => ({
       value,
-      label: value,
+      label: `${timeZoneCity(value)} · ${value}`,
     }));
   }, [detectedTimezone]);
   const createVenueMutation = useCreateVenueMutation();
@@ -150,6 +152,8 @@ export default function CreateComplexScreen() {
                 options={timezoneOptions}
                 label="Zona horaria"
                 placeholder="Seleccionar zona horaria"
+                searchable
+                searchPlaceholder="Buscar ciudad o zona"
                 error={fieldState.invalid}
               />
               {fieldState.error ? (

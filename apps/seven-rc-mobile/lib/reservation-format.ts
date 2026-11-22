@@ -88,3 +88,32 @@ export function formatVenueTime(value: string, timeZone?: string | null): string
 export function formatVenueRange(startAt: string, endAt: string, timeZone?: string | null): string {
   return `${formatVenueDay(startAt, timeZone)} · ${formatVenueTime(startAt, timeZone)}–${formatVenueTime(endAt, timeZone)}`;
 }
+
+/** `YYYY-MM-DD` of `value` in the venue timezone (device zone if unknown). */
+export function venueDateKey(value: string | Date, timeZone?: string | null): string | null {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    timeZone: safeTimeZone(timeZone),
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/** "$120.000" in es-CO for an amount in minor units. Null when zero or the currency is unknown. */
+export function formatMoney(minor: number, currency: string): string | null {
+  if (!minor) return null;
+  try {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(minor / 100);
+  } catch {
+    return null;
+  }
+}
