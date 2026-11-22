@@ -1,8 +1,8 @@
-import { SignOutButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import Link from 'next/link';
 import type { SVGProps } from 'react';
 import { statusLabel, type ProductStatus } from '../lib/products';
+import { SignOutControl } from './sign-out-control';
 import { SiteLogo } from './site-logo';
 
 /*
@@ -123,14 +123,7 @@ export async function SiteHeader({ signInHref = '/sign-in' }: SiteHeaderProps) {
             <Link href="/apps" className={compactSecondaryButtonClass}>
               Mis apps
             </Link>
-            <SignOutButton redirectUrl="/">
-              <button
-                type="button"
-                className="inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 text-md font-bold leading-[1.3] text-text underline underline-offset-4"
-              >
-                Cerrar sesión
-              </button>
-            </SignOutButton>
+            <SignOutControl className="inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 text-md font-bold leading-[1.3] text-text underline underline-offset-4" />
           </>
         ) : (
           <Link href={signInHref} className={compactSecondaryButtonClass}>
