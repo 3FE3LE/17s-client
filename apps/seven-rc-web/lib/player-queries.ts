@@ -18,15 +18,13 @@ import {
   useSevenRcPlayerVenuesQuery,
 } from '@17suit/module-seven-reservations-club/client';
 import { useMemo } from 'react';
+import { useAccessToken } from '@/lib/use-access-token';
 
 function usePlayerApi() {
+  const getAccessToken = useAccessToken();
   return useMemo(
-    () =>
-      createSevenRcPlayerApi({
-        apiBaseUrls: ['/api'],
-        getAccessToken: () => Promise.resolve('web-bff'),
-      }),
-    [],
+    () => createSevenRcPlayerApi({ apiBaseUrls: ['/api'], getAccessToken }),
+    [getAccessToken],
   );
 }
 
