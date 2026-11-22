@@ -1,8 +1,9 @@
 import { useSignIn } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppLinkAction, GapView } from '@17suit/ui';
+import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function ForgotPasswordScreen() {
@@ -80,8 +81,9 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <AppFrame
-      appName="Recuperar contraseña"
+    <Screen
+      back={false}
+      title="Recuperar contraseña"
       subtitle={
         step === 'request'
           ? 'Te enviaremos un código a tu correo.'
@@ -145,6 +147,6 @@ export default function ForgotPasswordScreen() {
 
         <AppLinkAction onPress={() => router.back()}>Volver a iniciar sesión</AppLinkAction>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }

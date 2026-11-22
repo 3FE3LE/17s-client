@@ -2,23 +2,30 @@ import { Feather } from '@expo/vector-icons';
 import {
   AppAlert,
   AppBadge,
+  AppButton,
   AppEmpty,
   AppSkeleton,
   GapView,
   useAppTheme,
-  useAppToast,
-} from '@17suit/ui';
-import { AppButton } from '@17suit/ui-native';
+} from '@17suit/ui-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 import { Screen } from '../../../components/screen';
+import { VenueLinks } from '../../../components/venue-links';
 import { confirmDestructive } from '../../../lib/confirm';
 import { humanizeError } from '../../../lib/error-messages';
+import { feedback } from '../../../lib/feedback';
+import { useNow } from '../../../lib/focus';
+import { usePullRefresh } from '../../../lib/use-pull-refresh';
+import { venueRouteParams } from '../../../lib/venue-params';
 import { useCancelReservationMutation, useMyReservationsQuery } from '../../../lib/player-queries';
 import {
+  displayStatus,
+  formatMoney,
   formatVenueLongDay,
   formatVenueTime,
   isReservationCancellable,
+  isReservationUpcoming,
   reservationBadgeVariant,
   reservationStatusLabel,
 } from '../../../lib/reservation-format';
@@ -31,7 +38,7 @@ function DetailRow({
   label,
   value,
 }: {
-  icon: 'map-pin' | 'grid' | 'calendar' | 'clock' | 'users' | 'file-text';
+  icon: 'grid' | 'calendar' | 'clock' | 'users' | 'file-text' | 'credit-card';
   label: string;
   value: string;
 }) {
@@ -77,8 +84,8 @@ function DetailRow({
 
 export default function ReservationDetailScreen() {
   const router = useRouter();
-  const toast = useAppToast();
   const { theme } = useAppTheme();
+  const now = useNow();
   const params = useLocalSearchParams<{ reservationId?: string | string[] }>();
   const reservationId = Array.isArray(params.reservationId)
     ? params.reservationId[0]
@@ -91,6 +98,7 @@ export default function ReservationDetailScreen() {
         ? PENDING_POLL_MS
         : false,
   });
+  const pullRefresh = usePullRefresh(() => reservationsQuery.refetch());
   const cancelMutation = useCancelReservationMutation();
   const reservation = reservationsQuery.data?.find((item) => item.id === reservationId);
 
@@ -140,7 +148,19 @@ export default function ReservationDetailScreen() {
   }
 
   const timeZone = reservation.venue?.timezone;
-  const canCancel = isReservationCancellable(reservation.status, reservation.startAt);
+  const status = displayStatus(reservation, now);
+  const cancelWindowHours = reservation.venue?.cancellationWindowHours ?? 0;
+  const canCancel = isReservationCancellable(status, reservation.startAt, cancelWindowHours, now);
+  const cancelWindowClosed = !canCancel && isReservationUpcoming(reservation, now);
+  const totalLabel =
+    formatMoney(reservation.priceMinor, reservation.currency) ?? 'A confirmar con el complejo';
+  const depositLabel = formatMoney(reservation.depositMinor, reservation.currency);
+  const note = {
+    color: theme.colors.muted,
+    fontFamily: theme.typography.styles.body.nativeFamily,
+    fontSize: theme.typography.styles.body.fontSize,
+    lineHeight: 22,
+  };
   const isCancelling = cancelMutation.isPending;
   const timeRange = `${formatVenueTime(reservation.startAt, timeZone)}–${formatVenueTime(
     reservation.endAt,
@@ -150,16 +170,21 @@ export default function ReservationDetailScreen() {
   const runCancel = async () => {
     try {
       await cancelMutation.mutateAsync(reservation.id);
-      toast.success('Reserva cancelada', 'Liberamos el horario para otros jugadores.');
+      feedback.success('Reserva cancelada', 'Liberamos el horario para otros jugadores.');
     } catch (error) {
-      toast.error('No se pudo cancelar', humanizeError(error, 'cancel'));
+      feedback.error('No se pudo cancelar', humanizeError(error, 'cancel'));
     }
   };
 
   const bookAgain = () => {
     router.push({
       pathname: '/reservations/new',
-      params: { venueId: reservation.venueId, pitchId: reservation.pitchId },
+      params: {
+        ...(reservation.venue
+          ? venueRouteParams(reservation.venue)
+          : { venueId: reservation.venueId }),
+        pitchId: reservation.pitchId,
+      },
     });
   };
 
@@ -180,10 +205,8 @@ export default function ReservationDetailScreen() {
   return (
     <Screen
       title={reservation.venue?.name ?? 'Reserva'}
-      onRefresh={() => {
-        void reservationsQuery.refetch();
-      }}
-      refreshing={reservationsQuery.isFetching && !reservationsQuery.isLoading}
+      onRefresh={pullRefresh.onRefresh}
+      refreshing={pullRefresh.refreshing}
       footer={
         canCancel ? (
           <AppButton
@@ -206,22 +229,29 @@ export default function ReservationDetailScreen() {
     >
       <GapView gap="md">
         <View style={{ flexDirection: 'row' }}>
-          <AppBadge variant={reservationBadgeVariant(reservation.status)}>
-            {reservationStatusLabel(reservation.status)}
+          <AppBadge variant={reservationBadgeVariant(status)}>
+            {reservationStatusLabel(status)}
           </AppBadge>
         </View>
 
-        {reservation.status === 'pending_confirmation' ? (
-          <Text
-            style={{
-              color: theme.colors.muted,
-              fontFamily: theme.typography.styles.body.nativeFamily,
-              fontSize: theme.typography.styles.body.fontSize,
-              lineHeight: 22,
-            }}
-          >
-            El complejo aún debe confirmar tu reserva. Revisamos el estado cada 30 segundos mientras
-            tengas esta pantalla abierta, y al volver a la app.
+        {status === 'pending_confirmation' ? (
+          <Text style={note}>
+            El complejo aún debe confirmar tu reserva. Verás el cambio aquí cuando responda.
+          </Text>
+        ) : null}
+        {status === 'expired' ? (
+          <Text style={note}>
+            La solicitud venció sin confirmarse. Puedes hacer una reserva nueva.
+          </Text>
+        ) : null}
+        {cancelWindowClosed ? (
+          <Text style={note}>
+            {`El plazo para cancelar terminó ${cancelWindowHours} h antes del inicio. Si no puedes ir, avisa al complejo.`}
+          </Text>
+        ) : null}
+        {canCancel && cancelWindowHours > 0 ? (
+          <Text style={note}>
+            {`Puedes cancelar hasta ${cancelWindowHours} h antes del inicio.`}
           </Text>
         ) : null}
 
@@ -242,9 +272,14 @@ export default function ReservationDetailScreen() {
             value={formatVenueLongDay(reservation.startAt, timeZone)}
           />
           <DetailRow icon="clock" label={venueTimeLabel(timeZone)} value={timeRange} />
-          {reservation.venue?.address ? (
-            <DetailRow icon="map-pin" label="Dirección" value={reservation.venue.address} />
+          <DetailRow icon="credit-card" label="Total" value={totalLabel} />
+          {depositLabel ? (
+            <DetailRow icon="credit-card" label="Anticipo" value={depositLabel} />
           ) : null}
+          <VenueLinks
+            address={reservation.venue?.address}
+            phone={reservation.venue?.contactPhone}
+          />
           {reservation.invitedCount > 0 ? (
             <DetailRow icon="users" label="Invitados" value={String(reservation.invitedCount)} />
           ) : null}

@@ -1,4 +1,4 @@
-import { useAppTheme } from '@17suit/ui';
+import { useAppTheme } from '@17suit/ui-native';
 import { Pressable, Text } from 'react-native';
 
 interface ChoiceChipProps {

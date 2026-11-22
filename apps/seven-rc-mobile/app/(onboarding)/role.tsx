@@ -3,7 +3,7 @@ import {
   useSetCurrentUserRoleMutation,
   type SevenReservationsClubRole,
 } from '@17suit/module-seven-reservations-club/client';
-import { AppFrame, AppSpinner, GapView, useAppTheme } from '@17suit/ui';
+import { AppFrame, AppSpinner, GapView, useAppTheme } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';

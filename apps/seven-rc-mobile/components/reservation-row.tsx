@@ -1,7 +1,8 @@
 import { Feather } from '@expo/vector-icons';
-import { AppBadge, useAppTheme } from '@17suit/ui';
+import { AppBadge, useAppTheme } from '@17suit/ui-native';
 import { Pressable, Text, View } from 'react-native';
 import {
+  displayStatus,
   formatVenueRange,
   reservationBadgeVariant,
   reservationStatusLabel,
@@ -24,7 +25,8 @@ export function ReservationRow({ reservation, onPress, featured = false }: Reser
     reservation.endAt,
     reservation.venue?.timezone,
   );
-  const status = reservationStatusLabel(reservation.status);
+  const currentStatus = displayStatus(reservation);
+  const status = reservationStatusLabel(currentStatus);
   const titleType = featured
     ? theme.typography.styles.subtitle1
     : theme.typography.styles.subtitle2;
@@ -78,7 +80,7 @@ export function ReservationRow({ reservation, onPress, featured = false }: Reser
         <Feather name="chevron-right" size={20} color={theme.colors.muted} />
       </View>
       <View style={{ flexDirection: 'row' }}>
-        <AppBadge variant={reservationBadgeVariant(reservation.status)}>{status}</AppBadge>
+        <AppBadge variant={reservationBadgeVariant(currentStatus)}>{status}</AppBadge>
       </View>
     </Pressable>
   );

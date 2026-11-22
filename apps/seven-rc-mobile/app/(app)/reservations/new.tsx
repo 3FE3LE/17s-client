@@ -1,21 +1,36 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import { sevenRcQueryKeys } from '@17suit/module-seven-reservations-club/client';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Feather } from '@expo/vector-icons';
-import { AppAlert, AppSkeleton, GapView, useAppToast, useAppTheme } from '@17suit/ui';
-import { AppButton, AppInput, AppScrollView, AppSelect, AppTypography } from '@17suit/ui-native';
+import {
+  AppAlert,
+  AppButton,
+  AppInput,
+  AppScrollView,
+  AppSelect,
+  AppSkeleton,
+  AppTypography,
+  GapView,
+  useAppTheme,
+} from '@17suit/ui-native';
 import {
   usePitchAvailabilityQuery,
   usePlayerVenuePitchesQuery,
-  usePlayerVenuesQuery,
   useCreateReservationMutation,
   type PitchAvailability,
 } from '../../../lib/player-queries';
 import { Pressable, Text, View } from 'react-native';
 import { Screen } from '../../../components/screen';
 import { ChoiceChip } from '../../../components/choice-chip';
+import { FormError } from '../../../components/form-field';
+import { VenueLinks } from '../../../components/venue-links';
+import { feedback } from '../../../lib/feedback';
+import { useNow, useScreenFocus } from '../../../lib/focus';
+import { bookingPolicyLine, useVenueSnapshot, type VenueSnapshot } from '../../../lib/venue-params';
 import { humanizeError } from '../../../lib/error-messages';
 import { formatMoney, formatVenueTime } from '../../../lib/reservation-format';
 import { venueTimeLabel } from '../../../lib/timezone-label';
@@ -25,14 +40,15 @@ type AvailabilitySlot = PitchAvailability['slots'][number];
 const reservationSchema = z.object({
   pitchId: z.string().trim().min(1, 'Selecciona una cancha.'),
   invitedCount: z.string().trim().optional(),
-  notes: z.string().trim().max(500).optional(),
+  notes: z.string().trim().max(500, 'Máximo 500 caracteres.').optional(),
 });
 
 type ReservationFormValues = z.infer<typeof reservationSchema>;
 
 const MAX_TURNS = 4;
 const MAX_DAY_CHIPS = 30;
-const FALLBACK_TIMEZONE = 'America/Bogota';
+/** The venue search omits the horizon (see `VenueSnapshot`); the server still enforces it. */
+const DEFAULT_HORIZON_DAYS = 14;
 
 function toOptionalNumber(value?: string) {
   if (!value) return undefined;
@@ -48,24 +64,14 @@ function toDateKey(value: Date) {
   return `${value.getFullYear()}-${month}-${day}`;
 }
 
-function resolveTimeZone(timeZone?: string | null) {
-  if (!timeZone) return FALLBACK_TIMEZONE;
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone }).format(0);
-    return timeZone;
-  } catch {
-    return FALLBACK_TIMEZONE;
-  }
-}
-
 /** Today's venue-local calendar date, packed into a device-local midnight Date. */
-function venueToday(timeZone: string) {
+function venueToday(timeZone: string, now: number) {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date());
+  }).formatToParts(new Date(now));
   const get = (type: Intl.DateTimeFormatPartTypes) =>
     Number(parts.find((part) => part.type === type)?.value ?? '0');
   return new Date(get('year'), get('month') - 1, get('day'));
@@ -115,24 +121,62 @@ function contiguousRun(slots: AvailabilitySlot[], start: AvailabilitySlot | null
   return run;
 }
 
+/** Holds the form (and every date it renders) until the venue's timezone is known. */
 export default function NewReservationScreen() {
   const router = useRouter();
-  const toast = useAppToast();
+  const { venue, venueId, isLoading, isMissing, error, refetch } = useVenueSnapshot();
+
+  if (venue) return <NewReservationForm key={venue.id} venue={venue} />;
+
+  return (
+    <Screen title="Nueva reserva">
+      {isLoading || (!isMissing && !error) ? (
+        <GapView gap="md">
+          <AppSkeleton height={44} rounded="md" />
+          <AppSkeleton height={120} rounded="lg" />
+        </GapView>
+      ) : (
+        <GapView gap="md">
+          <AppAlert
+            variant="warning"
+            title="No pudimos cargar el complejo"
+            description={
+              error
+                ? humanizeError(error, 'load')
+                : 'No lo encontramos. Vuelve al inicio y elígelo otra vez.'
+            }
+            {...(venueId
+              ? {
+                  action: (
+                    <AppButton variant="warning" onPress={refetch}>
+                      Reintentar
+                    </AppButton>
+                  ),
+                }
+              : {})}
+          />
+          <AppButton variant="neutral" onPress={() => router.replace('/home')}>
+            Volver al inicio
+          </AppButton>
+        </GapView>
+      )}
+    </Screen>
+  );
+}
+
+function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { theme } = useAppTheme();
-  const params = useLocalSearchParams<{
-    venueId?: string | string[];
-    pitchId?: string | string[];
-  }>();
-  const venueId = Array.isArray(params.venueId) ? params.venueId[0] : params.venueId;
+  const params = useLocalSearchParams<{ pitchId?: string | string[] }>();
   const pitchIdParam = Array.isArray(params.pitchId) ? params.pitchId[0] : params.pitchId;
 
-  const pitchesQuery = usePlayerVenuePitchesQuery(venueId ?? null);
-  // Same query key as the home venue list, so this is normally a cache hit.
-  const venuesQuery = usePlayerVenuesQuery();
-  const venue = venuesQuery.data?.find((item) => item.id === venueId);
-  const venueTimeZone = resolveTimeZone(venue?.timezone);
+  const pitchesQuery = usePlayerVenuePitchesQuery(venue.id);
+  const venueTimeZone = venue.timezone;
+  const now = useNow();
   const createReservation = useCreateReservationMutation();
-  const [pickedDayIndex, setPickedDayIndex] = useState(0);
+  // The date, not its index: "Hoy" shifts when the venue's day rolls over.
+  const [pickedDateKey, setPickedDateKey] = useState<string | null>(null);
   const [pickedStartAt, setPickedStartAt] = useState<string | null>(null);
   const [pickedTurns, setPickedTurns] = useState(1);
   const [showDetails, setShowDetails] = useState(false);
@@ -160,10 +204,16 @@ export default function NewReservationScreen() {
   const selectedPitchId = watch('pitchId');
   const pitchExists = pitchOptions.some((option) => option.value === selectedPitchId);
 
-  const today = venueToday(venueTimeZone);
-  const horizonDays = Math.min(MAX_DAY_CHIPS, Math.max(1, venue?.bookingHorizonDays ?? 14));
+  const today = venueToday(venueTimeZone, now);
+  const horizonDays = Math.min(
+    MAX_DAY_CHIPS,
+    Math.max(1, venue.bookingHorizonDays ?? DEFAULT_HORIZON_DAYS),
+  );
   const days = Array.from({ length: horizonDays }, (_unused, index) => addDays(today, index));
-  const dayIndex = Math.min(pickedDayIndex, days.length - 1);
+  const dayIndex = Math.max(
+    0,
+    days.findIndex((day) => toDateKey(day) === pickedDateKey),
+  );
   const selectedDate = days[dayIndex] ?? today;
   const dateKey = toDateKey(selectedDate);
 
@@ -171,8 +221,15 @@ export default function NewReservationScreen() {
     pitchExists ? selectedPitchId : null,
     dateKey,
   );
-  const currency = availabilityQuery.data?.currency ?? venue?.currency ?? 'COP';
-  const nowMs = Date.now();
+  const currency = availabilityQuery.data?.currency ?? venue.currency ?? 'COP';
+  useScreenFocus(
+    useCallback(() => {
+      if (!selectedPitchId) return;
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(selectedPitchId),
+      });
+    }, [queryClient, selectedPitchId]),
+  );
   const slots = useMemo(
     () =>
       [...(availabilityQuery.data?.slots ?? [])].sort(
@@ -181,7 +238,7 @@ export default function NewReservationScreen() {
     [availabilityQuery.data],
   );
   const availableSlots = slots.filter(
-    (slot) => slot.status === 'AVAILABLE' && new Date(slot.startAt).getTime() > nowMs,
+    (slot) => slot.status === 'AVAILABLE' && new Date(slot.startAt).getTime() > now,
   );
   const startSlot = availableSlots.find((slot) => slot.startAt === pickedStartAt) ?? null;
   const run = contiguousRun(slots, startSlot);
@@ -201,10 +258,6 @@ export default function NewReservationScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
-    if (!venueId) {
-      setSubmitError('No encontramos el complejo. Vuelve al inicio y elígelo otra vez.');
-      return;
-    }
     if (!firstChosen || !lastChosen) return;
     if (new Date(firstChosen.startAt).getTime() <= Date.now()) {
       setSubmitError('Ese horario ya pasó. Elige otro.');
@@ -221,9 +274,9 @@ export default function NewReservationScreen() {
         notes: values.notes?.trim() || undefined,
       });
       if (created.status === 'pending_confirmation') {
-        toast.success('Reserva enviada', 'El complejo debe confirmarla.');
+        feedback.success('Reserva enviada', 'El complejo debe confirmarla.');
       } else {
-        toast.success('Reserva creada', 'Revisa los detalles de tu reserva.');
+        feedback.success('Reserva creada', 'Revisa los detalles de tu reserva.');
       }
       router.replace(`/reservations/${created.id}`);
     } catch (error) {
@@ -255,18 +308,13 @@ export default function NewReservationScreen() {
   return (
     <Screen
       title="Nueva reserva"
-      {...(venue?.name ? { subtitle: venue.name } : {})}
+      subtitle={venue.name}
       footer={
         <>
-          {submitError ? (
-            <Text
-              accessibilityRole="alert"
-              accessibilityLiveRegion="polite"
-              style={{ color: theme.colors.error, fontSize: 13, lineHeight: 18 }}
-            >
-              {submitError}
-            </Text>
-          ) : null}
+          <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
+            {bookingPolicyLine(venue, firstChosen ? totalMinor : undefined)}
+          </Text>
+          <FormError message={submitError} />
           <AppButton onPress={onSubmit} disabled={!canSubmit} busy={isSubmitting}>
             {ctaLabel}
           </AppButton>
@@ -274,6 +322,11 @@ export default function NewReservationScreen() {
       }
     >
       <GapView gap="md">
+        {venue.address || venue.contactPhone ? (
+          <View>
+            <VenueLinks address={venue.address} phone={venue.contactPhone} />
+          </View>
+        ) : null}
         <Controller
           control={control}
           name="pitchId"
@@ -292,14 +345,7 @@ export default function NewReservationScreen() {
                 disabled={pitchesQuery.isLoading}
                 error={fieldState.invalid}
               />
-              {fieldState.error ? (
-                <Text
-                  accessibilityLiveRegion="polite"
-                  style={{ color: theme.colors.error, fontSize: 13, lineHeight: 18 }}
-                >
-                  {fieldState.error.message}
-                </Text>
-              ) : null}
+              <FormError message={fieldState.error?.message ?? null} />
             </>
           )}
         />
@@ -326,7 +372,7 @@ export default function NewReservationScreen() {
                   selected={index === dayIndex}
                   minWidth={64}
                   onPress={() => {
-                    setPickedDayIndex(index);
+                    setPickedDateKey(toDateKey(day));
                     setPickedStartAt(null);
                     setPickedTurns(1);
                   }}
@@ -474,14 +520,7 @@ export default function NewReservationScreen() {
                     placeholder="Ej. traemos balón propio"
                     error={fieldState.invalid}
                   />
-                  {fieldState.error ? (
-                    <Text
-                      accessibilityLiveRegion="polite"
-                      style={{ color: theme.colors.error, fontSize: 13, lineHeight: 18 }}
-                    >
-                      Máximo 500 caracteres.
-                    </Text>
-                  ) : null}
+                  <FormError message={fieldState.error?.message ?? null} />
                 </>
               )}
             />

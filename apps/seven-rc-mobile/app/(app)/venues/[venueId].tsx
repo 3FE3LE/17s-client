@@ -1,11 +1,21 @@
-import { Feather } from '@expo/vector-icons';
-import { AppAlert, AppButton, AppEmpty, AppSkeleton, GapView, useAppTheme } from '@17suit/ui';
-import { AppScrollView } from '@17suit/ui-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  AppAlert,
+  AppButton,
+  AppEmpty,
+  AppScrollView,
+  AppSkeleton,
+  GapView,
+  useAppTheme,
+} from '@17suit/ui-native';
+import { useRouter } from 'expo-router';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { VenueLinks } from '../../../components/venue-links';
 import { humanizeError } from '../../../lib/error-messages';
-import { usePlayerVenuePitchesQuery, usePlayerVenuesQuery } from '../../../lib/player-queries';
+import { usePlayerVenuePitchesQuery } from '../../../lib/player-queries';
+import { pitchSummary, sportIcon } from '../../../lib/sports';
+import { useVenueSnapshot, venueRouteParams } from '../../../lib/venue-params';
 
 /**
  * Venue sheet. Presented as a native modal by `(app)/_layout.tsx`, so iOS
@@ -15,13 +25,11 @@ export default function VenueSheetScreen() {
   const { theme } = useAppTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ venueId?: string | string[] }>();
-  const venueId = Array.isArray(params.venueId) ? params.venueId[0] : params.venueId;
-  const venuesQuery = usePlayerVenuesQuery();
-  const pitchesQuery = usePlayerVenuePitchesQuery(venueId ?? null);
-  const venue = venuesQuery.data?.find((item) => item.id === venueId);
+  const { venueId, venue } = useVenueSnapshot();
+  const pitchesQuery = usePlayerVenuePitchesQuery(venueId);
   const venueName = venue?.name ?? 'Complejo';
-  const address = venue?.address?.trim().length ? venue.address : 'Dirección pendiente';
+  // Unknown while the venue loads; only a loaded venue can be missing an address.
+  const isAddressMissing = Boolean(venue) && !venue?.address?.trim();
   const subtitleType = theme.typography.styles.subtitle1;
   const captionType = theme.typography.styles.caption;
   const bodyType = theme.typography.styles.body;
@@ -29,9 +37,10 @@ export default function VenueSheetScreen() {
   const close = () => router.back();
   const book = (pitchId?: string) => {
     router.back();
+    const venueParams = venue ? venueRouteParams(venue) : { venueId: venueId ?? '' };
     router.push({
       pathname: '/reservations/new',
-      params: pitchId ? { venueId: venueId ?? '', pitchId } : { venueId: venueId ?? '' },
+      params: pitchId ? { ...venueParams, pitchId } : venueParams,
     });
   };
 
@@ -66,17 +75,19 @@ export default function VenueSheetScreen() {
           >
             {venueName}
           </Text>
-          <Text
-            numberOfLines={1}
-            style={{
-              color: theme.colors.muted,
-              fontFamily: captionType.nativeFamily,
-              fontSize: captionType.fontSize,
-              letterSpacing: captionType.letterSpacingPx,
-            }}
-          >
-            {address}
-          </Text>
+          {isAddressMissing ? (
+            <Text
+              numberOfLines={1}
+              style={{
+                color: theme.colors.muted,
+                fontFamily: captionType.nativeFamily,
+                fontSize: captionType.fontSize,
+                letterSpacing: captionType.letterSpacingPx,
+              }}
+            >
+              Dirección pendiente
+            </Text>
+          ) : null}
         </View>
         <Pressable
           onPress={close}
@@ -96,6 +107,10 @@ export default function VenueSheetScreen() {
         >
           <Feather name="x" size={20} color={theme.colors.text} />
         </Pressable>
+      </View>
+
+      <View style={{ paddingHorizontal: theme.spacing.lg }}>
+        <VenueLinks address={venue?.address} phone={venue?.contactPhone} />
       </View>
 
       <AppScrollView
@@ -151,7 +166,7 @@ export default function VenueSheetScreen() {
           ) : null}
 
           {(pitchesQuery.data ?? []).map((pitch) => {
-            const detail = `${pitch.sportType ?? 'Multideporte'} · ${pitch.capacity} jugadores · ${pitch.slotDurationMinutes} min por turno`;
+            const detail = pitchSummary(pitch);
             return (
               <Pressable
                 key={pitch.id}
@@ -171,6 +186,13 @@ export default function VenueSheetScreen() {
                   opacity: pressed ? 0.85 : 1,
                 })}
               >
+                <MaterialCommunityIcons
+                  name={sportIcon(pitch.sportType)}
+                  size={28}
+                  color={theme.colors.text}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text
                     style={{

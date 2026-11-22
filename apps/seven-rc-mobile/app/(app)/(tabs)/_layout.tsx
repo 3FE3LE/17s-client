@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { useAppTheme } from '@17suit/ui';
+import { useAppTheme } from '@17suit/ui-native';
 import { Tabs } from 'expo-router/js-tabs';
 
 export default function TabsLayout() {

@@ -8,7 +8,7 @@ const STATUS_LABELS: Record<ReservationStatus, string> = {
   rejected: 'Rechazada',
   cancelled: 'Cancelada',
   completed: 'Completada',
-  expired: 'Expirada',
+  expired: 'Vencida',
   no_show: 'No asistió',
 };
 
@@ -26,16 +26,64 @@ export function reservationBadgeVariant(status: string): ReservationBadgeVariant
   return 'neutral';
 }
 
-/** Statuses a player can still cancel. */
-export function isReservationCancellable(status: string, startAt: string): boolean {
+/**
+ * Statuses a player can still cancel. With `cancellationWindowHours`, mirrors
+ * the server rule: no cancelling inside the window before the start.
+ */
+export function isReservationCancellable(
+  status: string,
+  startAt: string,
+  cancellationWindowHours = 0,
+  now = Date.now(),
+): boolean {
   if (status !== 'pending_confirmation' && status !== 'confirmed') return false;
   const start = new Date(startAt).getTime();
-  return Number.isFinite(start) && start > Date.now();
+  return Number.isFinite(start) && start - cancellationWindowHours * 3_600_000 > now;
 }
 
-/** Upcoming = still active and starting in the future. */
-export function isReservationUpcoming(status: string, startAt: string): boolean {
-  return isReservationCancellable(status, startAt);
+/**
+ * A pending request that can no longer be confirmed: its start already passed,
+ * or the hold the server gave it ran out.
+ */
+export function isPendingExpired(
+  reservation: { status: string; startAt: string; holdExpiresAt?: string | null },
+  now = Date.now(),
+): boolean {
+  if (reservation.status !== 'pending_confirmation') return false;
+  const start = new Date(reservation.startAt).getTime();
+  if (Number.isFinite(start) && start <= now) return true;
+  if (reservation.holdExpiresAt) {
+    const hold = new Date(reservation.holdExpiresAt).getTime();
+    if (Number.isFinite(hold) && hold <= now) return true;
+  }
+  return false;
+}
+
+/** A pending request the owner can still act on. */
+export function isAwaitingOwner(
+  reservation: { status: string; startAt: string; holdExpiresAt?: string | null },
+  now = Date.now(),
+): boolean {
+  return reservation.status === 'pending_confirmation' && !isPendingExpired(reservation, now);
+}
+
+/**
+ * Status to show and to derive actions from. The server only marks a stale
+ * request `expired` later (sweeper), so the client derives it.
+ */
+export function displayStatus(
+  reservation: { status: string; startAt: string; holdExpiresAt?: string | null },
+  now = Date.now(),
+): string {
+  return isPendingExpired(reservation, now) ? 'expired' : reservation.status;
+}
+
+/** Upcoming = still active (not a lapsed request) and starting in the future. */
+export function isReservationUpcoming(
+  reservation: { status: string; startAt: string; holdExpiresAt?: string | null },
+  now = Date.now(),
+): boolean {
+  return isReservationCancellable(displayStatus(reservation, now), reservation.startAt, 0, now);
 }
 
 function safeTimeZone(timeZone?: string | null): string | undefined {
@@ -111,7 +159,9 @@ export function formatMoney(minor: number, currency: string): string | null {
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency,
-      maximumFractionDigits: 0,
+      // Whole amounts stay "$120.000"; cents show only when there are some.
+      minimumFractionDigits: minor % 100 === 0 ? 0 : 2,
+      maximumFractionDigits: minor % 100 === 0 ? 0 : 2,
     }).format(minor / 100);
   } catch {
     return null;

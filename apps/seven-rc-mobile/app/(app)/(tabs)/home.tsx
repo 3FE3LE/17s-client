@@ -1,27 +1,107 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import {
+  sevenRcQueryKeys,
   useCurrentUserRoleQuery,
   useRoleGate,
 } from '@17suit/module-seven-reservations-club/client';
-import { AppAlert, AppEmpty, AppSkeleton, AppSpinner, GapView, useAppTheme } from '@17suit/ui';
-import { AppButton, AppInput, AppTypography } from '@17suit/ui-native';
+import {
+  AppAlert,
+  AppButton,
+  AppEmpty,
+  AppInput,
+  AppSkeleton,
+  AppSpinner,
+  AppTypography,
+  GapView,
+  useAppTheme,
+} from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
+import { useQueryClient } from '@tanstack/react-query';
+import { Pressable, Text } from 'react-native';
 import { Screen } from '../../../components/screen';
-import { useOwnerVenuesQuery } from '../../../lib/owner-queries';
+import {
+  OWNER_INBOX_MAX_VENUES,
+  ownerReservationsRange,
+  useOwnerVenuesQuery,
+  useOwnerVenuesReservationsQueries,
+  type VenueReservation,
+} from '../../../lib/owner-queries';
 import { VenueCard } from '../../../components/venue-card';
 import { useMyReservationsQuery, usePlayerVenuesQuery } from '../../../lib/player-queries';
 import { PlayerVenueCard } from '../../../components/player-venue-card';
 import { ReservationRow } from '../../../components/reservation-row';
+import { OwnerReservationCard } from '../../../components/owner-reservation-card';
 import { humanizeError } from '../../../lib/error-messages';
-import { isReservationUpcoming } from '../../../lib/reservation-format';
+import { isAwaitingOwner, isReservationUpcoming } from '../../../lib/reservation-format';
+import { formatUpdatedAgo, useNow, useScreenFocus } from '../../../lib/focus';
+import { useOwnerReservationActions } from '../../../lib/use-owner-reservation-actions';
+import { usePullRefresh } from '../../../lib/use-pull-refresh';
+import { OwnerActionSheet } from '../../../components/owner-action-sheet';
+import { venueRouteParams } from '../../../lib/venue-params';
+
+/** Owner inbox refresh cadence while home is on screen. */
+const PENDING_POLL_MS = 45_000;
+/** Returning to home skips what was fetched this recently: the API allows 60 requests a minute. */
+const FOCUS_REFRESH_MIN_AGE_MS = 10_000;
+const MAX_INBOX_ITEMS = 10;
+const MAX_UPCOMING = 3;
+const MAX_HISTORY = 20;
+const MAX_VENUES = 6;
 
 function SectionTitle({ children }: { children: string }) {
   return (
     <AppTypography variant="subtitle2" accessibilityRole="header" style={{ marginTop: 8 }}>
       {children}
     </AppTypography>
+  );
+}
+
+function Caption({ children }: { children: string }) {
+  const { theme } = useAppTheme();
+  return (
+    // Not a live region: "Actualizado hace X" would be read out every minute.
+    <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>{children}</Text>
+  );
+}
+
+/** Low-weight disclosure row ("Ver historial (4)"). */
+function DisclosureLink({
+  label,
+  expanded,
+  onPress,
+}: {
+  label: string;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  const { theme } = useAppTheme();
+  const type = theme.typography.styles.button;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: theme.spacing.sm,
+        opacity: pressed ? 0.7 : 1,
+      })}
+    >
+      <Feather
+        name={expanded ? 'chevron-up' : 'chevron-down'}
+        size={18}
+        color={theme.colors.text}
+      />
+      <Text
+        style={{ color: theme.colors.text, fontFamily: type.nativeFamily, fontSize: type.fontSize }}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -82,23 +162,137 @@ export default function HomeScreen() {
   );
 }
 
+interface InboxItem {
+  reservation: VenueReservation;
+  venueName: string;
+  timeZone: string | undefined;
+}
+
 function OwnerHome() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { theme } = useAppTheme();
   const venuesQuery = useOwnerVenuesQuery();
-  const venues = venuesQuery.data ?? [];
+  const venues = useMemo(() => venuesQuery.data ?? [], [venuesQuery.data]);
+  const [range] = useState(() => ownerReservationsRange());
+
+  const refreshOwnerData = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues }),
+    [queryClient],
+  );
+  const pullRefresh = usePullRefresh(refreshOwnerData);
+  // Back on home from a venue or the profile tab. The app returning to the
+  // foreground is covered by the reservation queries' refetchOnWindowFocus.
+  const refreshOnFocus = useCallback(
+    () =>
+      queryClient.refetchQueries({
+        queryKey: sevenRcQueryKeys.ownerVenues,
+        type: 'active',
+        predicate: (query) => Date.now() - query.state.dataUpdatedAt > FOCUS_REFRESH_MIN_AGE_MS,
+      }),
+    [queryClient],
+  );
+  const focused = useScreenFocus(refreshOnFocus);
+  const now = useNow(30_000);
+
+  const venueIds = useMemo(() => venues.map((venue) => venue.id), [venues]);
+  const reservationQueries = useOwnerVenuesReservationsQueries(
+    venueIds,
+    range.from,
+    range.to,
+    focused ? PENDING_POLL_MS : false,
+  );
+  const actions = useOwnerReservationActions();
+
+  const { inbox, pendingByVenue } = useMemo(() => {
+    const items: InboxItem[] = [];
+    const counts = new Map<string, number>();
+    reservationQueries.forEach((query, index) => {
+      const venue = venues[index];
+      if (!venue) return;
+      for (const reservation of query.data ?? []) {
+        if (!isAwaitingOwner(reservation, now)) continue;
+        counts.set(venue.id, (counts.get(venue.id) ?? 0) + 1);
+        items.push({ reservation, venueName: venue.name, timeZone: venue.timezone });
+      }
+    });
+    items.sort(
+      (a, b) =>
+        new Date(a.reservation.startAt).getTime() - new Date(b.reservation.startAt).getTime(),
+    );
+    return { inbox: items, pendingByVenue: counts };
+  }, [reservationQueries, venues, now]);
+
+  const inboxLoading = reservationQueries.some((query) => query.isLoading);
+  const inboxError = reservationQueries.find((query) => query.error)?.error ?? null;
+  // The inbox is only as fresh as its oldest venue, e.g. one whose poll is failing.
+  const updateTimes = reservationQueries
+    .map((query) => query.dataUpdatedAt)
+    .filter((updatedAt) => updatedAt > 0);
+  const updatedLabel =
+    updateTimes.length > 0 ? formatUpdatedAgo(Math.min(...updateTimes), now) : null;
+
+  const visibleInbox = inbox.slice(0, MAX_INBOX_ITEMS);
+  const hiddenInbox = inbox.length - visibleInbox.length;
 
   return (
     <Screen
       title="Inicio"
       subtitle="Administras tus complejos"
       back={false}
-      onRefresh={() => {
-        void venuesQuery.refetch();
-      }}
-      refreshing={venuesQuery.isFetching && !venuesQuery.isLoading}
+      onRefresh={pullRefresh.onRefresh}
+      refreshing={pullRefresh.refreshing}
     >
       <GapView gap="md">
+        <OwnerActionSheet actions={actions} />
+        {venues.length > 0 ? (
+          <GapView gap="sm">
+            <SectionTitle>
+              {inbox.length > 0 ? `Por confirmar (${inbox.length})` : 'Por confirmar'}
+            </SectionTitle>
+            {updatedLabel ? <Caption>{updatedLabel}</Caption> : null}
+
+            {inboxLoading && inbox.length === 0 ? <AppSkeleton height={140} rounded="lg" /> : null}
+
+            {inboxError ? (
+              <AppAlert
+                variant="warning"
+                title="No pudimos cargar algunas solicitudes"
+                description={humanizeError(inboxError, 'load')}
+                action={
+                  <AppButton variant="warning" onPress={() => void refreshOwnerData()}>
+                    Reintentar
+                  </AppButton>
+                }
+              />
+            ) : null}
+
+            {!inboxLoading && !inboxError && inbox.length === 0 ? (
+              <Caption>No tienes solicitudes pendientes. Las nuevas aparecerán aquí.</Caption>
+            ) : null}
+
+            {visibleInbox.map((item) => (
+              <OwnerReservationCard
+                key={item.reservation.id}
+                reservation={item.reservation}
+                venueName={venues.length > 1 ? item.venueName : undefined}
+                timeZone={item.timeZone}
+                now={now}
+                actions={actions}
+              />
+            ))}
+
+            {hiddenInbox > 0 ? (
+              <Caption>
+                {`Y ${hiddenInbox} ${hiddenInbox === 1 ? 'solicitud más' : 'solicitudes más'}. Ábrelas desde cada complejo.`}
+              </Caption>
+            ) : null}
+            {venues.length > OWNER_INBOX_MAX_VENUES ? (
+              <Caption>{`Mostramos las solicitudes de tus primeros ${OWNER_INBOX_MAX_VENUES} complejos.`}</Caption>
+            ) : null}
+          </GapView>
+        ) : null}
+
         <SectionTitle>Mis complejos</SectionTitle>
 
         {venuesQuery.isLoading ? (
@@ -137,7 +331,11 @@ function OwnerHome() {
         ) : null}
 
         {venues.map((venue) => (
-          <VenueCard key={venue.id} venue={venue} />
+          <VenueCard
+            key={venue.id}
+            venue={venue}
+            pendingCount={pendingByVenue.get(venue.id) ?? 0}
+          />
         ))}
 
         {venues.length > 0 ? (
@@ -157,22 +355,30 @@ function PlayerHome() {
   const [searchText, setSearchText] = useState('');
   // Search runs on submit, not per keystroke, so typing costs no requests.
   const [searchQuery, setSearchQuery] = useState('');
-  const myReservationsQuery = useMyReservationsQuery();
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showAllVenues, setShowAllVenues] = useState(false);
+  const now = useNow(60_000);
+  const myReservationsQuery = useMyReservationsQuery({ refetchOnWindowFocus: true });
   const playerVenuesQuery = usePlayerVenuesQuery(searchQuery || undefined);
 
-  const { nextReservation, otherReservations } = useMemo(() => {
+  const { nextReservation, upcoming, past } = useMemo(() => {
     const all = myReservationsQuery.data ?? [];
-    const upcoming = all
-      .filter((reservation) => isReservationUpcoming(reservation.status, reservation.startAt))
+    const active = all
+      .filter((reservation) => isReservationUpcoming(reservation, now))
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-    const next = upcoming[0] ?? null;
-    const rest = all
-      .filter((reservation) => reservation.id !== next?.id)
+    const activeIds = new Set(active.map((reservation) => reservation.id));
+    const history = all
+      .filter((reservation) => !activeIds.has(reservation.id))
       .sort((a, b) => new Date(b.startAt).getTime() - new Date(a.startAt).getTime());
-    return { nextReservation: next, otherReservations: rest };
-  }, [myReservationsQuery.data]);
+    return { nextReservation: active[0] ?? null, upcoming: active.slice(1), past: history };
+  }, [myReservationsQuery.data, now]);
 
   const playerVenues = playerVenuesQuery.data ?? [];
+  const visibleVenues = showAllVenues ? playerVenues : playerVenues.slice(0, MAX_VENUES);
+  const pullRefresh = usePullRefresh(() =>
+    Promise.all([myReservationsQuery.refetch(), playerVenuesQuery.refetch()]),
+  );
   const openReservation = (id: string) => router.push(`/reservations/${id}`);
   const submitSearch = () => setSearchQuery(searchText.trim());
   const clearSearch = () => {
@@ -180,19 +386,37 @@ function PlayerHome() {
     setSearchQuery('');
   };
 
+  const visibleUpcoming = showAllUpcoming ? upcoming : upcoming.slice(0, MAX_UPCOMING);
+  const visibleHistory = past.slice(0, MAX_HISTORY);
+  const lastPast = past[0] ?? null;
+  const firstVenue = playerVenues[0] ?? null;
+
+  let emptyAction: { label: string; onPress: () => void } | null = null;
+  if (lastPast?.venue) {
+    const venue = lastPast.venue;
+    emptyAction = {
+      label: `Reservar de nuevo en ${venue.name}`,
+      onPress: () =>
+        router.push({
+          pathname: '/reservations/new',
+          params: { ...venueRouteParams(venue), pitchId: lastPast.pitchId },
+        }),
+    };
+  } else if (firstVenue) {
+    emptyAction = {
+      label: `Ver canchas en ${firstVenue.name}`,
+      onPress: () =>
+        router.push({ pathname: '/venues/[venueId]', params: venueRouteParams(firstVenue) }),
+    };
+  }
+
   return (
     <Screen
       title="Inicio"
       subtitle="Reservas como jugador"
       back={false}
-      onRefresh={() => {
-        void myReservationsQuery.refetch();
-        void playerVenuesQuery.refetch();
-      }}
-      refreshing={
-        (myReservationsQuery.isFetching && !myReservationsQuery.isLoading) ||
-        (playerVenuesQuery.isFetching && !playerVenuesQuery.isLoading)
-      }
+      onRefresh={pullRefresh.onRefresh}
+      refreshing={pullRefresh.refreshing}
     >
       <GapView gap="md">
         <SectionTitle>Próxima reserva</SectionTitle>
@@ -230,20 +454,10 @@ function PlayerHome() {
             title="No tienes reservas próximas"
             description="Elige un complejo y reserva tu cancha."
             icon={<Feather name="calendar" size={20} color={iconColor} />}
+            {...(emptyAction
+              ? { actionLabel: emptyAction.label, onAction: emptyAction.onPress }
+              : {})}
           />
-        ) : null}
-
-        {otherReservations.length > 0 ? (
-          <>
-            <SectionTitle>Mis reservas</SectionTitle>
-            {otherReservations.map((reservation) => (
-              <ReservationRow
-                key={reservation.id}
-                reservation={reservation}
-                onPress={() => openReservation(reservation.id)}
-              />
-            ))}
-          </>
         ) : null}
 
         <SectionTitle>Complejos</SectionTitle>
@@ -313,9 +527,62 @@ function PlayerHome() {
           )
         ) : null}
 
-        {playerVenues.map((venue) => (
+        {visibleVenues.map((venue) => (
           <PlayerVenueCard key={venue.id} venue={venue} />
         ))}
+        {playerVenues.length > MAX_VENUES ? (
+          <DisclosureLink
+            label={showAllVenues ? 'Ver menos' : `Ver los ${playerVenues.length} complejos`}
+            expanded={showAllVenues}
+            onPress={() => setShowAllVenues((current) => !current)}
+          />
+        ) : null}
+
+        {upcoming.length > 0 || past.length > 0 ? <SectionTitle>Mis reservas</SectionTitle> : null}
+
+        {upcoming.length > 0 ? (
+          <GapView gap="sm">
+            <AppTypography variant="body" color={theme.colors.muted} accessibilityRole="header">
+              {`Próximas (${upcoming.length})`}
+            </AppTypography>
+            {visibleUpcoming.map((reservation) => (
+              <ReservationRow
+                key={reservation.id}
+                reservation={reservation}
+                onPress={() => openReservation(reservation.id)}
+              />
+            ))}
+            {upcoming.length > MAX_UPCOMING ? (
+              <DisclosureLink
+                label={showAllUpcoming ? 'Ver menos' : `Ver las ${upcoming.length} próximas`}
+                expanded={showAllUpcoming}
+                onPress={() => setShowAllUpcoming((current) => !current)}
+              />
+            ) : null}
+          </GapView>
+        ) : null}
+
+        {past.length > 0 ? (
+          <GapView gap="sm">
+            <DisclosureLink
+              label={showHistory ? 'Ocultar historial' : `Ver historial (${past.length})`}
+              expanded={showHistory}
+              onPress={() => setShowHistory((current) => !current)}
+            />
+            {showHistory
+              ? visibleHistory.map((reservation) => (
+                  <ReservationRow
+                    key={reservation.id}
+                    reservation={reservation}
+                    onPress={() => openReservation(reservation.id)}
+                  />
+                ))
+              : null}
+            {showHistory && past.length > MAX_HISTORY ? (
+              <Caption>{`Mostramos tus últimas ${MAX_HISTORY} reservas.`}</Caption>
+            ) : null}
+          </GapView>
+        ) : null}
       </GapView>
     </Screen>
   );

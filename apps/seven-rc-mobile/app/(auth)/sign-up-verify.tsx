@@ -1,18 +1,20 @@
 import { useSignUp } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppLinkAction, GapView, useAppToast } from '@17suit/ui';
+import { AppButton, AppLinkAction, AppTypography, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { View } from 'react-native';
 import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpVerifyScreen() {
   const router = useRouter();
-  const toast = useAppToast();
   const { isLoaded, signUp, setActive } = useSignUp();
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
   const codeError =
     submitAttempted && code.trim().length === 0 ? 'Ingresa el código de verificación.' : null;
 
@@ -20,6 +22,7 @@ export default function SignUpVerifyScreen() {
     if (!isLoaded) return;
     setSubmitAttempted(true);
     setFormError(null);
+    setResent(false);
     if (code.trim().length === 0) return;
 
     setIsSubmitting(true);
@@ -43,10 +46,11 @@ export default function SignUpVerifyScreen() {
   const handleResendCode = async () => {
     if (!isLoaded) return;
     setFormError(null);
+    setResent(false);
     setIsSubmitting(true);
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      toast.success('Código enviado', 'Revisa tu correo, también la carpeta de spam.');
+      setResent(true);
     } catch (err) {
       setFormError(humanizeClerkError(err, 'No pudimos reenviar el código.'));
     } finally {
@@ -55,8 +59,9 @@ export default function SignUpVerifyScreen() {
   };
 
   return (
-    <AppFrame
-      appName="Verifica tu correo"
+    <Screen
+      back={false}
+      title="Verifica tu correo"
       subtitle="Escribe el código de verificación que te enviamos por correo."
     >
       <GapView gap="sm">
@@ -72,6 +77,13 @@ export default function SignUpVerifyScreen() {
           }}
         />
         <FormError message={formError} />
+        {resent ? (
+          <View accessibilityLiveRegion="polite">
+            <AppTypography variant="body">
+              Código enviado. Revisa tu correo, también la carpeta de spam.
+            </AppTypography>
+          </View>
+        ) : null}
         <AppButton onPress={handleVerifyEmail} disabled={isSubmitting}>
           {isSubmitting ? 'Verificando…' : 'Verificar correo'}
         </AppButton>
@@ -80,6 +92,6 @@ export default function SignUpVerifyScreen() {
         </AppButton>
         <AppLinkAction onPress={() => router.back()}>Cambiar correo</AppLinkAction>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }
