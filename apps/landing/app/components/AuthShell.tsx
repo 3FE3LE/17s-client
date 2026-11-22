@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { SiteHeader } from './landing-ui';
+import { SiteLogo } from './site-logo';
 
 interface AuthShellProps extends PropsWithChildren {
   title: string;
@@ -16,7 +16,9 @@ export function AuthShell({ title, description, children }: AuthShellProps) {
   return (
     <main className="min-h-screen bg-suit-canvas font-zilla text-text">
       <div className="mx-auto max-w-[1120px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pt-[var(--spacing-lg)]">
-        <SiteHeader />
+        <header className="mb-[var(--spacing-xl)] flex items-center md:mb-[var(--spacing-x3l)]">
+          <SiteLogo />
+        </header>
 
         <section className="grid grid-cols-1 items-start gap-[var(--spacing-xl)] lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:gap-[var(--spacing-x3l)]">
           <div className="grid gap-[var(--spacing-md)] lg:pt-[var(--spacing-lg)]">

@@ -1,18 +1,10 @@
 import type { Metadata } from 'next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { auth } from '@clerk/nextjs/server';
-import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
+import { Arvo, Zilla_Slab } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { SiteFooter } from './components/site-footer';
 import './globals.css';
-
-const amaranth = Amaranth({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-amaranth',
-  display: 'swap',
-});
 
 const arvo = Arvo({
   subsets: ['latin'],
@@ -42,22 +34,19 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const { userId } = await auth();
-  const isSignedIn = Boolean(userId);
-
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
+    <html lang="es" className={`${arvo.variable} ${zillaSlab.variable}`}>
       <body>
         <WebAuthProvider
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
           signInForceRedirectUrl="/"
-          signUpForceRedirectUrl="/"
+          signUpForceRedirectUrl="/apps"
         >
           <AppProviders>
             {children}
-            <SiteFooter isSignedIn={isSignedIn} />
+            <SiteFooter />
           </AppProviders>
         </WebAuthProvider>
       </body>

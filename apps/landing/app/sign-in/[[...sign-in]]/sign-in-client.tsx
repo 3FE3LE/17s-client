@@ -7,9 +7,20 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
-import { getClerkErrorMessage, isAlreadySignedInError } from '../../lib/clerk-errors';
+import {
+  getClerkErrorField,
+  getClerkErrorMessage,
+  isAlreadySignedInError,
+  type AuthErrorField,
+} from '../../lib/clerk-errors';
 
 const GENERIC_ERROR = 'No pudimos iniciar sesión. Inténtalo de nuevo en unos minutos.';
+const ERROR_ID = 'sign-in-error';
+
+// Only forward `redirect_url` when there is a real destination; '/' is the default.
+function withRedirect(path: string, target: string): string {
+  return target === '/' ? path : `${path}?redirect_url=${encodeURIComponent(target)}`;
+}
 
 export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
   const router = useRouter();
@@ -17,7 +28,16 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<AuthErrorField>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGooglePending, setIsGooglePending] = useState(false);
+
+  const fail = (err: unknown, fallback: string) => {
+    setError(getClerkErrorMessage(err, fallback));
+    setErrorField(getClerkErrorField(err));
+  };
+  const fieldProps = (field: Exclude<AuthErrorField, null>) =>
+    error && errorField === field ? { error: true, 'aria-describedby': ERROR_ID } : {};
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -25,6 +45,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
 
     setIsSubmitting(true);
     setError(null);
+    setErrorField(null);
 
     try {
       const result = await signIn.create({
@@ -41,19 +62,24 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
       setError(
         'No pudimos completar el inicio de sesión. Inténtalo de nuevo o restablece tu contraseña.',
       );
+      setErrorField(null);
     } catch (err) {
       if (isAlreadySignedInError(err)) {
         router.replace(redirectTarget);
         return;
       }
-      setError(getClerkErrorMessage(err, GENERIC_ERROR));
+      fail(err, GENERIC_ERROR);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const onGoogleSSO = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || isGooglePending) return;
+
+    setIsGooglePending(true);
+    setError(null);
+    setErrorField(null);
 
     try {
       await signIn.authenticateWithRedirect({
@@ -67,7 +93,9 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
         router.replace(redirectTarget);
         return;
       }
-      setError(getClerkErrorMessage(err, GENERIC_ERROR));
+      fail(err, GENERIC_ERROR);
+      // The redirect only happens on success, so the button is re-enabled on failure.
+      setIsGooglePending(false);
     }
   };
 
@@ -80,10 +108,12 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
         <button
           type="button"
           onClick={onGoogleSSO}
-          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-sm rounded-[var(--radius-control)] border border-line bg-surface px-md text-md font-bold leading-[1.3] text-text transition-[border-color,box-shadow] duration-200 hover:border-[color-mix(in_oklab,var(--color-text)_36%,transparent)] hover:shadow-panel"
+          disabled={!isLoaded || isGooglePending || isSubmitting}
+          aria-busy={isGooglePending}
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-sm rounded-[var(--radius-control)] border border-line bg-surface px-md text-md font-bold leading-[1.3] text-text transition-[border-color,box-shadow] duration-200 hover:border-[color-mix(in_oklab,var(--color-text)_36%,transparent)] hover:shadow-panel disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-line disabled:hover:shadow-none"
         >
           <GoogleMark />
-          Continuar con Google
+          {isGooglePending ? 'Abriendo Google…' : 'Continuar con Google'}
         </button>
 
         <p className="m-0 flex items-center gap-sm text-sm leading-[18px] text-muted before:h-px before:flex-1 before:bg-line before:content-[''] after:h-px after:flex-1 after:bg-line after:content-['']">
@@ -101,7 +131,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
             autoComplete="email"
             spellCheck={false}
             required
-            error={Boolean(error)}
+            {...fieldProps('email')}
           />
           <AppInput
             type="password"
@@ -112,24 +142,24 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
             placeholder="Tu contraseña"
             autoComplete="current-password"
             required
-            error={Boolean(error)}
+            {...fieldProps('password')}
           />
-          <AppButton type="submit" compact disabled={isSubmitting}>
+          <AppButton type="submit" compact disabled={isSubmitting || isGooglePending}>
             {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
           </AppButton>
           <div id="clerk-captcha" />
-          <AuthFormError message={error} />
+          <AuthFormError id={ERROR_ID} message={error} />
         </form>
 
         <div className="flex flex-wrap justify-between gap-x-md">
           <Link
-            href={`/sign-up?redirect_url=${encodeURIComponent(redirectTarget)}`}
+            href={withRedirect('/sign-up', redirectTarget)}
             className="inline-flex min-h-11 items-center font-bold text-text underline underline-offset-4"
           >
             Crear cuenta
           </Link>
           <Link
-            href={`/forgot-password?redirect_url=${encodeURIComponent(redirectTarget)}`}
+            href={withRedirect('/forgot-password', redirectTarget)}
             className="inline-flex min-h-11 items-center font-bold text-text underline underline-offset-4"
           >
             Olvidé mi contraseña

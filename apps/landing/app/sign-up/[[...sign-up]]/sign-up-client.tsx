@@ -7,9 +7,18 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
-import { getClerkErrorMessage, isAlreadySignedInError } from '../../lib/clerk-errors';
+import {
+  getClerkErrorField,
+  getClerkErrorMessage,
+  isAlreadySignedInError,
+  type AuthErrorField,
+} from '../../lib/clerk-errors';
 
 const GENERIC_ERROR = 'No pudimos crear tu cuenta. Inténtalo de nuevo en unos minutos.';
+const ERROR_ID = 'sign-up-error';
+const PASSWORD_HINT_ID = 'sign-up-password-hint';
+
+type SignUpErrorField = AuthErrorField | 'confirmPassword';
 
 export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const router = useRouter();
@@ -20,7 +29,23 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const [code, setCode] = useState('');
   const [needsVerification, setNeedsVerification] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<SignUpErrorField>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendNotice, setResendNotice] = useState<string | null>(null);
+
+  const clearError = () => {
+    setError(null);
+    setErrorField(null);
+  };
+  const fail = (err: unknown, fallback: string) => {
+    setError(getClerkErrorMessage(err, fallback));
+    setErrorField(getClerkErrorField(err));
+  };
+  const isInvalid = (field: Exclude<SignUpErrorField, null>) =>
+    Boolean(error) && errorField === field;
+  const describedBy = (field: Exclude<SignUpErrorField, null>, hintId?: string) =>
+    [hintId, isInvalid(field) ? ERROR_ID : null].filter(Boolean).join(' ') || undefined;
 
   const handleCreateAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -28,11 +53,12 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
 
     if (password !== confirmPassword) {
       setError('Las contraseñas no coinciden.');
+      setErrorField('confirmPassword');
       return;
     }
 
     setIsSubmitting(true);
-    setError(null);
+    clearError();
 
     try {
       const result = await signUp.create({
@@ -58,7 +84,7 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
         router.replace(redirectTarget);
         return;
       }
-      setError(getClerkErrorMessage(err, GENERIC_ERROR));
+      fail(err, GENERIC_ERROR);
     } finally {
       setIsSubmitting(false);
     }
@@ -69,7 +95,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
     if (!isLoaded) return;
 
     setIsSubmitting(true);
-    setError(null);
+    clearError();
+    setResendNotice(null);
 
     try {
       const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
@@ -80,11 +107,37 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
       }
 
       setError('No pudimos verificar el código. Revisa tu correo e inténtalo de nuevo.');
+      setErrorField('code');
     } catch (err) {
-      setError(getClerkErrorMessage(err, GENERIC_ERROR));
+      fail(err, GENERIC_ERROR);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleResendCode = async () => {
+    if (!isLoaded || isResending) return;
+
+    setIsResending(true);
+    clearError();
+    setResendNotice(null);
+
+    try {
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      setCode('');
+      setResendNotice(`Te enviamos un código nuevo a ${email.trim()}.`);
+    } catch (err) {
+      fail(err, 'No pudimos reenviar el código. Espera unos minutos e inténtalo de nuevo.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleChangeEmail = () => {
+    setNeedsVerification(false);
+    setCode('');
+    setResendNotice(null);
+    clearError();
   };
 
   return (
@@ -105,7 +158,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               autoComplete="email"
               spellCheck={false}
               required
-              error={Boolean(error)}
+              error={isInvalid('email')}
+              aria-describedby={describedBy('email')}
             />
             <AppInput
               type="password"
@@ -116,8 +170,12 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               placeholder="Crea una contraseña"
               autoComplete="new-password"
               required
-              error={Boolean(error)}
+              error={isInvalid('password')}
+              aria-describedby={describedBy('password', PASSWORD_HINT_ID)}
             />
+            <p id={PASSWORD_HINT_ID} className="m-0 -mt-[4px] text-sm leading-[1.4] text-muted">
+              Usa al menos 8 caracteres. Evita contraseñas que ya usas en otros sitios.
+            </p>
             <AppInput
               type="password"
               name="confirmPassword"
@@ -127,7 +185,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               placeholder="Repite tu contraseña"
               autoComplete="new-password"
               required
-              error={Boolean(error)}
+              error={isInvalid('confirmPassword')}
+              aria-describedby={describedBy('confirmPassword')}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
@@ -145,7 +204,7 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               .
             </p>
             <div id="clerk-captcha" />
-            <AuthFormError message={error} />
+            <AuthFormError id={ERROR_ID} message={error} />
           </form>
         ) : (
           <div className="grid gap-sm">
@@ -168,14 +227,40 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               label="Código de verificación"
               placeholder="123456"
               autoComplete="one-time-code"
+              inputMode="numeric"
               spellCheck={false}
               required
-              error={Boolean(error)}
+              error={isInvalid('code')}
+              aria-describedby={describedBy('code')}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Verificando…' : 'Verificar correo'}
             </AppButton>
-            <AuthFormError message={error} />
+            <AuthFormError id={ERROR_ID} message={error} />
+            <p
+              aria-live="polite"
+              className="m-0 min-h-0 text-sm leading-[18px] text-muted empty:hidden"
+            >
+              {resendNotice}
+            </p>
+            <div className="flex flex-wrap justify-between gap-x-md">
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={isResending || isSubmitting}
+                className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-md font-bold text-text underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResending ? 'Enviando código…' : 'Reenviar código'}
+              </button>
+              <button
+                type="button"
+                onClick={handleChangeEmail}
+                disabled={isSubmitting}
+                className="inline-flex min-h-11 cursor-pointer items-center border-0 bg-transparent p-0 text-md font-bold text-text underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cambiar correo
+              </button>
+            </div>
           </form>
         ) : null}
 

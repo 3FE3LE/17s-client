@@ -213,7 +213,7 @@ export const productCount = products.length;
 
 export const statusLabel: Record<ProductStatus, string> = {
   live: 'Disponible',
-  beta: 'Beta',
+  beta: 'Disponible · beta',
   soon: 'Próximamente',
 };
 

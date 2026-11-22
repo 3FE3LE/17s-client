@@ -1,3 +1,4 @@
+import { auth } from '@clerk/nextjs/server';
 import Link from 'next/link';
 import {
   ArrowRightIcon,
@@ -7,6 +8,7 @@ import {
   primaryButtonClass,
   productButtonClass,
   secondaryButtonClass,
+  sectionHeadingClass,
 } from './components/landing-ui';
 import { getProductAppUrl, hasApp, productCount, products, type Product } from './lib/products';
 
@@ -14,19 +16,35 @@ const availableCount = products.filter(hasApp).length;
 const upcomingCount = productCount - availableCount;
 
 const benefits = [
-  {
-    title: 'Entras una vez',
-    body: 'La misma cuenta abre todas las apps de 17Suit.',
-  },
-  {
-    title: 'Vuelves a donde ibas',
-    body: 'Después de iniciar sesión regresas a la app desde la que llegaste.',
-  },
-  {
-    title: 'Recuperas el acceso tú mismo',
-    body: 'Si olvidas tu contraseña, te enviamos un código a tu correo.',
-  },
+  'Entras una vez y abres cualquier app de 17Suit',
+  'Vuelves a la app desde la que llegaste',
+  'Recuperas tu contraseña con un código en tu correo',
 ];
+
+/*
+ * Hero mark: the product numerals as one composition. Decorative only; the
+ * product grid below is the single list of products on this page.
+ */
+function NumeralMark() {
+  return (
+    <div
+      aria-hidden="true"
+      className="grid select-none grid-cols-[repeat(5,auto)] items-end justify-start gap-x-[clamp(10px,2vw,28px)] lg:justify-end"
+    >
+      {products.map((product, index) => (
+        <span
+          key={product.slug}
+          data-product={product.accentKey}
+          className={`font-arvo font-bold leading-[0.8] tracking-[-0.04em] text-product tabular-nums ${
+            index < 2 ? 'text-[clamp(64px,10vw,148px)]' : 'text-[clamp(40px,5.5vw,80px)] opacity-80'
+          }`}
+        >
+          {product.numeral}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 function ProductCard({ product }: { product: Product }) {
   const appUrl = getProductAppUrl(product);
@@ -82,7 +100,10 @@ function ProductCard({ product }: { product: Product }) {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { userId } = await auth();
+  const isSignedIn = Boolean(userId);
+
   return (
     <main className="min-h-screen bg-suit-canvas text-text">
       <div className="mx-auto max-w-[1120px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pb-[var(--spacing-x4l)] md:pt-[var(--spacing-lg)]">
@@ -90,7 +111,7 @@ export default function HomePage() {
 
         <section
           aria-labelledby="hero-title"
-          className="grid grid-cols-1 items-start gap-[var(--spacing-xl)] lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-[var(--spacing-x3l)]"
+          className="grid grid-cols-1 items-end gap-[var(--spacing-xl)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:gap-[var(--spacing-x3l)]"
         >
           <div className="pt-[var(--spacing-sm)] lg:pt-[var(--spacing-lg)]">
             <h1
@@ -105,77 +126,22 @@ export default function HomePage() {
               cualquier app de 17Suit.
             </p>
             <div className="mt-[var(--spacing-xl)] flex flex-wrap items-center gap-[var(--spacing-sm)]">
-              <Link href="/sign-up" className={primaryButtonClass}>
-                Crear cuenta
-              </Link>
+              {isSignedIn ? (
+                <Link href="/apps" className={primaryButtonClass}>
+                  Abrir mis apps
+                </Link>
+              ) : (
+                <Link href="/sign-up" className={primaryButtonClass}>
+                  Crear cuenta
+                </Link>
+              )}
               <Link href="#productos" className={secondaryButtonClass}>
                 Ver productos
               </Link>
             </div>
           </div>
 
-          <nav
-            aria-labelledby="index-title"
-            className="rounded-[var(--radius-xl)] border border-line bg-surface p-[var(--spacing-lg)] shadow-panel"
-          >
-            <h2
-              id="index-title"
-              className="m-0 font-amaranth text-[clamp(22px,2.4vw,26px)] font-bold leading-[1.2] text-text"
-            >
-              {productCount} productos, una cuenta
-            </h2>
-            <ul className="m-0 mt-[var(--spacing-md)] grid list-none p-0">
-              {products.map((product) => (
-                <li
-                  key={product.slug}
-                  data-product={product.accentKey}
-                  className="border-t border-line first:border-t-0"
-                >
-                  <Link
-                    href={`/${product.slug}`}
-                    className="group grid min-h-14 grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-[var(--spacing-md)] rounded-md px-[var(--spacing-xs)] py-[var(--spacing-sm)] no-underline transition-colors duration-200 hover:bg-[color-mix(in_oklab,var(--color-product)_8%,transparent)]"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="text-right font-arvo text-[34px] font-bold leading-none tracking-[-0.03em] text-product tabular-nums"
-                    >
-                      {product.numeral}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block font-bold leading-[1.3] text-text">
-                        {product.name}
-                      </span>
-                      <span className="block text-sm leading-[18px] text-muted">
-                        {product.status === 'soon' ? 'Próximamente' : 'Ya puedes usarla'}
-                      </span>
-                    </span>
-                    <ArrowRightIcon className="text-product transition-transform duration-200 group-hover:translate-x-0.5" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </section>
-
-        <section aria-labelledby="benefits-title" className="mt-[var(--spacing-x4l)]">
-          <h2
-            id="benefits-title"
-            className="m-0 font-amaranth text-[clamp(30px,4vw,42px)] font-bold leading-[1.15] text-text"
-          >
-            Lo que ganas con una sola cuenta
-          </h2>
-          <dl className="m-0 mt-[var(--spacing-lg)] grid grid-cols-1 gap-[var(--spacing-lg)] md:grid-cols-3">
-            {benefits.map((benefit) => (
-              <div key={benefit.title} className="border-t-2 border-text pt-[var(--spacing-md)]">
-                <dt className="font-arvo text-lg font-bold leading-[1.25] text-text">
-                  {benefit.title}
-                </dt>
-                <dd className="m-0 mt-[var(--spacing-sm)] max-w-[34ch] text-md leading-[1.5] text-muted">
-                  {benefit.body}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <NumeralMark />
         </section>
 
         <section
@@ -184,10 +150,7 @@ export default function HomePage() {
           className="mt-[var(--spacing-x4l)] scroll-mt-[var(--spacing-lg)]"
         >
           <div className="flex flex-wrap items-end justify-between gap-[var(--spacing-sm)]">
-            <h2
-              id="products-title"
-              className="m-0 font-amaranth text-[clamp(30px,4vw,42px)] font-bold leading-[1.15] text-text"
-            >
+            <h2 id="products-title" className={sectionHeadingClass}>
               Productos
             </h2>
             <p className="m-0 text-md leading-[1.5] text-muted">
@@ -203,29 +166,54 @@ export default function HomePage() {
         </section>
 
         <section
-          aria-labelledby="cta-title"
-          className="mt-[var(--spacing-x3l)] flex flex-col items-start justify-between gap-[var(--spacing-md)] rounded-[var(--radius-xl)] border border-line bg-surface p-[var(--spacing-lg)] shadow-panel md:flex-row md:items-center md:p-[var(--spacing-xl)]"
+          aria-labelledby="benefits-title"
+          className="mt-[var(--spacing-xl)] flex flex-wrap items-baseline gap-x-[var(--spacing-lg)] gap-y-[var(--spacing-xs)] border-t border-line pt-[var(--spacing-md)]"
         >
-          <div>
-            <h2
-              id="cta-title"
-              className="m-0 font-arvo text-[clamp(24px,3vw,32px)] font-bold leading-[1.2] text-text"
-            >
-              Empieza con una cuenta
-            </h2>
-            <p className="m-0 mt-[var(--spacing-xs)] text-md leading-[1.5] text-muted">
-              Es la misma para todas las apps de 17Suit.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-[var(--spacing-sm)]">
-            <Link href="/sign-up" className={primaryButtonClass}>
-              Crear cuenta
-            </Link>
-            <Link href="/sign-in" className={secondaryButtonClass}>
-              Iniciar sesión
-            </Link>
-          </div>
+          <h2
+            id="benefits-title"
+            className="m-0 font-arvo text-md font-bold leading-[1.4] text-text"
+          >
+            Con una sola cuenta:
+          </h2>
+          <ul className="m-0 flex list-none flex-wrap gap-x-[var(--spacing-lg)] gap-y-[var(--spacing-xs)] p-0 text-md leading-[1.5] text-muted">
+            {benefits.map((benefit) => (
+              <li key={benefit} className="flex items-baseline gap-[var(--spacing-xs)]">
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 shrink-0 translate-y-[-2px] rounded-full bg-brand-secondary"
+                />
+                {benefit}
+              </li>
+            ))}
+          </ul>
         </section>
+
+        {isSignedIn ? null : (
+          <section
+            aria-labelledby="cta-title"
+            className="mt-[var(--spacing-x3l)] flex flex-col items-start justify-between gap-[var(--spacing-md)] rounded-[var(--radius-xl)] border border-line bg-surface p-[var(--spacing-lg)] shadow-panel md:flex-row md:items-center md:p-[var(--spacing-xl)]"
+          >
+            <div>
+              <h2 id="cta-title" className={sectionHeadingClass}>
+                Empieza con una cuenta
+              </h2>
+              <p className="m-0 mt-[var(--spacing-xs)] text-md leading-[1.5] text-muted">
+                Es la misma para todas las apps de 17Suit.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-[var(--spacing-sm)]">
+              <Link href="/sign-up" className={primaryButtonClass}>
+                Crear cuenta
+              </Link>
+              <Link
+                href="/sign-in"
+                className="inline-flex min-h-11 items-center px-[var(--spacing-sm)] font-bold text-text underline underline-offset-4"
+              >
+                Ya tengo cuenta
+              </Link>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
