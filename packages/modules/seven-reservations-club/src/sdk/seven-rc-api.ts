@@ -12,6 +12,9 @@ import {
 export type OwnerVenue = ApiSchema<'OwnerVenueResponseDto'>;
 export type PublicVenue = ApiResponse<'/7rc/venues', 'get'>[number];
 export type Pitch = ApiSchema<'PitchResponseDto'>;
+/** Owner pitch listing and pricing responses carry the peak/off-peak rules. */
+export type PitchWithPricing = ApiSchema<'PitchWithPricingResponseDto'>;
+export type PitchPriceRule = ApiSchema<'PitchPriceRuleResponseDto'>;
 export type ReservationStatus = ApiSchema<'ReservationStatus'>;
 export type ReservationBase = ApiSchema<'ReservationResponseDto'>;
 export type ReservationWithVenuePitch = ApiSchema<'ReservationWithVenuePitchResponseDto'>;
@@ -27,6 +30,13 @@ export type ConfigurePitchSlotsInput = ApiInput<
   ApiRequestBody<'/7rc/pitches/{pitchId}/slots', 'put'>
 >;
 type ConfigurePitchSlotsResult = ApiSchema<'ConfigurePitchSlotsResponseDto'>;
+export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDto'>>;
+export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
+export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
+export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
+export type ReservationPaymentKind = ApiSchema<'ReservationPaymentKind'>;
+export type ReservationPaymentMethod = ApiSchema<'ReservationPaymentMethod'>;
+export type VenueSettings = ApiSchema<'VenueResponseDto'>;
 
 export interface SevenRcApiClientOptions {
   apiBaseUrls: string[];
@@ -37,7 +47,7 @@ export interface SevenRcApiClientOptions {
 export interface SevenRcOwnerApi {
   listOwnerVenues: () => Promise<OwnerVenue[]>;
   createVenue: (input: CreateVenueInput) => Promise<OwnerVenue>;
-  listOwnerVenuePitches: (venueId: string) => Promise<Pitch[]>;
+  listOwnerVenuePitches: (venueId: string) => Promise<PitchWithPricing[]>;
   createPitchForVenue: (venueId: string, input: CreatePitchInput) => Promise<Pitch>;
   configurePitchSlots: (
     pitchId: string,
@@ -51,6 +61,31 @@ export interface SevenRcOwnerApi {
   ) => Promise<VenueReservation[]>;
   confirmReservation: (reservationId: string) => Promise<ReservationBase>;
   rejectReservation: (reservationId: string) => Promise<ReservationBase>;
+  /** Partial update: omitted fields keep their stored value. */
+  updateVenueSettings: (venueId: string, input: UpdateVenueSettingsInput) => Promise<VenueSettings>;
+  /** Replaces the base price and the whole rule list. */
+  configurePitchPricing: (
+    pitchId: string,
+    input: ConfigurePitchPricingInput,
+  ) => Promise<PitchWithPricing>;
+  /**
+   * Records money the venue received or returned. A pending hold whose deposit is
+   * covered becomes confirmed server-side. The server returns the reservation with
+   * its payments but without `pitch`/`user`, so only the base shape is promised.
+   */
+  recordReservationPayment: (
+    reservationId: string,
+    input: RecordReservationPaymentInput,
+  ) => Promise<ReservationBase>;
+  markNoShow: (reservationId: string) => Promise<ReservationBase>;
+  completeReservation: (reservationId: string) => Promise<ReservationBase>;
+  /** Venue-side cancel; no cancellation window applies. */
+  ownerCancelReservation: (reservationId: string) => Promise<ReservationBase>;
+  /** Walk-in / phone booking entered from the agenda; created confirmed. */
+  createOwnerReservation: (
+    venueId: string,
+    input: CreateOwnerReservationInput,
+  ) => Promise<ReservationBase>;
 }
 
 export interface SevenRcPlayerApi {
@@ -109,17 +144,19 @@ async function parseJsonSafe(response: Response): Promise<unknown> {
 }
 
 function extractErrorMessage(payload: unknown, fallback: string): string {
-  if (payload && typeof payload === 'object' && 'error' in payload) {
-    const error = (payload as { error?: unknown }).error;
-    if (typeof error === 'string' && error.length > 0) {
-      return error;
-    }
-  }
-
+  // Nest sends `{ message: 'Timeslot is unavailable', error: 'Conflict' }`: `message` is
+  // the specific reason. The web BFF and validation errors only have a usable `error`.
   if (payload && typeof payload === 'object' && 'message' in payload) {
     const message = (payload as { message?: unknown }).message;
     if (typeof message === 'string' && message.length > 0) {
       return message;
+    }
+  }
+
+  if (payload && typeof payload === 'object' && 'error' in payload) {
+    const error = (payload as { error?: unknown }).error;
+    if (typeof error === 'string' && error.length > 0) {
+      return error;
     }
   }
 
@@ -215,10 +252,13 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
       });
     },
     listOwnerVenuePitches(venueId) {
-      return request<Pitch[]>(apiPath('/7rc/owner/venues/{venueId}/pitches', { venueId }), {
-        method: 'GET',
-        cache: 'no-store',
-      });
+      return request<PitchWithPricing[]>(
+        apiPath('/7rc/owner/venues/{venueId}/pitches', { venueId }),
+        {
+          method: 'GET',
+          cache: 'no-store',
+        },
+      );
     },
     createPitchForVenue(venueId, input) {
       return request<Pitch>(apiPath('/7rc/venues/{venueId}/pitches', { venueId }), {
@@ -269,6 +309,55 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
           method: 'PATCH',
         },
       );
+    },
+    updateVenueSettings(venueId, input) {
+      return request<VenueSettings>(apiPath('/7rc/venues/{venueId}/settings', { venueId }), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+    },
+    configurePitchPricing(pitchId, input) {
+      return request<PitchWithPricing>(apiPath('/7rc/pitches/{pitchId}/pricing', { pitchId }), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+    },
+    recordReservationPayment(reservationId, input) {
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/payments', { id: reservationId }),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        },
+      );
+    },
+    markNoShow(reservationId) {
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/no-show', { id: reservationId }),
+        { method: 'POST' },
+      );
+    },
+    completeReservation(reservationId) {
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/complete', { id: reservationId }),
+        { method: 'POST' },
+      );
+    },
+    ownerCancelReservation(reservationId) {
+      return request<ReservationBase>(
+        apiPath('/7rc/reservations/{id}/owner-cancel', { id: reservationId }),
+        { method: 'POST' },
+      );
+    },
+    createOwnerReservation(venueId, input) {
+      return request<ReservationBase>(apiPath('/7rc/venues/{venueId}/reservations', { venueId }), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
     },
   };
 }

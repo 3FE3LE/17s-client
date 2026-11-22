@@ -36,35 +36,44 @@ const PREVIEW_SLOTS = [
   { time: '9:00 p. m.', free: false },
 ] as const;
 
-/** Illustration of the booking step: free slots are chosen, taken ones are crossed out. */
+/**
+ * Illustration of the booking step: free slots are chosen, taken ones are crossed out.
+ * Drawn flat on a tinted plate, with no button shapes or pointer affordances, so it reads
+ * as a picture of the product rather than a control on this page.
+ */
 function SlotPreview() {
   return (
     <figure className="m-0 grid gap-[var(--spacing-sm)] border-t border-border-default pt-[var(--spacing-lg)] lg:border-l lg:border-t-0 lg:pl-[var(--spacing-xl)] lg:pt-0">
-      <div aria-hidden className="grid gap-[var(--spacing-sm)]">
-        <p className="m-0 font-arvo text-lg leading-[1.3] text-text">Cancha 2 · Fútbol 5</p>
-        <div className="grid grid-cols-2 gap-[var(--spacing-sm)]">
+      <div
+        aria-hidden
+        inert
+        className="pointer-events-none grid select-none gap-[var(--spacing-sm)] rounded-[var(--radius-lg)] border border-dashed border-border-strong bg-background/70 p-[var(--spacing-md)]"
+      >
+        <p className="m-0 font-arvo text-md leading-[1.3] text-text">Cancha 2 · Fútbol 5</p>
+        <p className="m-0 text-sm leading-[18px] text-muted">Sábado · hora del complejo</p>
+        <div className="grid grid-cols-2 gap-[var(--spacing-xs)]">
           {PREVIEW_SLOTS.map((slot) => (
             <span
               key={slot.time}
               className={cx(
-                'flex min-h-11 items-center justify-center gap-xs rounded-[var(--radius-md)] border px-3 text-md tabular-nums',
-                !slot.free && 'border-border-default text-muted line-through',
-                slot.free && !('selected' in slot) && 'border-border-strong font-bold text-text',
-                'selected' in slot &&
-                  'border-action-primary bg-action-primary font-bold text-foreground-inverse shadow-[0_2px_8px_rgb(0_0_0/0.16)]',
+                'flex min-h-9 items-center justify-center gap-xs rounded-[var(--radius-sm)] px-2 text-sm tabular-nums',
+                !slot.free && 'text-muted line-through',
+                slot.free && !('selected' in slot) && 'bg-surface font-bold text-text',
+                'selected' in slot && 'bg-action-primary-soft font-bold text-text',
               )}
             >
-              {'selected' in slot ? <CheckCircle2 size={16} aria-hidden /> : null}
+              {'selected' in slot ? <CheckCircle2 size={14} aria-hidden /> : null}
               {slot.time}
             </span>
           ))}
         </div>
-        <span className="flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-action-primary px-3 font-bold text-foreground-inverse">
-          Reservar
-        </span>
+        <p className="m-0 text-sm leading-[18px] text-text">
+          <span className="font-bold">7:00 p. m.</span> · pendiente de confirmación
+        </p>
       </div>
       <figcaption className="text-pretty text-sm leading-[1.45] text-muted">
-        Los horarios ocupados aparecen tachados; solo eliges entre los libres.
+        Ilustración: así eliges turno. Los ocupados aparecen tachados y solo puedes elegir entre los
+        libres.
       </figcaption>
     </figure>
   );
@@ -143,9 +152,9 @@ export default async function HomePage() {
             </h1>
 
             <p className="mt-[var(--spacing-md)] max-w-[56ch] text-pretty text-md leading-[1.5] text-muted">
-              Seven RC muestra los turnos disponibles de cada cancha. Eliges día y hora, el complejo
-              confirma tu reserva y ves el estado en un solo lugar, sin cadenas de mensajes por
-              WhatsApp.
+              Seven Reservations Club muestra los turnos disponibles de cada cancha. Eliges día y
+              hora, el complejo confirma tu reserva y ves el estado en un solo lugar, sin cadenas de
+              mensajes por WhatsApp.
             </p>
 
             <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-sm)]">

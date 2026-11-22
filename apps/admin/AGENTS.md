@@ -42,18 +42,20 @@
 | `/analytics` Analítica | `app/(console)/analytics/page.tsx`                              | Not available yet                                                        |
 | 403                    | `components/access-denied.tsx` (rendered by the console layout) | Signed in but not on the allowlist                                       |
 | errors / loading       | `app/(console)/error.tsx`, `app/(console)/loading.tsx`          | Spanish `AppAlert` + retry, `AppSkeleton`                                |
+| pending loading        | `app/(console)/<section>/loading.tsx`                           | `SectionPendingLoading`, shaped like the pending panel                   |
 | 404                    | `app/not-found.tsx`                                             | Spanish, link to Resumen                                                 |
 
-Shell: `components/admin-shell.tsx` wraps `AppWorkspaceShell` (`density="compact"`, no eyebrow, `account` = operator email next to "Cerrar sesión") and adds an environment strip above it ("Entorno de producción / pruebas / desarrollo", from `VERCEL_ENV` then `NODE_ENV`; destructive tone in production). Pending sections carry a "Pendiente" nav badge. While the console is read-only, production does not say "Estás operando sobre datos reales"; add that warning when the first write action lands. Nav and section copy: `lib/sections.ts`.
+Shell: `components/admin-shell.tsx` wraps `AppWorkspaceShell` (`density="compact"`: flat background, collapsed sidebar below `lg`; no eyebrow; `statusSlot` = environment badge "Entorno de producción / pruebas / desarrollo" from `VERCEL_ENV` then `NODE_ENV`; `account` = operator email next to "Cerrar sesión"). Production adds a fixed 3px destructive rail at the top of the viewport. Pending sections sit under the "Próximamente" nav group. While the console is read-only, production does not say "Estás operando sobre datos reales"; add that warning when the first write action lands. Environment labels, tones and the "Abrir" / "Abrir en producción" link copy: `lib/environment.ts`. Nav and section copy: `lib/sections.ts`.
 
 ## Local conventions
 
-- Pages are RSC. `AppEmpty`, `AppAlert`, `AppBadge` and `AppSkeleton` read the theme through a client hook, so render them from `'use client'` components.
+- Pages are RSC. `AppAlert`, `AppBadge` and `AppSkeleton` read the theme through a client hook, so render them from `'use client'` components.
 - No fake data: sections without a backend use `SectionPending`.
 - Spanish copy. Only "Tenants" and "Feature flags" stay in English.
 - Light theme only (`app/globals.css`, `AppProviders themeMode="light"`).
 - No `useEffect`.
-- Env vars: see `.env.example` (`ADMIN_ALLOWED_EMAILS` is server-only; never prefix it with `NEXT_PUBLIC_`).
+- Env vars: see `.env.example` (`ADMIN_ALLOWED_EMAILS` and the optional `ADMIN_ACCESS_CONTACT` are server-only; never prefix them with `NEXT_PUBLIC_`).
+- Visible copy avoids internal names (Clerk, 17s-server, apps-registry.json, env var names); keep them in code comments.
 
 ## Related Context
 

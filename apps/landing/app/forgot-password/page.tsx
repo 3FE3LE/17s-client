@@ -84,14 +84,14 @@ function ForgotPasswordPageContent() {
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
         {step === 'request' ? (
-          <form className="grid gap-sm" onSubmit={sendResetCode}>
+          <form method="post" className="grid gap-sm" onSubmit={sendResetCode}>
             <AppInput
               type="email"
               name="email"
               value={email}
               onChangeText={setEmail}
               label="Correo electrónico"
-              placeholder="tu@empresa.com"
+              placeholder="tu@correo.com"
               autoComplete="email"
               spellCheck={false}
               required
@@ -104,7 +104,7 @@ function ForgotPasswordPageContent() {
             <AuthFormError message={error} />
           </form>
         ) : (
-          <form className="grid gap-sm" onSubmit={resetPassword}>
+          <form method="post" className="grid gap-sm" onSubmit={resetPassword}>
             <AppInput
               type="text"
               name="code"

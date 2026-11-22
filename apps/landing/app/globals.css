@@ -91,6 +91,19 @@
   --suit-color-muted: #cfcfcf;
 }
 
+/* `@theme inline` only inlines `--color-product` inside generated utilities
+ * (text-product, bg-product). Arbitrary values read a custom property as-is,
+ * and `--color-product` resolves once on :root to the fallback, so every
+ * product tint came out the same. Arbitrary values use `--landing-product`,
+ * re-resolved per product scope. (Tailwind drops plain redeclarations of a
+ * theme variable, hence the separate name.) */
+:root {
+  --landing-product: var(--color-brand-secondary);
+}
+[data-product] {
+  --landing-product: var(--product-accent);
+}
+
 @theme inline {
   --color-product: var(--product-accent, var(--color-brand-secondary));
   --color-on-product: var(--product-on-accent);

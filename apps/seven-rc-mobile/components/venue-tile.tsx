@@ -1,5 +1,5 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAppTheme } from '@17suit/ui';
+import { AppBadge, useAppTheme } from '@17suit/ui-native';
 import { Pressable, Text, View } from 'react-native';
 
 interface VenueTileProps {
@@ -7,15 +7,24 @@ interface VenueTileProps {
   address?: string | null | undefined;
   /** Extra line under the address, e.g. "3 canchas · 12 reservas". */
   meta?: string | null;
+  /** Attention badge, e.g. "2 por confirmar". */
+  badge?: string | null;
   accessibilityHint: string;
   onPress: () => void;
 }
 
 /**
- * Venue row shared by owner and player home. A sport glyph stands in for venue
- * photos, which the API does not provide.
+ * Venue row shared by owner and player home. A neutral venue glyph stands in
+ * for photos: the venue lists carry no sports, which show on each court row.
  */
-export function VenueTile({ name, address, meta, accessibilityHint, onPress }: VenueTileProps) {
+export function VenueTile({
+  name,
+  address,
+  meta,
+  badge,
+  accessibilityHint,
+  onPress,
+}: VenueTileProps) {
   const { theme } = useAppTheme();
   const addressLabel = address?.trim().length ? address : 'Dirección pendiente';
   const titleType = theme.typography.styles.subtitle2;
@@ -25,7 +34,7 @@ export function VenueTile({ name, address, meta, accessibilityHint, onPress }: V
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={[name, addressLabel, meta].filter(Boolean).join(', ')}
+      accessibilityLabel={[name, badge, addressLabel, meta].filter(Boolean).join(', ')}
       accessibilityHint={accessibilityHint}
       style={({ pressed }) => ({
         width: '100%',
@@ -53,7 +62,7 @@ export function VenueTile({ name, address, meta, accessibilityHint, onPress }: V
           backgroundColor: `${theme.colors.brandPrimary}22`,
         }}
       >
-        <MaterialCommunityIcons name="soccer-field" size={30} color={theme.colors.text} />
+        <MaterialCommunityIcons name="stadium-variant" size={30} color={theme.colors.text} />
       </View>
       <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
         <Text
@@ -83,6 +92,7 @@ export function VenueTile({ name, address, meta, accessibilityHint, onPress }: V
             {addressLabel}
           </Text>
         </View>
+        {badge ? <AppBadge variant="warning">{badge}</AppBadge> : null}
         {meta ? (
           <Text
             style={{

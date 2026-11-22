@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { inputRecipe, useAppTheme } from '@17suit/ui';
+import { inputRecipe, useAppTheme } from '@17suit/ui-native';
 import { useId, useState } from 'react';
 import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 

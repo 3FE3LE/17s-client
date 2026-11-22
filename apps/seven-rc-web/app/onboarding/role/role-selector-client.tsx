@@ -60,8 +60,8 @@ export function RoleSelectorClient({ preferredRole = null }: { preferredRole?: A
 
   return (
     <AppFrame
-      appName="¿Cómo vas a usar Seven RC?"
-      subtitle="Elige una opción. Define qué ves al entrar."
+      appName="¿Cómo vas a usar Seven Reservations Club?"
+      subtitle="Elige una opción. Define qué ves al entrar, y puedes cambiarla cuando quieras arriba, junto a “Cerrar sesión”."
     >
       {roleError ? (
         <div className="grid gap-sm">

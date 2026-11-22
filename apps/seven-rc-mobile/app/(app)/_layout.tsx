@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-expo';
-import { useAppTheme } from '@17suit/ui';
+import { useAppTheme } from '@17suit/ui-native';
 import { Redirect, Stack } from 'expo-router';
 
 /**

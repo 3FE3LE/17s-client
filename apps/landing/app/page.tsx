@@ -9,7 +9,9 @@ import {
   productButtonClass,
   secondaryButtonClass,
   sectionHeadingClass,
+  textLinkClass,
 } from './components/landing-ui';
+import { FifteenReviewMock, SevenSlotMock } from './components/product-mocks';
 import { getProductAppUrl, hasApp, productCount, products, type Product } from './lib/products';
 
 const availableCount = products.filter(hasApp).length;
@@ -22,26 +24,18 @@ const benefits = [
 ];
 
 /*
- * Hero mark: the product numerals as one composition. Decorative only; the
- * product grid below is the single list of products on this page.
+ * Hero visual: the two open products, shown as their own sample screens.
+ * On mobile only the Fifteen screen shows, after the CTAs and at a smaller size.
  */
-function NumeralMark() {
+function HeroProducts() {
   return (
-    <div
-      aria-hidden="true"
-      className="grid select-none grid-cols-[repeat(5,auto)] items-end justify-start gap-x-[clamp(10px,2vw,28px)] lg:justify-end"
-    >
-      {products.map((product, index) => (
-        <span
-          key={product.slug}
-          data-product={product.accentKey}
-          className={`font-arvo font-bold leading-[0.8] tracking-[-0.04em] text-product tabular-nums ${
-            index < 2 ? 'text-[clamp(64px,10vw,148px)]' : 'text-[clamp(40px,5.5vw,80px)] opacity-80'
-          }`}
-        >
-          {product.numeral}
-        </span>
-      ))}
+    <div className="relative mx-auto grid w-full max-w-[400px] gap-[var(--spacing-md)] lg:mx-0 lg:max-w-none">
+      <div data-product="fifteen">
+        <FifteenReviewMock compact caption="Fifteen: movimientos por revisar. Datos ficticios." />
+      </div>
+      <div data-product="seven" className="hidden lg:ml-[var(--spacing-xl)] lg:block">
+        <SevenSlotMock compact caption="Seven: horarios libres de una cancha. Datos ficticios." />
+      </div>
     </div>
   );
 }
@@ -53,7 +47,7 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <article
       data-product={product.accentKey}
-      className={`group relative isolate flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-line bg-[color-mix(in_oklab,var(--color-product)_7%,var(--color-surface))] p-[var(--spacing-lg)] transition-[transform,box-shadow,border-color] duration-300 ease-out focus-within:border-product hover:-translate-y-1 hover:border-product hover:shadow-[0_18px_40px_color-mix(in_oklab,var(--color-product)_18%,transparent)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
+      className={`group relative isolate flex flex-col overflow-hidden rounded-[var(--radius-xl)] border border-line bg-[color-mix(in_oklab,var(--landing-product)_13%,var(--color-surface))] p-[var(--spacing-lg)] transition-[transform,box-shadow,border-color] duration-300 ease-out focus-within:border-product hover:-translate-y-1 hover:border-product hover:shadow-[0_18px_40px_color-mix(in_oklab,var(--landing-product)_18%,transparent)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${
         featured ? 'md:col-span-3 md:min-h-[340px]' : 'md:col-span-2'
       }`}
     >
@@ -84,7 +78,7 @@ function ProductCard({ product }: { product: Product }) {
       <div className="mt-auto flex flex-wrap items-center gap-x-[var(--spacing-md)] gap-y-[var(--spacing-sm)] pt-[var(--spacing-lg)]">
         {appUrl ? (
           <a href={appUrl} className={`${productButtonClass} relative z-10`}>
-            Probar {product.shortName}
+            Probar en la app<span className="sr-only"> {product.shortName}</span>
             <ArrowUpRightIcon />
           </a>
         ) : null}
@@ -92,7 +86,7 @@ function ProductCard({ product }: { product: Product }) {
           href={`/${product.slug}`}
           className="inline-flex min-h-11 items-center gap-2 rounded-md font-bold text-product no-underline after:absolute after:inset-0 after:content-[''] hover:underline"
         >
-          Ver {product.shortName}
+          Ver detalles<span className="sr-only"> de {product.name}</span>
           <ArrowRightIcon className="transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </div>
@@ -111,7 +105,7 @@ export default async function HomePage() {
 
         <section
           aria-labelledby="hero-title"
-          className="grid grid-cols-1 items-end gap-[var(--spacing-xl)] lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)] lg:gap-[var(--spacing-x3l)]"
+          className="grid grid-cols-1 items-center gap-[var(--spacing-xl)] lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-[var(--spacing-x3l)]"
         >
           <div className="pt-[var(--spacing-sm)] lg:pt-[var(--spacing-lg)]">
             <h1
@@ -141,7 +135,7 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <NumeralMark />
+          <HeroProducts />
         </section>
 
         <section
@@ -153,7 +147,8 @@ export default async function HomePage() {
             <h2 id="products-title" className={sectionHeadingClass}>
               Productos
             </h2>
-            <p className="m-0 text-md leading-[1.5] text-muted">
+            <p className="m-0 max-w-[52ch] text-md leading-[1.5] text-muted">
+              Cada número es una app, con un nombre en inglés que dice para qué sirve.{' '}
               {availableCount} disponibles hoy y {upcomingCount} en camino.
             </p>
           </div>
@@ -205,10 +200,7 @@ export default async function HomePage() {
               <Link href="/sign-up" className={primaryButtonClass}>
                 Crear cuenta
               </Link>
-              <Link
-                href="/sign-in"
-                className="inline-flex min-h-11 items-center px-[var(--spacing-sm)] font-bold text-text underline underline-offset-4"
-              >
+              <Link href="/sign-in" className={textLinkClass}>
                 Ya tengo cuenta
               </Link>
             </div>

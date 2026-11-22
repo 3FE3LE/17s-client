@@ -1,8 +1,9 @@
 import { useSignUp } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppLinkAction, GapView } from '@17suit/ui';
+import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpScreen() {
@@ -58,7 +59,11 @@ export default function SignUpScreen() {
   };
 
   return (
-    <AppFrame appName="Crear cuenta" subtitle="Te enviaremos un código para verificar tu correo.">
+    <Screen
+      back={false}
+      title="Crear cuenta"
+      subtitle="Te enviaremos un código para verificar tu correo."
+    >
       <GapView gap="sm">
         <FormField
           label="Correo"
@@ -95,6 +100,6 @@ export default function SignUpScreen() {
         </AppButton>
         <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo una cuenta</AppLinkAction>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }

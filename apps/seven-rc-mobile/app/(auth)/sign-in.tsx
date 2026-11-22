@@ -1,10 +1,11 @@
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
-import { AppButton, AppDivider, AppFrame, AppLinkAction, GapView } from '@17suit/ui';
+import { AppButton, AppDivider, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { View } from 'react-native';
 import { useState } from 'react';
 import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -60,8 +61,9 @@ export default function SignInScreen() {
   };
 
   return (
-    <AppFrame
-      appName="Seven Reservations Club"
+    <Screen
+      back={false}
+      title="Seven Reservations Club"
       subtitle="Inicia sesión para reservar o administrar tus canchas."
     >
       <GapView gap="sm">
@@ -102,6 +104,6 @@ export default function SignInScreen() {
           </AppLinkAction>
         </View>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }

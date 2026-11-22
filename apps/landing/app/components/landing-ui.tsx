@@ -19,7 +19,7 @@ export const primaryButtonClass = `${buttonBase} border-action-primary-border bg
 export const secondaryButtonClass = `${buttonBase} border-line bg-surface text-text hover:border-[color-mix(in_oklab,var(--color-text)_32%,transparent)]`;
 
 /** Accent button for a product's own CTA; must sit inside a `[data-product]`. */
-export const productButtonClass = `${buttonBase} border-product bg-product text-on-product hover:shadow-[0_14px_28px_color-mix(in_oklab,var(--color-product)_32%,transparent)] dark:hover:shadow-[0_8px_18px_rgb(0_0_0/0.32)]`;
+export const productButtonClass = `${buttonBase} border-product bg-product text-on-product hover:shadow-[0_14px_28px_color-mix(in_oklab,var(--landing-product)_32%,transparent)] dark:hover:shadow-[0_8px_18px_rgb(0_0_0/0.32)]`;
 
 /** Compact header control: same shape as the buttons, smaller padding. */
 const compactButtonBase =
@@ -31,7 +31,7 @@ export const compactSecondaryButtonClass = `${compactButtonBase} border-line bg-
 export const sectionHeadingClass =
   'm-0 font-arvo text-[clamp(28px,3.6vw,40px)] font-bold leading-[1.15] tracking-[-0.015em] text-text';
 
-/* Icon geometry from lucide (ISC): arrow-right and arrow-up-right, 24px grid, 2px stroke. */
+/* Icon geometry from lucide (ISC): arrow-right, arrow-up-right, arrow-down; 24px grid, 2px stroke. */
 function IconBase(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -68,6 +68,19 @@ export function ArrowUpRightIcon(props: SVGProps<SVGSVGElement>) {
     </IconBase>
   );
 }
+
+export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 5v14" />
+      <path d="m19 12-7 7-7-7" />
+    </IconBase>
+  );
+}
+
+/** Underlined text link for tertiary actions ("Volver al inicio", "Ya tengo cuenta"). */
+export const textLinkClass =
+  'inline-flex min-h-11 items-center px-[var(--spacing-sm)] font-bold text-text underline underline-offset-4';
 
 export function StatusBadge({ status }: { status: ProductStatus }) {
   const tone: Record<ProductStatus, string> = {

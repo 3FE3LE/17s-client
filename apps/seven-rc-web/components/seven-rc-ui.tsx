@@ -1,6 +1,14 @@
 'use client';
 
-import { AppButton, AppSkeleton, RefreshCcw, cx, inputRecipe } from '@17suit/ui';
+import {
+  AppButton,
+  AppInput,
+  AppSkeleton,
+  RefreshCcw,
+  cx,
+  inputRecipe,
+  type AppInputProps,
+} from '@17suit/ui';
 import { useId, type ReactNode, type RefObject } from 'react';
 import { formatUpdatedAgo } from '@/lib/seven-rc-format';
 import { useNow } from '@/lib/use-now';
@@ -98,6 +106,79 @@ export function InlineStatus({ message }: { message: string | null }) {
   );
 }
 
+/** Hint line under a field, tied to the control with aria-describedby. */
+function FieldHint({ id, children }: { id: string; children: ReactNode }) {
+  return (
+    <p id={id} className="m-0 text-sm leading-[18px] text-muted">
+      {children}
+    </p>
+  );
+}
+
+/** AppInput plus a persistent hint that says what the value changes. */
+export function HintedInput({
+  hint,
+  errorMessage = null,
+  ...props
+}: AppInputProps & { hint: ReactNode; errorMessage?: string | null }) {
+  const hintId = useId();
+  const errorId = `${hintId}-error`;
+  return (
+    <div className="grid content-start gap-xs">
+      <AppInput
+        {...props}
+        error={Boolean(errorMessage)}
+        aria-describedby={errorMessage ? `${hintId} ${errorId}` : hintId}
+      />
+      <FieldHint id={hintId}>{hint}</FieldHint>
+      <InlineError id={errorId} message={errorMessage} />
+    </div>
+  );
+}
+
+export function TextAreaField({
+  label,
+  name,
+  value,
+  onChangeValue,
+  hint,
+  maxLength,
+  rows = 3,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChangeValue: (value: string) => void;
+  hint?: ReactNode;
+  maxLength?: number;
+  rows?: number;
+  placeholder?: string;
+}) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  const classes = inputRecipe({ state: 'default', platform: 'web' });
+  return (
+    <div className={classes.root}>
+      <label htmlFor={id} className={classes.fieldLabel}>
+        {label}
+      </label>
+      <textarea
+        id={id}
+        name={name}
+        value={value}
+        rows={rows}
+        maxLength={maxLength}
+        placeholder={placeholder}
+        aria-describedby={hint ? hintId : undefined}
+        onChange={(event) => onChangeValue(event.target.value)}
+        className={cx(classes.control, 'h-auto min-h-[88px] resize-y py-2 leading-[1.5]')}
+      />
+      {hint ? <FieldHint id={hintId}>{hint}</FieldHint> : null}
+    </div>
+  );
+}
+
 export function SectionHeader({
   id,
   title,
@@ -147,10 +228,12 @@ export interface ConfirmDialogProps {
   error: string | null;
   onConfirm: () => void;
   onClosed: () => void;
+  /** `destructive` (default) for irreversible removals, `primary` for affirmative steps. */
+  tone?: 'destructive' | 'primary';
 }
 
 /**
- * Native <dialog> confirmation for destructive actions. Open it from the
+ * Native <dialog> confirmation for consequential actions. Open it from the
  * triggering event handler with `dialogRef.current?.showModal()`.
  */
 export function ConfirmDialog({
@@ -164,6 +247,7 @@ export function ConfirmDialog({
   error,
   onConfirm,
   onClosed,
+  tone = 'destructive',
 }: ConfirmDialogProps) {
   const titleId = useId();
   const bodyId = useId();
@@ -197,7 +281,7 @@ export function ConfirmDialog({
             {dismissLabel}
           </AppButton>
           <AppButton
-            variant="destructive"
+            variant={tone === 'primary' ? 'primary' : 'destructive'}
             fullWidth={false}
             disabled={isPending}
             onPress={onConfirm}

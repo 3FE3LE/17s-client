@@ -51,7 +51,7 @@ export default async function AppsPage() {
                 <li
                   key={product.slug}
                   data-product={product.accentKey}
-                  className="flex flex-col gap-[var(--spacing-md)] rounded-[var(--radius-xl)] border border-line bg-[color-mix(in_oklab,var(--color-product)_7%,var(--color-surface))] p-[var(--spacing-lg)]"
+                  className="flex flex-col gap-[var(--spacing-md)] rounded-[var(--radius-xl)] border border-line bg-[color-mix(in_oklab,var(--landing-product)_13%,var(--color-surface))] p-[var(--spacing-lg)]"
                 >
                   <div className="flex items-start justify-between gap-[var(--spacing-md)]">
                     <div className="min-w-0">

@@ -3,25 +3,28 @@ import {
   useCurrentUserRoleQuery,
   useSetCurrentUserRoleMutation,
 } from '@17suit/module-seven-reservations-club/client';
-import { AppBadge, AppProfile, GapView, useAppTheme, useAppToast } from '@17suit/ui';
-import { AppButton, useAnimatedValue } from '@17suit/ui-native';
+import {
+  AppBadge,
+  AppButton,
+  AppProfile,
+  GapView,
+  useAnimatedValue,
+  useAppTheme,
+} from '@17suit/ui-native';
 import { Alert, Animated, Platform, Pressable, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Screen } from '../../../components/screen';
 import { useQueryClient } from '@tanstack/react-query';
-import * as SecureStore from 'expo-secure-store';
 import { humanizeError } from '../../../lib/error-messages';
-
-const THEME_STORAGE_KEY = '17suit.theme.mode';
+import { feedback } from '../../../lib/feedback';
 
 export default function ProfileScreen() {
   const { signOut } = useClerk();
   const { user } = useUser();
   const queryClient = useQueryClient();
   const router = useRouter();
-  const toast = useAppToast();
   const { role } = useCurrentUserRoleQuery({ userId: user?.id, enabled: Boolean(user?.id) });
   const setRoleMutation = useSetCurrentUserRoleMutation();
   const { mode, setMode, theme } = useAppTheme();
@@ -34,13 +37,13 @@ export default function ProfileScreen() {
   const switchRole = async () => {
     try {
       await setRoleMutation.mutateAsync(nextRole);
-      toast.success(
+      feedback.success(
         'Modo cambiado',
         nextRole === 'OWNER' ? 'Ahora administras complejos.' : 'Ahora reservas como jugador.',
       );
       router.replace('/home');
     } catch (error) {
-      toast.error('No se pudo cambiar el modo', humanizeError(error, 'save'));
+      feedback.error('No se pudo cambiar el modo', humanizeError(error, 'save'));
     }
   };
 
@@ -79,8 +82,8 @@ export default function ProfileScreen() {
     try {
       await signOut();
     } finally {
+      // Account data only; the theme is a preference of this device and stays.
       queryClient.clear();
-      await SecureStore.deleteItemAsync(THEME_STORAGE_KEY).catch(() => {});
     }
   };
 

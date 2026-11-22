@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { products } from '../lib/products';
 
@@ -18,7 +19,13 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-[1120px] gap-[var(--spacing-lg)] px-[var(--spacing-md)] py-[var(--spacing-xl)] md:px-[var(--spacing-lg)]">
         <div className="flex flex-wrap items-center justify-between gap-[var(--spacing-md)]">
           <div>
-            <p className="m-0 font-arvo text-lg font-bold leading-[1.25]">17Suit</p>
+            <Image
+              src="/logo-17suit@4x.svg"
+              alt="17Suit"
+              width={196}
+              height={62}
+              className="h-[32px] w-auto dark:brightness-0 dark:invert"
+            />
             <p className="m-0 mt-[var(--spacing-xs)] text-sm leading-[1.5] text-muted">
               Una cuenta para todas las apps de 17Suit.
             </p>

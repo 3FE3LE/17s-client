@@ -10,7 +10,6 @@ import {
   type ReservationWithVenuePitch,
   type ReservationBase,
   type SevenRcRefreshOptions,
-  sevenRcQueryKeys,
   useSevenRcCancelReservationMutation,
   useSevenRcCreateReservationMutation,
   useSevenRcMyReservationsQuery,
@@ -18,8 +17,7 @@ import {
   useSevenRcPlayerVenuePitchesQuery,
   useSevenRcPlayerVenuesQuery,
 } from '@17suit/module-seven-reservations-club/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 function usePlayerApi() {
   return useMemo(
@@ -45,18 +43,6 @@ export function usePlayerVenuePitchesQuery(venueId: string | null) {
 export function usePitchAvailabilityQuery(pitchId: string | null, date: string | null) {
   const api = usePlayerApi();
   return useSevenRcPitchAvailabilityQuery(api, pitchId, date);
-}
-
-/** Booking or cancelling changes which slots are free; call after either settles. */
-export function useInvalidatePitchAvailability() {
-  const queryClient = useQueryClient();
-  return useCallback(
-    (pitchId: string) =>
-      queryClient.invalidateQueries({
-        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
-      }),
-    [queryClient],
-  );
 }
 
 export function useCreateReservationMutation() {

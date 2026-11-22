@@ -16,6 +16,11 @@ function resolveLandingUrl(path: LandingAuthPath): string {
   return path === '/sign-in' ? signInUrl : signInUrl.replace(/\/sign-in\/?$/, path);
 }
 
+/** Origin of the shared landing site (where a full sign-out sends the user). */
+export function resolveLandingHomeUrl(): string {
+  return new URL(resolveLandingUrl('/sign-in')).origin;
+}
+
 function resolveAppRootFromHeaders(headerList: Headers): string {
   const host = headerList.get('x-forwarded-host') ?? headerList.get('host') ?? 'localhost:3018';
   const proto = headerList.get('x-forwarded-proto') ?? 'http';

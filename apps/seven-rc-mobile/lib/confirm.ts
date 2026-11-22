@@ -26,3 +26,23 @@ export function confirmDestructive(
     { text: confirmText, style: 'destructive', onPress: onConfirm },
   ]);
 }
+
+/**
+ * Native confirm for a non-destructive action that cannot be undone (e.g.
+ * confirming a booking). Same web fallback as {@link confirmDestructive}.
+ */
+export function confirmAction(
+  { title, message, confirmText, cancelText }: ConfirmOptions,
+  onConfirm: () => void,
+) {
+  if (Platform.OS === 'web') {
+    const confirmFn = (globalThis as { confirm?: (text: string) => boolean }).confirm;
+    if (confirmFn?.(`${title}\n\n${message}`)) onConfirm();
+    return;
+  }
+
+  Alert.alert(title, message, [
+    { text: cancelText, style: 'cancel' },
+    { text: confirmText, onPress: onConfirm },
+  ]);
+}

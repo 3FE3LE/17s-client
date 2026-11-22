@@ -6,11 +6,43 @@ import { EmailAddress } from './email-address';
 
 interface AccessDeniedProps {
   email: string | null;
+  /** `ADMIN_ACCESS_CONTACT`, trimmed. Null when unset. */
+  accessContact: string | null;
+  /** Landing origin: where a plain sign-out ends up. */
+  landingHomeUrl: string;
   /** Only true in development when `ADMIN_ALLOWED_EMAILS` is unset or empty. */
   showMissingAllowlistHint: boolean;
 }
 
-export function AccessDenied({ email, showMissingAllowlistHint }: AccessDeniedProps) {
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function AccessContact({ contact }: { contact: string | null }) {
+  if (!contact) {
+    return <>Pide acceso al responsable de la consola.</>;
+  }
+  if (EMAIL_PATTERN.test(contact)) {
+    return (
+      <>
+        Para pedir acceso, escribe a{' '}
+        <a
+          href={`mailto:${contact}`}
+          className="font-sans font-bold text-info underline underline-offset-4"
+        >
+          <EmailAddress email={contact} />
+        </a>
+        .
+      </>
+    );
+  }
+  return <>Para pedir acceso, contacta con {contact}.</>;
+}
+
+export function AccessDenied({
+  email,
+  accessContact,
+  landingHomeUrl,
+  showMissingAllowlistHint,
+}: AccessDeniedProps) {
   const { signOut } = useClerk();
 
   return (
@@ -25,17 +57,22 @@ export function AccessDenied({ email, showMissingAllowlistHint }: AccessDeniedPr
         >
           No tienes acceso a la consola de operación
         </h1>
-        <p className="m-0 max-w-[65ch] text-md leading-[1.5] text-muted">
+        <p className="m-0 max-w-[65ch] text-pretty text-md leading-[1.5] text-muted">
           Iniciaste sesión como{' '}
           <strong className="text-brand-dark">
-            {email ? <EmailAddress email={email} /> : 'una cuenta sin email'}
+            {email ? <EmailAddress email={email} className="font-sans" /> : 'una cuenta sin email'}
           </strong>
-          , pero esa cuenta no está en la lista de operadores autorizados. Si necesitas acceso, pide
-          a un administrador de 17Suit que añada tu email verificado.
+          , pero esa cuenta no está en la lista de operadores autorizados. Si tienes otra cuenta con
+          acceso, entra con ella.
+        </p>
+        <p className="m-0 max-w-[65ch] text-pretty text-md leading-[1.5] text-text">
+          <AccessContact contact={accessContact} />
         </p>
         {showMissingAllowlistHint ? (
           // Static configuration note, present on first render: not an alert.
           // AppAlert hard-codes role="alert", which would interrupt screen readers.
+          // Development only, so the audience is the developer: the variable name
+          // is the fix and stays visible here.
           <aside
             aria-labelledby="falta-lista-acceso"
             className="grid gap-[var(--spacing-xs)] rounded-[var(--radius-md)] border border-warning/40 bg-feedback-warning-soft p-[var(--spacing-md)]"
@@ -55,11 +92,20 @@ export function AccessDenied({ email, showMissingAllowlistHint }: AccessDeniedPr
           </aside>
         ) : null}
         <div className="flex flex-wrap gap-[var(--spacing-sm)]">
+          {/* Sign out, then the /sign-in bridge sends them back to this console. */}
+          <AppButton
+            variant="primary"
+            compact
+            fullWidth={false}
+            onPress={() => signOut({ redirectUrl: '/sign-in' })}
+          >
+            Usar otra cuenta
+          </AppButton>
           <AppButton
             variant="neutral"
             compact
             fullWidth={false}
-            onPress={() => signOut({ redirectUrl: '/sign-in' })}
+            onPress={() => signOut({ redirectUrl: landingHomeUrl })}
           >
             Cerrar sesión
           </AppButton>

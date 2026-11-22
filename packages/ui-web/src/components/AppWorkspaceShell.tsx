@@ -4,6 +4,7 @@ import { buttonRecipe, cardRecipe, cx, pageContainerRecipe } from '@17suit/desig
 import { LogOut } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
+  Fragment,
   useSyncExternalStore,
   type CSSProperties,
   type ElementType,
@@ -47,12 +48,30 @@ export type AppWorkspaceNavItem = {
    * that exists as a route but is not built yet. Omit for working sections.
    */
   badge?: string;
+  /**
+   * Optional group label. Consecutive items that share a group render under a
+   * muted divider with this text (e.g. "Próximamente"). Items without a group
+   * render exactly as before, with no divider.
+   */
+  group?: string;
 };
+
+// Exact match, or a nested route under the item (`/billing/invoices` for
+// `/billing`). A bare prefix match would mark `/billing` active on `/billingx`.
+function isNavItemActive(href: string, activePath: string): boolean {
+  if (href === '/') {
+    return activePath === '/';
+  }
+  const base = href.endsWith('/') ? href.slice(0, -1) : href;
+  return activePath === base || activePath.startsWith(`${base}/`);
+}
 
 /**
  * `default` is the branded workspace (large sticky card header, ambient
- * decoration). `compact` is for operate consoles: small static header, no
- * decoration, tighter nav tiles.
+ * decoration). `compact` is for operate consoles: small static header, flat
+ * `bg-background` canvas with no decoration, tighter nav tiles without hover
+ * lift, and below `lg` a collapsed sidebar (brand row, scrollable nav with a
+ * fade edge, smaller account row) so the page heading stays above the fold.
  */
 export type AppWorkspaceShellDensity = 'default' | 'compact';
 
@@ -73,6 +92,12 @@ export interface AppWorkspaceShellProps extends PropsWithChildren {
    * sign-out sitting alone next to the product name on small screens.
    */
   account?: ReactNode;
+  /**
+   * Persistent status shown in the sidebar brand row (e.g. an environment
+   * badge). Right of the product name below `lg`, under it from `lg` up, where
+   * the sidebar is sticky. Omit to render nothing.
+   */
+  statusSlot?: ReactNode;
   linkComponent?: ElementType<{
     href: string;
     className?: string;
@@ -93,6 +118,7 @@ export function AppWorkspaceShell({
   signOutLabel = 'Log out',
   density = 'default',
   account,
+  statusSlot,
   linkComponent: LinkComponent = 'a',
   children,
 }: AppWorkspaceShellProps) {
@@ -109,7 +135,12 @@ export function AppWorkspaceShell({
     </button>
   ) : null;
   return (
-    <main className="relative min-h-screen bg-suit-canvas text-text">
+    <main
+      className={cx(
+        'relative min-h-screen text-text',
+        isCompact ? 'bg-background' : 'bg-suit-canvas',
+      )}
+    >
       {isCompact ? null : (
         <>
           <div
@@ -124,16 +155,36 @@ export function AppWorkspaceShell({
       )}
 
       <div className={pageContainerRecipe({ kind: 'workspace' })}>
-        <aside className="min-w-0 border-b border-border-default bg-surface-panel px-[var(--spacing-md)] py-[var(--spacing-md)] backdrop-blur-sm lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:px-[var(--spacing-lg)] lg:py-[var(--spacing-lg)]">
+        <aside
+          className={cx(
+            'min-w-0 border-b border-border-default lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r lg:px-[var(--spacing-lg)] lg:py-[var(--spacing-lg)]',
+            isCompact
+              ? 'bg-surface px-[var(--spacing-md)] py-[var(--spacing-sm)]'
+              : 'bg-surface-panel px-[var(--spacing-md)] py-[var(--spacing-md)] backdrop-blur-sm',
+          )}
+        >
           <div className="flex items-center justify-between gap-[var(--spacing-md)] lg:block">
             <LinkComponent href={homeHref} className="inline-flex flex-col no-underline">
-              <span className="text-xs font-light uppercase tracking-plus1_5 text-brand-secondary">
+              <span
+                className={cx(
+                  'text-xs font-light uppercase tracking-plus1_5 text-brand-secondary',
+                  isCompact && 'hidden lg:block',
+                )}
+              >
                 {productKicker}
               </span>
-              <span className="mt-1 font-arvo text-2xl font-bold leading-none text-brand-dark">
+              <span
+                className={cx(
+                  'font-arvo font-bold leading-none text-brand-dark',
+                  isCompact ? 'text-xl lg:mt-1 lg:text-2xl' : 'mt-1 text-2xl',
+                )}
+              >
                 {productName}
               </span>
             </LinkComponent>
+            {statusSlot ? (
+              <div className="min-w-0 lg:mt-[var(--spacing-sm)]">{statusSlot}</div>
+            ) : null}
             {onSignOut && !account ? (
               <button
                 type="button"
@@ -158,29 +209,37 @@ export function AppWorkspaceShell({
             className={cx(
               'flex max-w-full overflow-x-auto pb-[var(--spacing-xs)] lg:grid lg:overflow-visible lg:pb-0',
               isCompact
-                ? 'mt-[var(--spacing-sm)] gap-[var(--spacing-xs)]'
+                ? // Below lg the nav scrolls sideways: the mask fades the trailing edge so
+                  // clipped items read as "more this way", and the trailing spacer lets the
+                  // last item scroll clear of the fade.
+                  "mt-[var(--spacing-sm)] gap-[var(--spacing-xs)] [mask-image:linear-gradient(to_right,#000_calc(100%-32px),transparent)] after:w-6 after:shrink-0 after:content-[''] lg:[mask-image:none] lg:after:hidden"
                 : 'mt-[var(--spacing-md)] gap-[var(--spacing-sm)]',
             )}
           >
             {navItems.map((item, index) => {
-              const isActive =
-                item.href === '/' ? activePath === '/' : activePath.startsWith(item.href);
+              const isActive = isNavItemActive(item.href, activePath);
               const Icon = item.icon;
-              return (
+              const startsGroup = Boolean(item.group) && item.group !== navItems[index - 1]?.group;
+              const link = (
                 <LinkComponent
                   key={item.href}
                   href={item.href}
                   {...(isActive ? { 'aria-current': 'page' as const } : {})}
                   className={cx(
                     isCompact
-                      ? 'grid min-w-[140px] grid-cols-[24px_1fr] items-center gap-2 rounded-[var(--radius-md)] border px-[10px] py-[6px] text-sm font-bold no-underline transition-transform duration-200 motion-safe:hover:-translate-y-px lg:min-w-0'
+                      ? 'grid shrink-0 grid-cols-[24px_auto] items-center gap-2 whitespace-nowrap rounded-[var(--radius-md)] border px-[10px] py-[6px] text-sm font-bold no-underline transition-colors duration-150 lg:min-w-0 lg:grid-cols-[24px_1fr]'
                       : 'grid min-w-[156px] grid-cols-[32px_1fr] items-center gap-2 rounded-[var(--radius-lg)] border px-3 py-[10px] text-sm font-bold no-underline transition-transform duration-200 motion-safe:hover:-translate-y-px lg:min-w-0',
                     isActive
                       ? cx(
                           'border-action-primary-border bg-action-primary text-white',
                           !isCompact && 'shadow-action-primary-soft',
                         )
-                      : 'border-border-default bg-surface-navigation text-brand-dark',
+                      : cx(
+                          'border-border-default text-brand-dark',
+                          isCompact
+                            ? 'bg-surface hover:border-border-emphasis hover:bg-background'
+                            : 'bg-surface-navigation',
+                        ),
                   )}
                 >
                   <span
@@ -213,12 +272,37 @@ export function AppWorkspaceShell({
                   )}
                 </LinkComponent>
               );
+              if (!startsGroup) {
+                return link;
+              }
+              return (
+                <Fragment key={item.href}>
+                  <span className="flex shrink-0 items-center gap-2 self-center whitespace-nowrap px-[var(--spacing-xs)] text-xs font-bold leading-[18px] text-muted lg:mt-[var(--spacing-sm)] lg:self-auto lg:px-0">
+                    <span aria-hidden className="h-4 w-px bg-border-strong lg:hidden" />
+                    {item.group}
+                    <span aria-hidden className="hidden h-px flex-1 bg-border-default lg:block" />
+                  </span>
+                  {link}
+                </Fragment>
+              );
             })}
           </nav>
 
           {account ? (
-            <div className="mt-[var(--spacing-md)] flex flex-wrap items-center justify-between gap-[var(--spacing-sm)] lg:grid lg:justify-start">
-              <div className="min-w-0 text-sm leading-[1.4]">{account}</div>
+            <div
+              className={cx(
+                'flex flex-wrap items-center justify-between gap-[var(--spacing-sm)] lg:mt-[var(--spacing-md)] lg:grid lg:justify-start',
+                isCompact ? 'mt-[var(--spacing-xs)]' : 'mt-[var(--spacing-md)]',
+              )}
+            >
+              <div
+                className={cx(
+                  'min-w-0 leading-[1.4]',
+                  isCompact ? 'flex-1 text-xs lg:text-sm' : 'text-sm',
+                )}
+              >
+                {account}
+              </div>
               {signOutButton ? <div>{signOutButton}</div> : null}
             </div>
           ) : onSignOut ? (

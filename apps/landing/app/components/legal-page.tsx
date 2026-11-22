@@ -64,8 +64,13 @@ export function LegalPage({ title, description, sections }: LegalPageProps) {
       <div className="mx-auto max-w-[1120px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pb-[var(--spacing-x4l)] md:pt-[var(--spacing-lg)]">
         <SiteHeader />
 
-        <article aria-labelledby="legal-title" className="max-w-[68ch]">
-          <header className="grid gap-[var(--spacing-md)]">
+        {/* Desktop: reading column plus a sticky table of contents, so the page
+            uses the width instead of leaving a blank right half. */}
+        <article
+          aria-labelledby="legal-title"
+          className="grid grid-cols-1 gap-x-[var(--spacing-x3l)] lg:grid-cols-[minmax(0,68ch)_minmax(220px,1fr)]"
+        >
+          <header className="grid max-w-[68ch] gap-[var(--spacing-md)] lg:col-start-1 lg:row-start-1">
             <h1
               id="legal-title"
               className="m-0 text-balance font-arvo text-[clamp(34px,5vw,56px)] font-bold leading-[1.06] tracking-[-0.025em] text-text"
@@ -85,23 +90,28 @@ export function LegalPage({ title, description, sections }: LegalPageProps) {
             </ReviewNotice>
           </header>
 
-          <nav aria-label="Contenido" className="mt-[var(--spacing-xl)]">
-            <h2 className="m-0 font-arvo text-md font-bold leading-[1.3] text-text">Contenido</h2>
-            <ol className="m-0 mt-[var(--spacing-xs)] grid list-decimal gap-x-[var(--spacing-lg)] pl-[1.25em] text-md leading-[1.4] text-muted sm:grid-cols-2">
-              {sections.map((section) => (
-                <li key={section.id}>
-                  <a
-                    href={`#${section.id}`}
-                    className="inline-flex min-h-11 items-center text-text underline decoration-line hover:decoration-current"
-                  >
-                    {section.title}
-                  </a>
-                </li>
-              ))}
-            </ol>
+          <nav
+            aria-label="Contenido"
+            className="mt-[var(--spacing-xl)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0"
+          >
+            <div className="lg:sticky lg:top-[var(--spacing-lg)] lg:rounded-[var(--radius-lg)] lg:border lg:border-line lg:bg-surface lg:p-[var(--spacing-md)]">
+              <h2 className="m-0 font-arvo text-md font-bold leading-[1.3] text-text">Contenido</h2>
+              <ol className="m-0 mt-[var(--spacing-xs)] grid list-decimal gap-x-[var(--spacing-lg)] pl-[1.25em] text-md leading-[1.4] text-muted sm:grid-cols-2 lg:grid-cols-1">
+                {sections.map((section) => (
+                  <li key={section.id}>
+                    <a
+                      href={`#${section.id}`}
+                      className="inline-flex min-h-11 items-center text-text underline decoration-line hover:decoration-current"
+                    >
+                      {section.title}
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </nav>
 
-          <div className="mt-[var(--spacing-xl)] grid gap-[var(--spacing-xl)] border-t border-line pt-[var(--spacing-xl)]">
+          <div className="mt-[var(--spacing-xl)] grid max-w-[68ch] gap-[var(--spacing-xl)] border-t border-line pt-[var(--spacing-xl)] lg:col-start-1 lg:row-start-2">
             {sections.map((section) => (
               <section
                 key={section.id}

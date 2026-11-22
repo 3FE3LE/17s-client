@@ -1,60 +1,45 @@
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
+import {
+  sevenRcQueryKeys,
+  useCurrentUserRoleQuery,
+} from '@17suit/module-seven-reservations-club/client';
 import {
   AppAlert,
-  AppBadge,
-  AppButtonGroup,
+  AppButton,
   AppCard,
   AppEmpty,
   AppSeparator,
   AppSkeleton,
+  AppTypography,
   GapView,
   useAppTheme,
-  useAppToast,
-} from '@17suit/ui';
-import { AppButton, AppTypography } from '@17suit/ui-native';
-import { Feather } from '@expo/vector-icons';
+} from '@17suit/ui-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
-import { Text } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { Screen } from '../../../components/screen';
-import { confirmDestructive } from '../../../lib/confirm';
+import { OwnerActionSheet } from '../../../components/owner-action-sheet';
+import { OwnerReservationCard } from '../../../components/owner-reservation-card';
 import { humanizeError } from '../../../lib/error-messages';
+import { formatUpdatedAgo, useNow, useScreenFocus } from '../../../lib/focus';
+import { isAwaitingOwner, venueDateKey } from '../../../lib/reservation-format';
 import {
-  formatVenueRange,
-  reservationBadgeVariant,
-  reservationStatusLabel,
-  venueDateKey,
-} from '../../../lib/reservation-format';
-import {
-  useConfirmVenueReservationMutation,
+  ownerReservationsRange,
   useOwnerVenuePitchesQuery,
   useOwnerVenueReservationsQuery,
   useOwnerVenuesQuery,
-  useRejectVenueReservationMutation,
 } from '../../../lib/owner-queries';
+import { pitchSummary, sportIcon } from '../../../lib/sports';
+import { usePullRefresh } from '../../../lib/use-pull-refresh';
+import { useOwnerReservationActions } from '../../../lib/use-owner-reservation-actions';
 import type { VenueReservation } from '../../../lib/seven-rc-api';
-import { useMemo, useState } from 'react';
 
-/** Device-local `YYYY-MM-DD` for the API's date-range filter. */
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
+const PENDING_POLL_MS = 45_000;
 
 function byStart(a: VenueReservation, b: VenueReservation) {
   return new Date(a.startAt).getTime() - new Date(b.startAt).getTime();
-}
-
-function playerName(reservation: VenueReservation) {
-  return reservation.user?.name?.trim() || reservation.customerName?.trim() || null;
 }
 
 /**
@@ -103,41 +88,46 @@ export default function VenueDetailScreen() {
 
 function OwnerVenueDetail({ venueId }: { venueId: string }) {
   const router = useRouter();
-  const toast = useAppToast();
+  const queryClient = useQueryClient();
   const { theme } = useAppTheme();
   const iconColor = theme.colors.brandPrimary;
   const venuesQuery = useOwnerVenuesQuery();
   const pitchesQuery = useOwnerVenuePitchesQuery(venueId);
-  const reservationsRange = useMemo(
-    () => ({
-      from: formatDate(addDays(new Date(), -30)),
-      to: formatDate(addDays(new Date(), 60)),
-    }),
-    [],
+  const [range] = useState(() => ownerReservationsRange());
+  const refreshVenue = useCallback(
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenuePitches(venueId) }),
+        queryClient.invalidateQueries({
+          queryKey: sevenRcQueryKeys.ownerVenueReservationsBase(venueId),
+        }),
+      ]),
+    [queryClient, venueId],
   );
-  const reservationsQuery = useOwnerVenueReservationsQuery(
-    venueId,
-    reservationsRange.from,
-    reservationsRange.to,
-    { refetchOnWindowFocus: true },
-  );
-  const confirmReservationMutation = useConfirmVenueReservationMutation(venueId);
-  const rejectReservationMutation = useRejectVenueReservationMutation(venueId);
-  const [reservationAction, setReservationAction] = useState<{
-    reservationId: string;
-    action: 'confirm' | 'reject';
-  } | null>(null);
+  const pullRefresh = usePullRefresh(() => Promise.all([venuesQuery.refetch(), refreshVenue()]));
+  const focused = useScreenFocus(refreshVenue);
+  const now = useNow(30_000);
+  const reservationsQuery = useOwnerVenueReservationsQuery(venueId, range.from, range.to, {
+    refetchOnWindowFocus: true,
+    refetchInterval: focused ? PENDING_POLL_MS : false,
+    refetchIntervalInBackground: false,
+  });
+  const actions = useOwnerReservationActions();
 
   const venue = (venuesQuery.data ?? []).find((item) => item.id === venueId);
   const timeZone = venue?.timezone;
+  // Times and day buckets need the venue's zone; never fall back to the phone's.
+  const resolvingVenue = !timeZone && venuesQuery.isFetching;
+  const loadingAgenda = reservationsQuery.isLoading || resolvingVenue;
   const pitches = pitchesQuery.data ?? [];
 
-  // Day buckets use the venue's calendar, not the phone's.
+  // Day buckets use the venue's calendar, not the phone's. Expired requests
+  // fall out of "Por confirmar" into their day, marked "Vencida".
   const sections = useMemo(() => {
     const all = [...(reservationsQuery.data ?? [])].sort(byStart);
-    const today = venueDateKey(new Date(), timeZone);
-    const pending = all.filter((item) => item.status === 'pending_confirmation');
-    const rest = all.filter((item) => item.status !== 'pending_confirmation');
+    const today = venueDateKey(new Date(now), timeZone);
+    const pending = all.filter((item) => isAwaitingOwner(item, now));
+    const rest = all.filter((item) => !isAwaitingOwner(item, now));
     const keyOf = (item: VenueReservation) => venueDateKey(item.startAt, timeZone);
     return {
       pending,
@@ -153,116 +143,25 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
         })
         .reverse(),
     };
-  }, [reservationsQuery.data, timeZone]);
+  }, [reservationsQuery.data, timeZone, now]);
 
-  const isActionInProgress =
-    confirmReservationMutation.isPending || rejectReservationMutation.isPending;
   const hasAnyReservation =
     sections.pending.length +
       sections.today.length +
       sections.upcoming.length +
       sections.history.length >
     0;
-
-  async function confirmReservation(reservationId: string) {
-    try {
-      setReservationAction({ reservationId, action: 'confirm' });
-      await confirmReservationMutation.mutateAsync(reservationId);
-      toast.success('Reserva confirmada', 'El jugador ya ve su reserva como confirmada.');
-    } catch (error) {
-      toast.error('No se pudo confirmar', humanizeError(error, 'confirm'));
-    } finally {
-      setReservationAction(null);
-    }
-  }
-
-  async function rejectReservation(reservationId: string) {
-    try {
-      setReservationAction({ reservationId, action: 'reject' });
-      await rejectReservationMutation.mutateAsync(reservationId);
-      toast.success('Reserva rechazada', 'El jugador verá la reserva como rechazada.');
-    } catch (error) {
-      toast.error('No se pudo rechazar', humanizeError(error, 'reject'));
-    } finally {
-      setReservationAction(null);
-    }
-  }
-
-  function askRejectReservation(reservation: VenueReservation) {
-    const who = playerName(reservation) ?? 'El jugador';
-    confirmDestructive(
-      {
-        title: '¿Rechazar esta reserva?',
-        message: `${reservation.pitch?.name ?? 'Cancha'} · ${formatVenueRange(
-          reservation.startAt,
-          reservation.endAt,
-          timeZone,
-        )}. ${who} verá la reserva como rechazada y el horario quedará libre.`,
-        confirmText: 'Rechazar',
-        cancelText: 'Volver',
-      },
-      () => {
-        void rejectReservation(reservation.id);
-      },
-    );
-  }
+  const updatedLabel = formatUpdatedAgo(reservationsQuery.dataUpdatedAt, now);
 
   function renderReservation(reservation: VenueReservation) {
-    const isPending = reservation.status === 'pending_confirmation';
-    const name = playerName(reservation);
-    const details = [
-      name ?? 'Jugador sin nombre',
-      reservation.invitedCount > 0
-        ? `${reservation.invitedCount} ${reservation.invitedCount === 1 ? 'invitado' : 'invitados'}`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(' · ');
-    const isBusy = reservationAction?.reservationId === reservation.id;
-
     return (
-      <AppCard
+      <OwnerReservationCard
         key={reservation.id}
-        title={reservation.pitch?.name ?? 'Cancha'}
-        subtitle={formatVenueRange(reservation.startAt, reservation.endAt, timeZone)}
-        tone={isPending ? 'accent' : 'default'}
-        footer={
-          <GapView gap="sm">
-            <AppBadge variant={reservationBadgeVariant(reservation.status)}>
-              {reservationStatusLabel(reservation.status)}
-            </AppBadge>
-            {isPending ? (
-              <AppButtonGroup>
-                <AppButton
-                  variant="success"
-                  disabled={isActionInProgress}
-                  busy={isBusy && reservationAction?.action === 'confirm'}
-                  onPress={() => {
-                    void confirmReservation(reservation.id);
-                  }}
-                >
-                  {isBusy && reservationAction?.action === 'confirm' ? 'Confirmando…' : 'Confirmar'}
-                </AppButton>
-                <AppButton
-                  variant="destructive"
-                  disabled={isActionInProgress}
-                  busy={isBusy && reservationAction?.action === 'reject'}
-                  onPress={() => askRejectReservation(reservation)}
-                >
-                  {isBusy && reservationAction?.action === 'reject' ? 'Rechazando…' : 'Rechazar'}
-                </AppButton>
-              </AppButtonGroup>
-            ) : null}
-          </GapView>
-        }
-      >
-        <Text style={{ color: theme.colors.text, fontSize: 15, lineHeight: 22 }}>{details}</Text>
-        {reservation.notes ? (
-          <Text style={{ color: theme.colors.muted, fontSize: 14, lineHeight: 20 }}>
-            {`“${reservation.notes}”`}
-          </Text>
-        ) : null}
-      </AppCard>
+        reservation={reservation}
+        timeZone={timeZone}
+        now={now}
+        actions={actions}
+      />
     );
   }
 
@@ -281,19 +180,30 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
   return (
     <Screen
       title={venue?.name ?? 'Complejo'}
-      subtitle="Canchas y reservas del complejo"
-      onRefresh={() => {
-        void venuesQuery.refetch();
-        void pitchesQuery.refetch();
-        void reservationsQuery.refetch();
-      }}
-      refreshing={
-        (pitchesQuery.isFetching && !pitchesQuery.isLoading) ||
-        (reservationsQuery.isFetching && !reservationsQuery.isLoading)
-      }
+      subtitle={updatedLabel ?? 'Canchas y reservas del complejo'}
+      onRefresh={pullRefresh.onRefresh}
+      refreshing={pullRefresh.refreshing}
     >
       <GapView gap="md">
-        {reservationsQuery.isLoading ? (
+        <OwnerActionSheet actions={actions} />
+        {!timeZone && !venuesQuery.isFetching ? (
+          <AppAlert
+            variant="warning"
+            title="No pudimos cargar este complejo"
+            description={
+              venuesQuery.error
+                ? humanizeError(venuesQuery.error, 'load')
+                : 'No lo encontramos entre tus complejos.'
+            }
+            action={
+              <AppButton variant="warning" onPress={() => void venuesQuery.refetch()}>
+                Reintentar
+              </AppButton>
+            }
+          />
+        ) : null}
+
+        {loadingAgenda ? (
           <GapView gap="sm">
             <AppSkeleton height={100} rounded="lg" />
             <AppSkeleton height={100} rounded="lg" />
@@ -318,7 +228,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
           />
         ) : null}
 
-        {!reservationsQuery.isLoading && !reservationsQuery.error ? (
+        {timeZone && !loadingAgenda && !reservationsQuery.error ? (
           hasAnyReservation ? (
             <GapView gap="lg">
               {renderSection('Por confirmar', sections.pending)}
@@ -379,7 +289,6 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
           <AppCard
             key={pitch.id}
             title={pitch.name}
-            subtitle={`${pitch.sportType} · ${pitch.capacity} jugadores · ${pitch.slotDurationMinutes} min`}
             footer={
               <AppButton
                 variant="info"
@@ -388,7 +297,20 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
                 Configurar horarios
               </AppButton>
             }
-          />
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm }}>
+              <MaterialCommunityIcons
+                name={sportIcon(pitch.sportType)}
+                size={22}
+                color={theme.colors.muted}
+                accessibilityElementsHidden
+                importantForAccessibility="no"
+              />
+              <AppTypography variant="body" color={theme.colors.muted} style={{ flex: 1 }}>
+                {pitchSummary(pitch)}
+              </AppTypography>
+            </View>
+          </AppCard>
         ))}
 
         {pitches.length > 0 ? (

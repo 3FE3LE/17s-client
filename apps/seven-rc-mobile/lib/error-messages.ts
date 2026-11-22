@@ -10,7 +10,7 @@
 
 import { SevenRcApiError } from '@17suit/module-seven-reservations-club/client';
 
-type Context = 'load' | 'create' | 'cancel' | 'confirm' | 'reject' | 'save';
+type Context = 'load' | 'create' | 'cancel' | 'confirm' | 'reject' | 'save' | 'manage' | 'payment';
 
 const NETWORK = 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.';
 const SESSION = 'Tu sesión expiró. Vuelve a iniciar sesión.';
@@ -26,6 +26,8 @@ const CONFLICT: Record<Context, string> = {
   confirm: 'Esta reserva ya cambió de estado. Actualiza la lista.',
   reject: 'Esta reserva ya cambió de estado. Actualiza la lista.',
   save: 'Los datos chocan con otra configuración. Revisa e inténtalo de nuevo.',
+  manage: 'Esta reserva ya cambió de estado. Actualiza la lista.',
+  payment: 'Esta reserva ya cambió de estado. Actualiza la lista.',
 };
 
 const BAD_REQUEST: Record<Context, string> = {
@@ -35,6 +37,8 @@ const BAD_REQUEST: Record<Context, string> = {
   confirm: 'No se pudo confirmar esta reserva.',
   reject: 'No se pudo rechazar esta reserva.',
   save: 'Revisa los datos del formulario e inténtalo de nuevo.',
+  manage: 'La reserva cambió de estado o aún no permite esta acción. Actualiza la lista.',
+  payment: 'Revisa el monto. Si está bien, la reserva cambió de estado: actualiza la lista.',
 };
 
 const FALLBACK: Record<Context, string> = {
@@ -44,6 +48,8 @@ const FALLBACK: Record<Context, string> = {
   confirm: 'No pudimos confirmar la reserva.',
   reject: 'No pudimos rechazar la reserva.',
   save: 'No pudimos guardar los cambios.',
+  manage: 'No pudimos actualizar la reserva.',
+  payment: 'No pudimos registrar el pago.',
 };
 
 function statusFromMessage(message: string): number | null {
@@ -62,6 +68,31 @@ function fromStatus(status: number, context: Context): string | null {
   return null;
 }
 
+/**
+ * No HTTP response arrived (offline, DNS, timeout). Expo's fetch reports these
+ * as "fetch failed: …". A status in the message always means the server
+ * answered, even "Failed to fetch platform user (401)".
+ */
+export function isTransportError(error: unknown): boolean {
+  if (error instanceof SevenRcApiError) return false;
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  if (statusFromMessage(message) !== null) return false;
+  if (error instanceof Error && error.name === 'AbortError') return true;
+  return /abort|network|failed to fetch|fetch failed|unable to reach|timeout|timed out/i.test(
+    message,
+  );
+}
+
+/** The server rejected the request, so sending it again cannot help (401, 403, other 4xx). */
+export function isClientError(error: unknown): boolean {
+  if (error instanceof SevenRcApiError) return error.status < 500;
+  if (!(error instanceof Error)) return false;
+  const status = statusFromMessage(error.message);
+  if (status !== null) return status < 500;
+  // The role data source surfaces the server's error name instead of the status.
+  return /^(unauthorized|forbidden)$/i.test(error.message.trim());
+}
+
 export function humanizeError(error: unknown, context: Context = 'load'): string {
   if (error instanceof SevenRcApiError) {
     return fromStatus(error.status, context) ?? FALLBACK[context];
@@ -73,16 +104,7 @@ export function humanizeError(error: unknown, context: Context = 'load'): string
   const lower = message.toLowerCase();
   const status = statusFromMessage(message);
 
-  if (
-    (error instanceof Error && error.name === 'AbortError') ||
-    lower.includes('abort') ||
-    lower.includes('network') ||
-    lower.includes('failed to fetch') ||
-    lower.includes('unable to reach') ||
-    lower.includes('timeout')
-  ) {
-    return NETWORK;
-  }
+  if (isTransportError(error)) return NETWORK;
   if (lower === 'unauthorized' || status === 401) return SESSION;
   if (lower === 'forbidden' || status === 403) return FORBIDDEN;
   if (lower === 'not found' || status === 404) return NOT_FOUND;

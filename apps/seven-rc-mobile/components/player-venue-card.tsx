@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import type { PublicVenue } from '../lib/seven-rc-api';
+import { venueRouteParams } from '../lib/venue-params';
 import { VenueTile } from './venue-tile';
 
 interface PlayerVenueCardProps {
@@ -15,7 +16,9 @@ export function PlayerVenueCard({ venue }: PlayerVenueCardProps) {
       name={venue.name}
       address={venue.address}
       accessibilityHint="Muestra las canchas del complejo"
-      onPress={() => router.push(`/venues/${venue.id}`)}
+      onPress={() =>
+        router.push({ pathname: '/venues/[venueId]', params: venueRouteParams(venue) })
+      }
     />
   );
 }

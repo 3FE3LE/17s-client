@@ -34,7 +34,10 @@ export interface Product {
   summary: string;
   highlights: readonly string[];
   steps: readonly [ProductStep, ProductStep, ProductStep];
-  /** Shows the "Tus datos" block under the steps, linking to this /privacidad anchor. */
+  /**
+   * Shows the "Tus datos" block under the steps. It links to this /privacidad
+   * anchor only once `LEGAL_PUBLISHED` (app/lib/legal.ts) is true.
+   */
   privacyAnchor?: string;
   /** Env var holding the product web origin (only for products with an app). */
   appUrlEnv?: string;
@@ -57,15 +60,18 @@ export const products: readonly Product[] = [
     headline: 'Sabe en qué se fue tu dinero este mes sin pasar movimientos a mano.',
     summary:
       'Conecta tu Gmail y Fifteen lee las notificaciones de tus bancos y pasarelas de pago. Cada movimiento queda en revisión hasta que tú lo confirmas, así tus cuentas solo muestran lo que ya validaste.',
+    // Differentiators from the real flow (.claude/agents/fifteen-ac.md). Each one adds
+    // a detail the summary and steps do not already say.
     highlights: [
-      'Movimientos detectados en una cola de revisión, separados de lo que ya confirmaste',
-      'Tarjetas con sus días de corte y de pago',
-      'Ingresos, suscripciones y pagos fijos del mes en un solo panel',
+      'Solo los remitentes que apruebas generan movimientos; los demás puedes bloquearlos',
+      'Lo que Fifteen no reconoce con seguridad aparece aparte, marcado para corregir',
+      'Lo que descartas o pospones sale de la cola sin contar en tu mes, y puedes restaurarlo',
+      'Cada tarjeta guarda su día de corte y su día de pago',
     ],
     steps: [
       {
         title: 'Conecta tu correo',
-        body: 'Vinculas tu Gmail y eliges qué remitentes de bancos y pagos se leen.',
+        body: 'Vinculas tu Gmail y, entre los remitentes que encuentra, eliges los de tus bancos y pagos.',
       },
       {
         title: 'Revisa cada movimiento',
@@ -90,7 +96,7 @@ export const products: readonly Product[] = [
     tagline: 'Reserva cancha en tu complejo deportivo o administra las de tu negocio.',
     headline: 'Reserva cancha sin llamadas, y llena tu agenda si administras el complejo.',
     summary:
-      'Los complejos deportivos publican sus canchas y horarios; los jugadores eligen un horario libre y envían su reserva. El complejo la confirma o la rechaza desde su panel.',
+      'Los complejos deportivos publican sus canchas y horarios; los jugadores eligen un horario libre y reservan. Si el complejo no pide anticipo, la reserva queda confirmada al instante; si lo pide, el complejo la confirma al recibirlo.',
     highlights: [
       'Canchas con horarios y duración de turno propios',
       'Una vista para quien administra y otra para quien juega',
@@ -106,8 +112,8 @@ export const products: readonly Product[] = [
         body: 'Quien administra registra sus canchas y los horarios de cada día.',
       },
       {
-        title: 'Reservas y recibes respuesta',
-        body: 'Eliges cancha y hora; el complejo confirma o rechaza tu reserva.',
+        title: 'Reservas tu cancha',
+        body: 'Eliges cancha y hora. Sin anticipo, tu reserva queda confirmada al instante; con anticipo, el complejo la confirma al recibirlo.',
       },
     ],
     appUrlEnv: 'NEXT_PUBLIC_SEVEN_RC_WEB_URL',
@@ -222,6 +228,30 @@ export const legacySlugRedirects: Record<string, string> = {
   'fifteen-all-check': 'fifteen-account-check',
   'four-you-closet': 'for-your-closet',
 };
+
+/**
+ * Product whose web app origin matches an already-validated redirect target.
+ * Used by /sign-up to say which app the new account is for. Relative targets
+ * (landing pages) return undefined.
+ */
+export function getProductForRedirect(target: string): Product | undefined {
+  if (!/^https?:\/\//i.test(target)) return undefined;
+  let origin: string;
+  try {
+    origin = new URL(target).origin;
+  } catch {
+    return undefined;
+  }
+  return products.find((product) => {
+    const appUrl = getProductAppUrl(product);
+    if (!appUrl) return false;
+    try {
+      return new URL(appUrl).origin === origin;
+    } catch {
+      return false;
+    }
+  });
+}
 
 export function getProduct(slug: string): Product | undefined {
   return products.find((product) => product.slug === slug);
