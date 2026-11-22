@@ -31,15 +31,13 @@ import {
   useSevenRcRejectVenueReservationMutation,
 } from '@17suit/module-seven-reservations-club/client';
 import { useMemo } from 'react';
+import { useAccessToken } from '@/lib/use-access-token';
 
 function useOwnerApi() {
+  const getAccessToken = useAccessToken();
   return useMemo(
-    () =>
-      createSevenRcOwnerApi({
-        apiBaseUrls: ['/api'],
-        getAccessToken: () => Promise.resolve('web-bff'),
-      }),
-    [],
+    () => createSevenRcOwnerApi({ apiBaseUrls: ['/api'], getAccessToken }),
+    [getAccessToken],
   );
 }
 
