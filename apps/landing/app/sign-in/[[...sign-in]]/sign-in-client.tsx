@@ -107,7 +107,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
           Continuar con Google
         </AppButton>
 
-        <form className="grid gap-sm" onSubmit={handlePasswordSignIn}>
+        <form method="post" className="grid gap-sm" onSubmit={handlePasswordSignIn}>
           <AppInput
             type="email"
             name="email"
