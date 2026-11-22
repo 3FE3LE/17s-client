@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import type { DeploymentEnvironment } from '@/lib/environment';
 import { getSectionByPath } from '@/lib/sections';
 import { adminNavItems } from './admin-nav';
+import { EmailAddress } from './email-address';
 import { EnvironmentBadge } from './environment-badge';
 
 interface AdminShellProps {
@@ -16,9 +17,9 @@ interface AdminShellProps {
   children: ReactNode;
 }
 
-// AppWorkspaceShell's header only takes strings (eyebrow + title), so the
-// environment badge and the signed-in operator live in a context bar rendered
-// directly above the shell on every console route.
+// The environment strip sits directly above the shell on every console route so
+// production is always visually distinct (destructive tone). The operator identity
+// lives in the shell sidebar next to "Cerrar sesión" (`account` prop).
 export function AdminShell({ environment, operatorEmail, children }: AdminShellProps) {
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -33,36 +34,39 @@ export function AdminShell({ environment, operatorEmail, children }: AdminShellP
       >
         Saltar al contenido
       </a>
+      {/*
+        Copy rule: the console is read-only today, so the strip only names the
+        environment ("Entorno de producción"). When the first write action
+        (mutation against 17s-server) lands, production must also warn
+        "Estás operando sobre datos reales." next to the badge. Do not show that
+        warning before mutations exist: it contradicts the read-only console.
+      */}
       <header
         className={cx(
-          'relative z-10 flex flex-wrap items-center justify-between gap-x-[var(--spacing-md)] gap-y-[var(--spacing-xs)] border-b px-[var(--spacing-md)] py-[var(--spacing-sm)] text-sm leading-[1.4] md:px-[var(--spacing-lg)]',
+          'relative z-10 flex items-center border-b px-[var(--spacing-md)] py-[var(--spacing-xs)] text-sm leading-[1.4] md:px-[var(--spacing-lg)]',
           isProduction
             ? 'border-destructive/50 bg-feedback-error-soft'
             : 'border-border-default bg-surface',
         )}
       >
-        <div className="flex min-w-0 items-center gap-[var(--spacing-sm)]">
-          <EnvironmentBadge environment={environment} />
-          {isProduction ? (
-            <p className="m-0 text-brand-dark">Estás operando sobre datos reales.</p>
-          ) : null}
-        </div>
-        <p className="m-0 min-w-0 truncate text-muted">
-          <span className="sr-only">Sesión iniciada como </span>
-          <span aria-hidden>Operador: </span>
-          <span className="font-bold text-brand-dark">{operatorEmail}</span>
-        </p>
+        <EnvironmentBadge environment={environment} />
       </header>
       <AppWorkspaceShell
         productName="Admin"
         productKicker="17Suit"
-        eyebrow="Consola de operación"
+        density="compact"
         title={section?.title ?? 'Consola de operación'}
         navItems={adminNavItems}
         activePath={pathname}
         homeHref="/"
         onSignOut={() => signOut({ redirectUrl: '/sign-in' })}
         signOutLabel="Cerrar sesión"
+        account={
+          <p className="m-0 min-w-0 text-muted">
+            <span className="block">Sesión iniciada como</span>
+            <EmailAddress email={operatorEmail} className="block font-bold text-brand-dark" />
+          </p>
+        }
         linkComponent={Link}
       >
         <div

@@ -12,8 +12,7 @@ const badgeVariant = {
 export function EnvironmentBadge({ environment }: { environment: DeploymentEnvironment }) {
   return (
     <AppBadge variant={badgeVariant[environment]} rounded={false}>
-      <span className="sr-only">Entorno: </span>
-      {environmentLabel[environment]}
+      Entorno de {environmentLabel[environment].toLowerCase()}
     </AppBadge>
   );
 }

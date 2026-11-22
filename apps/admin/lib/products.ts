@@ -24,7 +24,7 @@ export interface SuiteProduct {
 export const suiteProducts: SuiteProduct[] = [
   {
     slug: 'landing',
-    name: 'Landing 17Suit',
+    name: 'Sitio público 17Suit',
     subdomain: '17suit.com',
     apps: [{ key: 'landing', surface: 'landing', devPort: 3000, active: true }],
   },
@@ -66,6 +66,6 @@ export const suiteProducts: SuiteProduct[] = [
 export const surfaceLabel: Record<SuiteSurface, string> = {
   web: 'Web',
   mobile: 'Móvil',
-  landing: 'Landing',
+  landing: 'Sitio público',
   admin: 'Consola',
 };

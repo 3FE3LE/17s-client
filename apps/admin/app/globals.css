@@ -19,7 +19,6 @@
   --suit-color-text: #00151c;
   --suit-color-muted: #394448;
   --suit-font-arvo: var(--font-arvo, 'Arvo'), serif;
-  --suit-font-amaranth: var(--font-amaranth, 'Amaranth'), sans-serif;
   --suit-font-zilla: var(--font-zilla, 'Zilla Slab'), serif;
 }
 
