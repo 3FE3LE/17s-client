@@ -2,10 +2,13 @@ import {
   createSevenRcPlayerApi,
   type CreateReservationInput,
   type Pitch,
+  type PitchAvailability,
   type PublicVenue,
   type ReservationWithVenuePitch,
+  useSevenRcCancelReservationMutation,
   useSevenRcCreateReservationMutation,
   useSevenRcMyReservationsQuery,
+  useSevenRcPitchAvailabilityQuery,
   useSevenRcPlayerVenuePitchesQuery,
   useSevenRcPlayerVenuesQuery,
 } from '@17suit/module-seven-reservations-club/client';
@@ -48,9 +51,26 @@ export function usePlayerVenuePitchesQuery(venueId: string | null) {
   return useSevenRcPlayerVenuePitchesQuery(api, venueId);
 }
 
+/** Venue-local slot availability for a pitch on `date` (YYYY-MM-DD). */
+export function usePitchAvailabilityQuery(pitchId: string | null, date: string | null) {
+  const api = usePlayerApi();
+  return useSevenRcPitchAvailabilityQuery(api, pitchId, date);
+}
+
 export function useCreateReservationMutation() {
   const api = usePlayerApi();
   return useSevenRcCreateReservationMutation(api);
 }
 
-export type { CreateReservationInput, Pitch, PublicVenue, ReservationWithVenuePitch };
+export function useCancelReservationMutation() {
+  const api = usePlayerApi();
+  return useSevenRcCancelReservationMutation(api);
+}
+
+export type {
+  CreateReservationInput,
+  Pitch,
+  PitchAvailability,
+  PublicVenue,
+  ReservationWithVenuePitch,
+};

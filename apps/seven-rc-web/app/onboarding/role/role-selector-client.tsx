@@ -3,72 +3,99 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
-  OnboardingRoleSelector,
   useCurrentUserRoleQuery,
   useSetCurrentUserRoleMutation,
 } from '@17suit/module-seven-reservations-club/client';
-import { AppFrame } from '@17suit/ui';
+import { AppButton, AppFrame } from '@17suit/ui';
+import { InlineError } from '@/components/seven-rc-ui';
+import { describeError } from '@/lib/seven-rc-errors';
 import { getRoleHomePath, type AppRole } from '@/lib/role';
+
+const ROLE_OPTIONS: ReadonlyArray<{
+  role: AppRole;
+  title: string;
+  description: string;
+  cta: string;
+}> = [
+  {
+    role: 'PLAYER',
+    title: 'Quiero reservar canchas',
+    description: 'Busca complejos, elige un horario libre y sigue el estado de tus reservas.',
+    cta: 'Continuar como jugador',
+  },
+  {
+    role: 'OWNER',
+    title: 'Administro un complejo',
+    description: 'Publica tus canchas y horarios, y confirma o rechaza las solicitudes.',
+    cta: 'Continuar como dueño de complejo',
+  },
+];
 
 export function RoleSelectorClient() {
   const router = useRouter();
-  const { role: currentRole, source, error: roleError, refetch } = useCurrentUserRoleQuery();
+  const { error: roleError, refetch } = useCurrentUserRoleQuery();
   const setRoleMutation = useSetCurrentUserRoleMutation();
-  const [isSubmittingRole, setIsSubmittingRole] = useState<AppRole | null>(null);
+  const [submittingRole, setSubmittingRole] = useState<AppRole | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
 
-  const handleSetRole = async (role: AppRole) => {
+  async function handleSetRole(role: AppRole) {
     setSubmitError(null);
-    setIsSubmittingRole(role);
-
+    setStatus(null);
+    setSubmittingRole(role);
     try {
       await setRoleMutation.mutateAsync(role);
-
-      setToast('Rol guardado correctamente. Redirigiendo...');
+      setStatus('Listo. Te llevamos a tu panel…');
       router.replace(getRoleHomePath(role));
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'No se pudo guardar tu rol');
-      setToast('No se pudo guardar el rol. Intenta de nuevo.');
-    } finally {
-      setIsSubmittingRole(null);
+    } catch (error) {
+      setSubmitError(describeError(error, 'No se pudo guardar tu elección. Intenta de nuevo.'));
+      setSubmittingRole(null);
     }
-  };
+  }
 
   return (
     <AppFrame
-      appName="Seven Reservations Club"
-      subtitle="Elige tu perfil inicial para personalizar tu experiencia"
+      appName="¿Cómo vas a usar Seven RC?"
+      subtitle="Elige una opción. Define qué ves al entrar."
     >
-      <div style={{ display: 'grid', gap: 12 }}>
-        <OnboardingRoleSelector
-          role={currentRole}
-          source={source}
-          isSubmittingRole={isSubmittingRole}
-          roleError={roleError}
-          submitError={submitError}
-          onRetryLoad={() => void refetch()}
-          onClearSubmitError={() => setSubmitError(null)}
-          onSelectRole={(role) => void handleSetRole(role)}
-        />
-        {toast ? (
-          <div
-            style={{
-              position: 'fixed',
-              right: 20,
-              bottom: 20,
-              padding: '10px 14px',
-              borderRadius: 10,
-              background: '#0f5132',
-              color: '#e8fff4',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
-              zIndex: 1000,
-            }}
+      {roleError ? (
+        <div className="grid gap-sm">
+          <InlineError message="No pudimos revisar tu cuenta. Puedes elegir igual o reintentar." />
+          <AppButton variant="neutral" fullWidth={false} onPress={() => void refetch()}>
+            Reintentar
+          </AppButton>
+        </div>
+      ) : null}
+
+      <ul className="m-0 grid list-none gap-md p-0 md:grid-cols-2">
+        {ROLE_OPTIONS.map((option) => (
+          <li
+            key={option.role}
+            className="grid content-between gap-md rounded-[var(--radius-lg)] border border-border-strong bg-background p-lg"
           >
-            {toast}
-          </div>
-        ) : null}
-      </div>
+            <div className="grid gap-xs">
+              <h2 className="m-0 font-arvo text-lg leading-[1.3] text-text">{option.title}</h2>
+              <p className="m-0 text-md leading-[1.5] text-muted">{option.description}</p>
+            </div>
+            <AppButton
+              variant="primary"
+              disabled={submittingRole !== null}
+              onPress={() => void handleSetRole(option.role)}
+            >
+              {submittingRole === option.role ? 'Guardando…' : option.cta}
+            </AppButton>
+          </li>
+        ))}
+      </ul>
+
+      <InlineError message={submitError} />
+      <p
+        aria-live="polite"
+        role="status"
+        className="m-0 min-h-[18px] text-sm leading-[18px] text-muted"
+      >
+        {status ?? ''}
+      </p>
     </AppFrame>
   );
 }

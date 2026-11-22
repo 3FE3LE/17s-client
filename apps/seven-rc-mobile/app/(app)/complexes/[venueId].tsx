@@ -10,11 +10,20 @@ import {
   AppSkeleton,
   AppTypography,
   GapView,
+  useAppTheme,
   useAppToast,
 } from '@17suit/ui';
+import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
-import { AuthTabScreen } from '../../../components/auth-tab-screen';
+import { Screen } from '../../../components/screen';
+import { confirmDestructive } from '../../../lib/confirm';
+import { humanizeError } from '../../../lib/error-messages';
+import {
+  formatVenueRange,
+  reservationBadgeVariant,
+  reservationStatusLabel,
+} from '../../../lib/reservation-format';
 import {
   useConfirmVenueReservationMutation,
   useOwnerVenuePitchesQuery,
@@ -38,41 +47,17 @@ function addDays(date: Date, days: number): Date {
   return next;
 }
 
-function formatTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatDay(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString();
-}
-
 function toDateKey(value: string): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return formatDate(date);
 }
 
-function formatReservationStatus(status: string): string {
-  return status.replaceAll('_', ' ');
-}
-
-function reservationBadgeVariant(
-  status: string,
-): 'neutral' | 'success' | 'destructive' | 'warning' | 'info' {
-  if (status === 'confirmed') return 'success';
-  if (status === 'pending_confirmation') return 'warning';
-  if (status === 'rejected' || status === 'cancelled') return 'destructive';
-  if (status === 'completed') return 'info';
-  return 'neutral';
-}
-
 export default function VenueDetailScreen() {
   const router = useRouter();
   const toast = useAppToast();
+  const { theme } = useAppTheme();
+  const iconColor = theme.colors.brandPrimary;
   const params = useLocalSearchParams<{ venueId?: string | string[] }>();
   const venueId = Array.isArray(params.venueId)
     ? (params.venueId[0] ?? null)
@@ -145,10 +130,9 @@ export default function VenueDetailScreen() {
     try {
       setReservationAction({ reservationId, action: 'confirm' });
       await confirmReservationMutation.mutateAsync(reservationId);
-      toast.success('Reserva confirmada', 'El jugador ya puede ver su reserva confirmada.');
+      toast.success('Reserva confirmada', 'El jugador ya ve su reserva como confirmada.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo confirmar la reserva.';
-      toast.error('Error al confirmar', message);
+      toast.error('No se pudo confirmar', humanizeError(error, 'confirm'));
     } finally {
       setReservationAction(null);
     }
@@ -158,13 +142,31 @@ export default function VenueDetailScreen() {
     try {
       setReservationAction({ reservationId, action: 'reject' });
       await rejectReservationMutation.mutateAsync(reservationId);
-      toast.success('Reserva rechazada', 'La reserva quedo marcada como rechazada.');
+      toast.success('Reserva rechazada', 'El jugador verá la reserva como rechazada.');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo rechazar la reserva.';
-      toast.error('Error al rechazar', message);
+      toast.error('No se pudo rechazar', humanizeError(error, 'reject'));
     } finally {
       setReservationAction(null);
     }
+  }
+
+  function askRejectReservation(reservation: VenueReservation) {
+    const who = reservation.user?.name ?? reservation.customerName ?? 'El jugador';
+    confirmDestructive(
+      {
+        title: '¿Rechazar esta reserva?',
+        message: `${reservation.pitch?.name ?? 'Cancha'} · ${formatVenueRange(
+          reservation.startAt,
+          reservation.endAt,
+          venue?.timezone,
+        )}. ${who} verá la reserva como rechazada y el horario quedará libre.`,
+        confirmText: 'Rechazar',
+        cancelText: 'Volver',
+      },
+      () => {
+        void rejectReservation(reservation.id);
+      },
+    );
   }
 
   function renderReservationRow(reservation: VenueReservation, allowActions: boolean) {
@@ -172,14 +174,12 @@ export default function VenueDetailScreen() {
       <AppCard
         key={reservation.id}
         title={reservation.pitch?.name ?? 'Cancha'}
-        subtitle={`${formatDay(reservation.startAt)} · ${formatTime(reservation.startAt)} - ${formatTime(
-          reservation.endAt,
-        )}`}
+        subtitle={formatVenueRange(reservation.startAt, reservation.endAt, venue?.timezone)}
         tone={reservation.status === 'pending_confirmation' ? 'accent' : 'default'}
         footer={
           <GapView gap="sm">
             <AppBadge variant={reservationBadgeVariant(reservation.status)}>
-              {formatReservationStatus(reservation.status)}
+              {reservationStatusLabel(reservation.status)}
             </AppBadge>
             {allowActions && reservation.status === 'pending_confirmation' ? (
               <AppButtonGroup>
@@ -198,9 +198,7 @@ export default function VenueDetailScreen() {
                 <AppButton
                   variant="destructive"
                   disabled={isActionInProgress}
-                  onPress={() => {
-                    void rejectReservation(reservation.id);
-                  }}
+                  onPress={() => askRejectReservation(reservation)}
                 >
                   {reservationAction?.reservationId === reservation.id &&
                   reservationAction.action === 'reject'
@@ -217,19 +215,21 @@ export default function VenueDetailScreen() {
 
   if (role !== 'OWNER') {
     return (
-      <AuthTabScreen appName="Complejo" subtitle="Solo disponible para cuentas OWNER." role={role}>
+      <Screen
+        title="Complejo"
+        subtitle="Solo las cuentas que administran complejos pueden ver esta pantalla."
+      >
         <GapView gap="md">
           <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
         </GapView>
-      </AuthTabScreen>
+      </Screen>
     );
   }
 
   return (
-    <AuthTabScreen
-      appName={venue?.name ?? 'Complejo'}
-      subtitle="Listado de canchas y reservas del complejo."
-      role={role}
+    <Screen
+      title={venue?.name ?? 'Complejo'}
+      subtitle="Canchas y reservas del complejo"
       onRefresh={() => {
         void venuesQuery.refetch();
         void pitchesQuery.refetch();
@@ -256,9 +256,9 @@ export default function VenueDetailScreen() {
         !pitchesQuery.isFetching &&
         (pitchesQuery.data ?? []).length === 0 ? (
           <AppEmpty
-            title="Este complejo aun no tiene canchas"
-            description="Crea la primera cancha para comenzar a recibir reservas."
-            icon="+"
+            title="Este complejo aún no tiene canchas"
+            description="Crea la primera cancha para empezar a recibir reservas."
+            icon={<Feather name="plus" size={20} color={iconColor} />}
             actionLabel="Crear cancha"
             onAction={() => router.push(`/complexes/${venueId}/courts/new`)}
           />
@@ -283,12 +283,8 @@ export default function VenueDetailScreen() {
         {pitchesQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No se pudo cargar canchas"
-            description={
-              pitchesQuery.error instanceof Error
-                ? pitchesQuery.error.message
-                : 'Error desconocido.'
-            }
+            title="No pudimos cargar las canchas"
+            description={humanizeError(pitchesQuery.error, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -314,20 +310,20 @@ export default function VenueDetailScreen() {
 
         {!reservationsQuery.isLoading && reservations.length === 0 ? (
           <AppEmpty
-            title="Sin reservas en la ventana de consulta"
-            description="Mostramos historial reciente y reservas proximas para operar mejor."
-            icon="..."
+            title="Aún no hay reservas"
+            description="Aquí verás las reservas de los últimos 30 días y de los próximos 60."
+            icon={<Feather name="calendar" size={20} color={iconColor} />}
           />
         ) : null}
 
         {!reservationsQuery.isLoading ? (
           <GapView gap="md">
-            <AppTypography variant="subtitle2">Pendientes de confirmacion</AppTypography>
+            <AppTypography variant="subtitle2">Pendientes de confirmación</AppTypography>
             {pendingReservations.length === 0 ? (
               <AppEmpty
                 title="Sin pendientes"
-                description="No hay reservas esperando confirmacion."
-                icon="..."
+                description="No hay reservas esperando tu confirmación."
+                icon={<Feather name="check-circle" size={20} color={iconColor} />}
               />
             ) : null}
             {pendingReservations.map((reservation) => renderReservationRow(reservation, true))}
@@ -337,17 +333,17 @@ export default function VenueDetailScreen() {
               <AppEmpty
                 title="Sin reservas para hoy"
                 description="No hay reservas para la fecha actual."
-                icon="..."
+                icon={<Feather name="sun" size={20} color={iconColor} />}
               />
             ) : null}
             {reservationsToday.map((reservation) => renderReservationRow(reservation, false))}
 
-            <AppTypography variant="subtitle2">Proximas reservas</AppTypography>
+            <AppTypography variant="subtitle2">Próximas reservas</AppTypography>
             {upcomingReservations.length === 0 ? (
               <AppEmpty
                 title="Sin reservas futuras"
                 description="No hay reservas en fechas posteriores."
-                icon="..."
+                icon={<Feather name="calendar" size={20} color={iconColor} />}
               />
             ) : null}
             {upcomingReservations.map((reservation) => renderReservationRow(reservation, false))}
@@ -356,8 +352,8 @@ export default function VenueDetailScreen() {
             {historyReservations.length === 0 ? (
               <AppEmpty
                 title="Sin historial reciente"
-                description="No se encontraron reservas previas en los ultimos 30 dias."
-                icon="..."
+                description="No hubo reservas en los últimos 30 días."
+                icon={<Feather name="clock" size={20} color={iconColor} />}
               />
             ) : null}
             {historyReservations.map((reservation) => renderReservationRow(reservation, false))}
@@ -367,12 +363,8 @@ export default function VenueDetailScreen() {
         {reservationsQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No se pudo cargar reservas"
-            description={
-              reservationsQuery.error instanceof Error
-                ? reservationsQuery.error.message
-                : 'Error desconocido.'
-            }
+            title="No pudimos cargar las reservas"
+            description={humanizeError(reservationsQuery.error, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -385,11 +377,7 @@ export default function VenueDetailScreen() {
             }
           />
         ) : null}
-
-        <AppButton variant="neutral" onPress={() => router.replace('/home')}>
-          Volver al listado de complejos
-        </AppButton>
       </GapView>
-    </AuthTabScreen>
+    </Screen>
   );
 }

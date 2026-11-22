@@ -7,7 +7,17 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Admin is light-only. AppWorkspaceShell paints hard-coded white panels, so the
+ * dark defaults in suit-tokens.css (applied unless the OS prefers light) would
+ * put light text on white. Pin the light values here; AppProviders is pinned to
+ * `themeMode="light"` in app/layout.tsx so the JS theme (AppEmpty, AppAlert,
+ * AppBadge) agrees with the CSS on both server and client. */
 :root {
+  color-scheme: light;
+  --suit-color-bg: #f7f8fa;
+  --suit-color-surface: #ffffff;
+  --suit-color-text: #00151c;
+  --suit-color-muted: #394448;
   --suit-font-arvo: var(--font-arvo, 'Arvo'), serif;
   --suit-font-amaranth: var(--font-amaranth, 'Amaranth'), sans-serif;
   --suit-font-zilla: var(--font-zilla, 'Zilla Slab'), serif;
@@ -30,5 +40,15 @@
 
   a {
     color: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-action-primary);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--color-action-primary-soft);
+    color: var(--color-brand-dark);
   }
 }

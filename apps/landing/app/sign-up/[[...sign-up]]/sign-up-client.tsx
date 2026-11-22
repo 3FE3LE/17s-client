@@ -1,40 +1,15 @@
 'use client';
 
 import { useSignUp } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction, AppTypography, suitTheme } from '@17suit/ui';
+import { AppButton, AppInput } from '@17suit/ui';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
+import { getClerkErrorMessage, isAlreadySignedInError } from '../../lib/clerk-errors';
 
-function getClerkErrors(error: unknown): Array<{ code?: string; message?: string }> {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    return (error as { errors?: Array<{ code?: string; message?: string }> }).errors ?? [];
-  }
-  return [];
-}
-
-function isAlreadySignedInError(error: unknown): boolean {
-  return getClerkErrors(error).some(
-    (e) =>
-      e.code === 'session_exists' ||
-      e.code === 'identifier_already_signed_in' ||
-      (e.message ?? '').toLowerCase().includes('already signed in'),
-  );
-}
-
-function getClerkErrorMessage(error: unknown): string {
-  const errors = getClerkErrors(error) as Array<{
-    code?: string;
-    message?: string;
-    longMessage?: string;
-  }>;
-  const first = errors[0];
-  if (first?.longMessage) return first.longMessage;
-  if (first?.message) return first.message;
-  if (first?.code) return first.code;
-  return 'No fue posible crear la cuenta.';
-}
+const GENERIC_ERROR = 'No pudimos crear tu cuenta. Inténtalo de nuevo en unos minutos.';
 
 export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
   const router = useRouter();
@@ -52,7 +27,7 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
     if (!isLoaded) return;
 
     if (password !== confirmPassword) {
-      setError('Las contrasenas no coinciden.');
+      setError('Las contraseñas no coinciden.');
       return;
     }
 
@@ -77,13 +52,13 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
         return;
       }
 
-      setError('No se pudo iniciar el registro. Intenta de nuevo.');
+      setError('No pudimos crear tu cuenta. Inténtalo de nuevo.');
     } catch (err) {
       if (isAlreadySignedInError(err)) {
         router.replace(redirectTarget);
         return;
       }
-      setError(getClerkErrorMessage(err));
+      setError(getClerkErrorMessage(err, GENERIC_ERROR));
     } finally {
       setIsSubmitting(false);
     }
@@ -104,9 +79,9 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
         return;
       }
 
-      setError('No se pudo completar la verificacion.');
+      setError('No pudimos verificar el código. Revisa tu correo e inténtalo de nuevo.');
     } catch (err) {
-      setError(getClerkErrorMessage(err));
+      setError(getClerkErrorMessage(err, GENERIC_ERROR));
     } finally {
       setIsSubmitting(false);
     }
@@ -114,9 +89,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
 
   return (
     <AuthShell
-      pageLabel="Registro"
-      title="Crea tu cuenta en minutos"
-      description="Completa tu registro una vez y usa la suite completa con la misma identidad."
+      title="Crea tu cuenta 17Suit"
+      description="Regístrate una vez con tu correo y usa la misma cuenta en todas las apps de 17Suit."
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
         {!needsVerification ? (
@@ -126,7 +100,7 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               name="email"
               value={email}
               onChangeText={setEmail}
-              label="Correo electronico"
+              label="Correo electrónico"
               placeholder="tu@empresa.com"
               autoComplete="email"
               spellCheck={false}
@@ -138,8 +112,8 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               name="password"
               value={password}
               onChangeText={setPassword}
-              label="Contrasena"
-              placeholder="Ingresa tu contrasena"
+              label="Contraseña"
+              placeholder="Crea una contraseña"
               autoComplete="new-password"
               required
               error={Boolean(error)}
@@ -149,26 +123,26 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               name="confirmPassword"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              label="Confirmar contrasena"
-              placeholder="Repite tu contrasena"
+              label="Confirmar contraseña"
+              placeholder="Repite tu contraseña"
               autoComplete="new-password"
               required
               error={Boolean(error)}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
-              {isSubmitting ? 'Creando...' : 'Crear cuenta'}
+              {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
             </AppButton>
             <div id="clerk-captcha" />
             <AuthFormError message={error} />
           </form>
         ) : (
           <div className="grid gap-sm">
-            <AppTypography variant="overline" color={suitTheme.colors.muted}>
-              Verificacion de correo
-            </AppTypography>
-            <AppTypography variant="body" color={suitTheme.colors.muted}>
-              Ingresa el codigo que recibiste para activar tu cuenta.
-            </AppTypography>
+            <h2 className="m-0 font-arvo text-lg font-bold leading-[1.25] text-text">
+              Revisa tu correo
+            </h2>
+            <p className="m-0 text-md leading-[1.5] text-muted">
+              Te enviamos un código a {email.trim()}. Escríbelo aquí para activar tu cuenta.
+            </p>
           </div>
         )}
 
@@ -179,25 +153,26 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
               name="code"
               value={code}
               onChangeText={setCode}
-              label="Codigo de verificacion"
-              placeholder="Codigo de verificacion"
+              label="Código de verificación"
+              placeholder="123456"
               autoComplete="one-time-code"
               spellCheck={false}
               required
               error={Boolean(error)}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
-              {isSubmitting ? 'Verificando...' : 'Verificar correo'}
+              {isSubmitting ? 'Verificando…' : 'Verificar correo'}
             </AppButton>
             <AuthFormError message={error} />
           </form>
         ) : null}
 
-        <AppLinkAction
-          onPress={() => router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`)}
+        <Link
+          href={`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`}
+          className="inline-flex min-h-11 w-fit items-center font-bold text-text underline underline-offset-4"
         >
           Ya tengo una cuenta
-        </AppLinkAction>
+        </Link>
       </div>
     </AuthShell>
   );

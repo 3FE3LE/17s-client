@@ -5,7 +5,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { AuthTabScreen } from '../../../../../components/auth-tab-screen';
+import { Screen } from '../../../../../components/screen';
+import { humanizeError } from '../../../../../lib/error-messages';
 import { useCreateVenuePitchMutation } from '../../../../../lib/owner-queries';
 import { Text } from 'react-native';
 
@@ -18,24 +19,24 @@ const createCourtSchema = z.object({
     .refine((value) => {
       const parsed = Number(value);
       return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100;
-    }, 'Capacidad invalida. Debe ser un entero entre 1 y 100.'),
+    }, 'Capacidad inválida. Debe ser un número entero entre 1 y 100.'),
   slotDurationMinutes: z
     .string()
     .trim()
     .refine((value) => {
       const parsed = Number(value);
       return Number.isInteger(parsed) && parsed >= 30;
-    }, 'Duracion invalida. Debe ser un entero mayor o igual a 30.'),
+    }, 'Duración inválida. Debe ser de al menos 30 minutos.'),
 });
 
 type CreateCourtFormValues = z.infer<typeof createCourtSchema>;
 
 const sportOptions = [
-  { value: 'padel', label: 'Padel' },
-  { value: 'futbol-5', label: 'Futbol 5' },
-  { value: 'futbol-7', label: 'Futbol 7' },
+  { value: 'padel', label: 'Pádel' },
+  { value: 'futbol-5', label: 'Fútbol 5' },
+  { value: 'futbol-7', label: 'Fútbol 7' },
   { value: 'tenis', label: 'Tenis' },
-  { value: 'basquet', label: 'Basquet' },
+  { value: 'basquet', label: 'Básquet' },
 ] as const;
 
 const capacityOptions = [
@@ -80,15 +81,14 @@ export default function CreateCourtScreen() {
 
   if (role !== 'OWNER' || !venueId) {
     return (
-      <AuthTabScreen
-        appName="Nueva cancha"
-        subtitle="Ruta invalida o permisos insuficientes."
-        role={role}
+      <Screen
+        title="Nueva cancha"
+        subtitle="No encontramos el complejo o tu cuenta no puede administrarlo."
       >
         <GapView gap="md">
           <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
         </GapView>
-      </AuthTabScreen>
+      </Screen>
     );
   }
 
@@ -103,17 +103,12 @@ export default function CreateCourtScreen() {
       toast.success('Cancha creada', 'La cancha ya aparece en el complejo.');
       router.replace(`/complexes/${venueId}/courts/${created.id}/slots`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo crear la cancha.';
-      toast.error('Error al crear cancha', message);
+      toast.error('No se pudo crear la cancha', humanizeError(error, 'save'));
     }
   });
 
   return (
-    <AuthTabScreen
-      appName="Nueva cancha"
-      subtitle="Agrega una cancha dentro del complejo seleccionado."
-      role={role}
-    >
+    <Screen title="Nueva cancha" subtitle="Agrega una cancha a este complejo.">
       <GapView gap="md">
         <Controller
           control={control}
@@ -123,7 +118,8 @@ export default function CreateCourtScreen() {
               <AppInput
                 value={field.value}
                 onChangeText={field.onChange}
-                placeholder="Nombre de la cancha"
+                label="Nombre de la cancha"
+                placeholder="Ej. Cancha 1"
                 error={fieldState.invalid}
               />
               {fieldState.error ? (
@@ -185,8 +181,8 @@ export default function CreateCourtScreen() {
                 value={field.value}
                 onChangeValue={field.onChange}
                 options={durationOptions as unknown as { value: string; label: string }[]}
-                label="Duracion por turno"
-                placeholder="Seleccionar duracion"
+                label="Duración por turno"
+                placeholder="Seleccionar duración"
                 error={fieldState.invalid}
               />
               {fieldState.error ? (
@@ -198,12 +194,12 @@ export default function CreateCourtScreen() {
           )}
         />
         <AppButton onPress={onSubmit} disabled={!formState.isValid || formState.isSubmitting}>
-          {formState.isSubmitting ? 'Creando...' : 'Guardar cancha'}
+          {formState.isSubmitting ? 'Creando…' : 'Guardar cancha'}
         </AppButton>
-        <AppButton variant="neutral" onPress={() => router.replace(`/complexes/${venueId}`)}>
+        <AppButton variant="neutral" onPress={() => router.back()}>
           Cancelar
         </AppButton>
       </GapView>
-    </AuthTabScreen>
+    </Screen>
   );
 }

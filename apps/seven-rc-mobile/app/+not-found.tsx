@@ -15,7 +15,7 @@ export default function NotFound() {
     <AppFrame appName="Seven Reservations Club" subtitle="Ruta no encontrada.">
       <GapView gap="md">
         <AppButton variant="neutral" disabled>
-          Preparando navegacion...
+          Preparando navegación…
         </AppButton>
       </GapView>
     </AppFrame>

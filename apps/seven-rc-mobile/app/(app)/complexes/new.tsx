@@ -6,15 +6,16 @@ import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
 import { useMemo } from 'react';
 import { z } from 'zod';
-import { AuthTabScreen } from '../../../components/auth-tab-screen';
+import { Screen } from '../../../components/screen';
+import { humanizeError } from '../../../lib/error-messages';
 import { IANA_TIMEZONES } from '../../../lib/iana-timezones';
 import { useCreateVenueMutation } from '../../../lib/owner-queries';
 import { Text } from 'react-native';
 
 const createComplexSchema = z.object({
   name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres.'),
-  location: z.string().trim().max(255, 'Maximo 255 caracteres.').optional().or(z.literal('')),
-  timezone: z.string().trim().max(80, 'Maximo 80 caracteres.').optional().or(z.literal('')),
+  location: z.string().trim().max(255, 'Máximo 255 caracteres.').optional().or(z.literal('')),
+  timezone: z.string().trim().max(80, 'Máximo 80 caracteres.').optional().or(z.literal('')),
 });
 
 type CreateComplexFormValues = z.infer<typeof createComplexSchema>;
@@ -64,15 +65,14 @@ export default function CreateComplexScreen() {
 
   if (role !== 'OWNER') {
     return (
-      <AuthTabScreen
-        appName="Nuevo complejo"
-        subtitle="Solo disponible para cuentas OWNER."
-        role={role}
+      <Screen
+        title="Nuevo complejo"
+        subtitle="Solo las cuentas que administran complejos pueden crear uno."
       >
         <GapView gap="md">
           <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
         </GapView>
-      </AuthTabScreen>
+      </Screen>
     );
   }
 
@@ -89,16 +89,14 @@ export default function CreateComplexScreen() {
       toast.success('Complejo creado', 'Ya puedes agregar canchas.');
       router.replace('/home');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo crear el complejo.';
-      toast.error('Error al crear complejo', message);
+      toast.error('No se pudo crear el complejo', humanizeError(error, 'save'));
     }
   });
 
   return (
-    <AuthTabScreen
-      appName="Nuevo complejo"
-      subtitle="Crea un complejo para luego cargar canchas y gestionar reservas."
-      role={role}
+    <Screen
+      title="Nuevo complejo"
+      subtitle="Crea el complejo; después agregas sus canchas y horarios."
     >
       <GapView gap="md">
         <Controller
@@ -109,7 +107,8 @@ export default function CreateComplexScreen() {
               <AppInput
                 value={field.value}
                 onChangeText={field.onChange}
-                placeholder="Nombre del complejo"
+                label="Nombre del complejo"
+                placeholder="Ej. Club La Cancha"
                 error={fieldState.invalid}
               />
               {fieldState.error ? (
@@ -128,7 +127,8 @@ export default function CreateComplexScreen() {
               <AppInput
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
-                placeholder="Direccion (opcional)"
+                label="Dirección (opcional)"
+                placeholder="Calle, número y ciudad"
                 error={fieldState.invalid}
               />
               {fieldState.error ? (
@@ -148,8 +148,8 @@ export default function CreateComplexScreen() {
                 value={field.value ?? ''}
                 onChangeValue={field.onChange}
                 options={timezoneOptions}
-                label="Timezone"
-                placeholder="Seleccionar timezone"
+                label="Zona horaria"
+                placeholder="Seleccionar zona horaria"
                 error={fieldState.invalid}
               />
               {fieldState.error ? (
@@ -161,12 +161,12 @@ export default function CreateComplexScreen() {
           )}
         />
         <AppButton onPress={onSubmit} disabled={!formState.isValid || formState.isSubmitting}>
-          {formState.isSubmitting ? 'Creando...' : 'Guardar complejo'}
+          {formState.isSubmitting ? 'Creando…' : 'Guardar complejo'}
         </AppButton>
-        <AppButton variant="neutral" onPress={() => router.replace('/home')}>
+        <AppButton variant="neutral" onPress={() => router.back()}>
           Cancelar
         </AppButton>
       </GapView>
-    </AuthTabScreen>
+    </Screen>
   );
 }

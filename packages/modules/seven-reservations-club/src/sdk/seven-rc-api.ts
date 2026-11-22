@@ -16,6 +16,9 @@ export type ReservationStatus = ApiSchema<'ReservationStatus'>;
 export type ReservationBase = ApiSchema<'ReservationResponseDto'>;
 export type ReservationWithVenuePitch = ApiSchema<'ReservationWithVenuePitchResponseDto'>;
 export type VenueReservation = ApiSchema<'VenueReservationResponseDto'>;
+export type AvailabilitySlotStatus = ApiSchema<'AvailabilitySlotStatus'>;
+export type AvailabilitySlot = ApiSchema<'AvailabilitySlotResponseDto'>;
+export type PitchAvailability = ApiSchema<'PitchAvailabilityResponseDto'>;
 
 export type CreateVenueInput = ApiInput<ApiRequestBody<'/7rc/venues', 'post'>>;
 export type CreateReservationInput = ApiInput<ApiRequestBody<'/7rc/reservations', 'post'>>;
@@ -53,6 +56,8 @@ export interface SevenRcOwnerApi {
 export interface SevenRcPlayerApi {
   listVenues: (query?: string) => Promise<PublicVenue[]>;
   listVenuePitches: (venueId: string) => Promise<Pitch[]>;
+  /** Derived slots + prices for a venue-local date (`YYYY-MM-DD`). */
+  getPitchAvailability: (pitchId: string, date: string) => Promise<PitchAvailability>;
   listMyReservations: () => Promise<ReservationWithVenuePitch[]>;
   createReservation: (input: CreateReservationInput) => Promise<ReservationBase>;
   cancelReservation: (reservationId: string) => Promise<ReservationBase>;
@@ -268,6 +273,16 @@ export function createSevenRcPlayerApi(options: SevenRcApiClientOptions): SevenR
         method: 'GET',
         cache: 'no-store',
       });
+    },
+    getPitchAvailability(pitchId, date) {
+      const query = new URLSearchParams({ date });
+      return request<PitchAvailability>(
+        `${apiPath('/7rc/pitches/{pitchId}/availability', { pitchId })}?${query}`,
+        {
+          method: 'GET',
+          cache: 'no-store',
+        },
+      );
     },
     listMyReservations() {
       return request<ReservationWithVenuePitch[]>('/7rc/reservations', {

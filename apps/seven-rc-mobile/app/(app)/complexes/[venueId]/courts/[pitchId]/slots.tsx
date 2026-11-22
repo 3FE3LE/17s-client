@@ -1,29 +1,23 @@
 import { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import {
-  AppButton,
-  AppFrame,
-  AppInput,
-  AppSelect,
-  GapView,
-  useAppTheme,
-  useAppToast,
-} from '@17suit/ui';
+import { AppButton, AppInput, AppSelect, GapView, useAppTheme, useAppToast } from '@17suit/ui';
 import {
   useOwnerVenuePitchesQuery,
   useConfigurePitchSlotsMutation,
 } from '../../../../../../lib/owner-queries';
+import { humanizeError } from '../../../../../../lib/error-messages';
 import { Text, View } from 'react-native';
+import { Screen } from '../../../../../../components/screen';
 
 const dayOptions = [
   { value: '0', label: 'Domingo' },
   { value: '1', label: 'Lunes' },
   { value: '2', label: 'Martes' },
-  { value: '3', label: 'Miercoles' },
+  { value: '3', label: 'Miércoles' },
   { value: '4', label: 'Jueves' },
   { value: '5', label: 'Viernes' },
-  { value: '6', label: 'Sabado' },
+  { value: '6', label: 'Sábado' },
 ] as const;
 
 function formatTime24(value: Date) {
@@ -60,7 +54,7 @@ export default function PitchSlotsScreen() {
 
   const handleSave = async () => {
     if (!pitchId) {
-      toast.error('Error', 'Cancha invalida.');
+      toast.error('Cancha no encontrada', 'Vuelve al complejo y elige la cancha otra vez.');
       return;
     }
 
@@ -75,22 +69,22 @@ export default function PitchSlotsScreen() {
         slotDurationMinutes: Number(slotDurationMinutes) || undefined,
         openingHours: payload,
       });
-      toast.success('Horarios guardados', 'La cancha quedo configurada.');
+      toast.success('Horarios guardados', 'La cancha quedó configurada.');
       router.replace(`/complexes/${venueId}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo guardar el horario.';
-      toast.error('Error', message);
+      toast.error('No se pudieron guardar los horarios', humanizeError(error, 'save'));
     }
   };
 
   return (
-    <AppFrame appName="Horarios" subtitle="Configura horarios de apertura para la cancha.">
+    <Screen title="Horarios" subtitle="Define qué días y a qué horas abre la cancha.">
       <GapView gap="md">
         <AppInput
           value={slotDurationMinutes}
           onChangeText={setSlotDurationMinutes}
           keyboardType="numeric"
-          placeholder="Duracion del turno (min)"
+          label="Duración del turno (minutos)"
+          placeholder="60"
         />
         <GapView gap="sm">
           {openingHours.map((row, index) => (
@@ -113,8 +107,8 @@ export default function PitchSlotsScreen() {
                   );
                 }}
                 options={dayOptions as unknown as { value: string; label: string }[]}
-                label="Dia"
-                placeholder="Seleccionar dia"
+                label="Día"
+                placeholder="Seleccionar día"
               />
               <AppButton variant="neutral" onPress={() => setPicker({ index, field: 'open' })}>
                 {`Apertura: ${row.openTime}`}
@@ -128,7 +122,7 @@ export default function PitchSlotsScreen() {
                   setOpeningHours((prev) => prev.filter((_, idx) => idx !== index));
                 }}
               >
-                Eliminar dia
+                Quitar este día
               </AppButton>
             </View>
           ))}
@@ -142,10 +136,10 @@ export default function PitchSlotsScreen() {
             ]);
           }}
         >
-          Agregar dia
+          Agregar día
         </AppButton>
         <AppButton onPress={handleSave} disabled={configureMutation.isPending}>
-          {configureMutation.isPending ? 'Guardando...' : 'Guardar horarios'}
+          {configureMutation.isPending ? 'Guardando…' : 'Guardar horarios'}
         </AppButton>
         <AppButton variant="neutral" onPress={() => router.back()}>
           Cancelar
@@ -175,13 +169,13 @@ export default function PitchSlotsScreen() {
       ) : null}
 
       {pitchesQuery.isLoading ? (
-        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Cargando cancha...</Text>
+        <Text style={{ color: theme.colors.muted, fontSize: 12 }}>Cargando cancha…</Text>
       ) : null}
       {!pitchesQuery.isLoading && !pitch ? (
         <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-          No se encontro la cancha seleccionada.
+          No encontramos la cancha seleccionada.
         </Text>
       ) : null}
-    </AppFrame>
+    </Screen>
   );
 }

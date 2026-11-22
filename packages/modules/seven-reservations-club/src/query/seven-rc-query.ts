@@ -8,6 +8,7 @@ import type {
   CreateVenueInput,
   OwnerVenue,
   Pitch,
+  PitchAvailability,
   PublicVenue,
   ReservationBase,
   ReservationWithVenuePitch,
@@ -28,6 +29,10 @@ export const sevenRcQueryKeys = {
   playerVenues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
   playerVenuePitches: (venueId: string) =>
     ['seven-rc', 'player', 'venues', venueId, 'pitches'] as const,
+  pitchAvailabilityBase: (pitchId: string) =>
+    ['seven-rc', 'pitches', pitchId, 'availability'] as const,
+  pitchAvailability: (pitchId: string, date: string) =>
+    ['seven-rc', 'pitches', pitchId, 'availability', date] as const,
 };
 
 export function useSevenRcOwnerVenuesQuery(api: SevenRcOwnerApi) {
@@ -197,6 +202,30 @@ export function useSevenRcPlayerVenuePitchesQuery(api: SevenRcPlayerApi, venueId
     staleTime: 60 * 1000,
     gcTime: 15 * 60 * 1000,
     refetchOnMount: false,
+    refetchOnReconnect: false,
+  });
+}
+
+/**
+ * Slot availability for one pitch on a venue-local date (`YYYY-MM-DD`). Short stale
+ * time: slots change as other players book, so a revisit should not show stale chips.
+ */
+export function useSevenRcPitchAvailabilityQuery(
+  api: SevenRcPlayerApi,
+  pitchId: string | null,
+  date: string | null,
+) {
+  return useQuery<PitchAvailability>({
+    queryKey: sevenRcQueryKeys.pitchAvailability(pitchId ?? 'missing', date ?? 'missing'),
+    queryFn: () => {
+      if (!pitchId || !date) {
+        throw new Error('Pitch id and date are required');
+      }
+      return api.getPitchAvailability(pitchId, date);
+    },
+    enabled: Boolean(pitchId && date),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
     refetchOnReconnect: false,
   });
 }
