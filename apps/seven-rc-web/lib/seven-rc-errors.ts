@@ -1,8 +1,11 @@
 /**
- * Maps server/SDK error messages to Spanish copy a player or owner can act on.
- * Unknown messages keep the raw text after the action-specific fallback, so
- * nothing is hidden when the server adds a new error.
+ * Maps server/SDK errors to Spanish copy a player or owner can act on.
+ * Known server messages win; otherwise the HTTP status (SevenRcApiError) picks a
+ * generic message; otherwise the action-specific fallback. Raw server text is
+ * never shown to users (it is English and often internal).
  */
+import { SevenRcApiError } from '@17suit/module-seven-reservations-club';
+
 const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchArray) => string }> =
   [
     {
@@ -80,14 +83,31 @@ const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchA
 
 export function describeError(error: unknown, fallback: string): string {
   const raw = error instanceof Error ? error.message.trim() : '';
-  if (!raw) return fallback;
 
   for (const entry of KNOWN_ERRORS) {
     const found = raw.match(entry.match);
     if (found) return entry.message(found);
   }
 
-  return `${fallback} (${raw})`;
+  if (error instanceof SevenRcApiError) {
+    const byStatus = describeStatus(error.status);
+    if (byStatus) return byStatus;
+  }
+
+  return fallback;
+}
+
+function describeStatus(status: number): string | null {
+  if (status === 401) return 'Tu sesión expiró. Vuelve a iniciar sesión.';
+  if (status === 403) return 'Tu cuenta no tiene permiso para esta acción.';
+  if (status === 404) return 'Lo que buscas ya no existe. Actualiza la página.';
+  if (status === 409)
+    return 'Alguien hizo un cambio al mismo tiempo. Actualiza y vuelve a intentar.';
+  if (status === 400 || status === 422)
+    return 'Revisa los datos del formulario e intenta de nuevo.';
+  if (status === 429) return 'Demasiados intentos seguidos. Espera un momento e intenta de nuevo.';
+  if (status >= 500) return 'El servidor tuvo un problema. Intenta de nuevo en unos minutos.';
+  return null;
 }
 
 /** True when the failure means the slot list on screen is stale. */

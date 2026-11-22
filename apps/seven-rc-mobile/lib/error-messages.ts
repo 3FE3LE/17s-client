@@ -1,11 +1,14 @@
 /**
  * Map raw SDK / network errors to human Spanish copy.
  *
- * The module SDK throws plain `Error`s whose message is either the server's
- * HTTP reason phrase (Nest's `error` field, e.g. "Conflict"), a synthetic
- * "Request failed (409)", "Unauthorized", or a fetch/abort failure. The
- * status code is not exposed as a field, so we match on the message.
+ * HTTP failures arrive as `SevenRcApiError`, which carries `.status`; that is
+ * mapped first. Everything else is a non-HTTP failure: a plain `Error` /
+ * `TypeError` from fetch (offline, DNS), an `AbortError` from the timeout, or
+ * the SDK's own `Error('Unauthorized')` when no token is available. Those fall
+ * back to message heuristics.
  */
+
+import { SevenRcApiError } from '@17suit/module-seven-reservations-club/client';
 
 type Context = 'load' | 'create' | 'cancel' | 'confirm' | 'reject' | 'save';
 
@@ -48,7 +51,22 @@ function statusFromMessage(message: string): number | null {
   return match ? Number(match[1]) : null;
 }
 
+function fromStatus(status: number, context: Context): string | null {
+  if (status === 401) return SESSION;
+  if (status === 403) return FORBIDDEN;
+  if (status === 404) return NOT_FOUND;
+  if (status === 409) return CONFLICT[context];
+  if (status === 400 || status === 422) return BAD_REQUEST[context];
+  if (status === 429) return RATE;
+  if (status >= 500) return SERVER;
+  return null;
+}
+
 export function humanizeError(error: unknown, context: Context = 'load'): string {
+  if (error instanceof SevenRcApiError) {
+    return fromStatus(error.status, context) ?? FALLBACK[context];
+  }
+
   const raw = error instanceof Error ? error.message : typeof error === 'string' ? error : null;
   if (raw === null) return FALLBACK[context];
   const message = raw.trim();

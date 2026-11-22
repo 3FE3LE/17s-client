@@ -132,6 +132,18 @@ export function SignUpClient({ redirectTarget }: { redirectTarget: string }) {
             <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
             </AppButton>
+            <p className="m-0 text-sm leading-[18px] text-muted">
+              {/* TODO(legal): switch to "Al crear tu cuenta aceptas…" once the terms are final. */}
+              Consulta los{' '}
+              <Link href="/terminos" className="font-bold text-text underline underline-offset-4">
+                Términos
+              </Link>{' '}
+              y la{' '}
+              <Link href="/privacidad" className="font-bold text-text underline underline-offset-4">
+                Política de privacidad
+              </Link>
+              .
+            </p>
             <div id="clerk-captcha" />
             <AuthFormError message={error} />
           </form>
