@@ -22,7 +22,7 @@ usage() {
 Usage:
   $0 development preview [vX.Y.Z-rc.N] [--dry-run]
   $0 preview production vX.Y.Z [--dry-run]
-  $0 tag <preview|production> vX.Y.Z[-rc.N]   # after the promotion PR merged
+  $0 tag <preview|production> vX.Y.Z[-rc.N]   # after the promotion PR merged; also creates the GitHub release
 
 The promotion commands open a PR. Merge it with "Squash and merge".
 EOF
@@ -31,6 +31,40 @@ EOF
 fail() {
   echo "Error: $*" >&2
   exit 1
+}
+
+# Newest commit reachable from $1 whose tree is $2 (empty when there is none).
+commit_with_tree() {
+  git log --format='%H %T' "$1" | awk -v tree="$2" '$2 == tree && !found { print $1; found = 1 }'
+}
+
+# Release notes for promotion commit $1: what landed on development since the
+# previous tag of the same branch. A squash hides it from GitHub's own generator.
+release_notes() {
+  local current previous_tag previous="" commit subject body
+  current="$(commit_with_tree origin/development "$(git rev-parse "$1^{tree}")")"
+  previous_tag="$(git describe --tags --abbrev=0 "$1^" 2>/dev/null || true)"
+  if [ -n "$previous_tag" ]; then
+    previous="$(commit_with_tree origin/development "$(git rev-parse "$previous_tag^{tree}")")"
+  fi
+  if [ -z "$current" ] || [ -z "$previous" ]; then
+    echo "Promotion $1."
+    return
+  fi
+  echo "Changes since $previous_tag:"
+  echo
+  for commit in $(git rev-list --first-parent "$previous..$current"); do
+    subject="$(git log -1 --format=%s "$commit")"
+    body="$(git log -1 --format=%b "$commit")"
+    case "$subject" in
+      # A merge commit carries the PR title on the first line of its body.
+      "Merge pull request #"*)
+        subject="${subject#Merge pull request }"
+        subject="${body%%$'\n'*} (${subject%% *})"
+        ;;
+    esac
+    echo "- $subject"
+  done
 }
 
 DRY_RUN=false
@@ -84,13 +118,24 @@ if [ "$SOURCE" = "tag" ]; then
     "chore(release): promote "*" to $TARGET $VERSION "*) ;;
     *) fail "the tip of origin/$TARGET is not the merged promotion of $VERSION." ;;
   esac
+  NOTES="$(release_notes "$SHA")"
+  # A suffix (-rc.1) means pre-release. Only a plain version becomes "Latest".
+  case "$VERSION" in
+    *-*) KIND=(--prerelease --latest=false) ;;
+    *) KIND=(--latest) ;;
+  esac
   if $DRY_RUN; then
-    echo "[dry run] would tag $SHA as $VERSION."
+    echo "[dry run] would tag $SHA as $VERSION and create a GitHub release (${KIND[*]}):"
+    echo "$NOTES"
     exit 0
   fi
+  command -v gh >/dev/null || fail "the GitHub CLI (gh) is required to create the release."
   git tag -a "$VERSION" -m "Release $VERSION" "$SHA"
   git push origin "refs/tags/$VERSION"
   echo "Tagged origin/$TARGET ($SHA) as $VERSION."
+  gh release create "$VERSION" --verify-tag "${KIND[@]}" --title "$VERSION" --notes "$NOTES" ||
+    fail "the tag was pushed but the release was not created. Create it with:
+gh release create $VERSION --verify-tag ${KIND[*]} --generate-notes"
   exit 0
 fi
 
@@ -103,11 +148,6 @@ if [ "$SOURCE_TREE" = "$TARGET_TREE" ]; then
   echo "$TARGET already has the content of $SOURCE. Nothing to promote."
   exit 0
 fi
-
-# Newest commit reachable from $1 whose tree is $2 (empty when there is none).
-commit_with_tree() {
-  git log --format='%H %T' "$1" | awk -v tree="$2" '$2 == tree && !found { print $1; found = 1 }'
-}
 
 # Safety check, in two steps:
 # 1. The source must be a state that existed on `development`. A direct change
