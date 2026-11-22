@@ -9,7 +9,9 @@ interface PageProps {
 
 export default async function SignUpPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const redirectTarget = resolveRedirectTarget(params.redirect_url);
+  // Sign-up with no product to return to lands on "Elige tu app" (/apps), not home.
+  // Product pages pass `redirect_url` so their sign-ups still go back to the product.
+  const redirectTarget = params.redirect_url ? resolveRedirectTarget(params.redirect_url) : '/apps';
   const { userId } = await auth();
 
   if (userId) {

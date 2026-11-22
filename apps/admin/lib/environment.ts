@@ -5,7 +5,7 @@ export type DeploymentEnvironment = 'production' | 'preview' | 'development';
 
 export const environmentLabel: Record<DeploymentEnvironment, string> = {
   production: 'Producción',
-  preview: 'Preview',
+  preview: 'Pruebas',
   development: 'Desarrollo',
 };
 

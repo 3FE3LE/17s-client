@@ -1,7 +1,9 @@
-import Image from 'next/image';
+import { SignOutButton } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import Link from 'next/link';
 import type { SVGProps } from 'react';
 import { statusLabel, type ProductStatus } from '../lib/products';
+import { SiteLogo } from './site-logo';
 
 /*
  * Shared landing primitives. Colors come from design tokens only
@@ -11,12 +13,23 @@ import { statusLabel, type ProductStatus } from '../lib/products';
 const buttonBase =
   'inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-5 text-md font-bold leading-[1.3] no-underline transition-[transform,box-shadow,background-color,border-color] duration-200 ease-out hover:-translate-y-px motion-reduce:transition-none motion-reduce:hover:translate-y-0';
 
-export const primaryButtonClass = `${buttonBase} border-action-primary-border bg-action-primary text-white shadow-action-primary hover:shadow-[0_16px_30px_rgb(0_145_110/0.3)]`;
+/* Dark mode drops the green glow for a neutral offset shadow (see globals.css too). */
+export const primaryButtonClass = `${buttonBase} border-action-primary-border bg-action-primary text-white shadow-action-primary hover:shadow-[0_16px_30px_rgb(0_145_110/0.3)] dark:shadow-[0_4px_12px_rgb(0_0_0/0.28)] dark:hover:shadow-[0_8px_18px_rgb(0_0_0/0.32)]`;
 
 export const secondaryButtonClass = `${buttonBase} border-line bg-surface text-text hover:border-[color-mix(in_oklab,var(--color-text)_32%,transparent)]`;
 
 /** Accent button for a product's own CTA; must sit inside a `[data-product]`. */
-export const productButtonClass = `${buttonBase} border-product bg-product text-on-product hover:shadow-[0_14px_28px_color-mix(in_oklab,var(--color-product)_32%,transparent)]`;
+export const productButtonClass = `${buttonBase} border-product bg-product text-on-product hover:shadow-[0_14px_28px_color-mix(in_oklab,var(--color-product)_32%,transparent)] dark:hover:shadow-[0_8px_18px_rgb(0_0_0/0.32)]`;
+
+/** Compact header control: same shape as the buttons, smaller padding. */
+const compactButtonBase =
+  'inline-flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-full border px-4 text-md font-bold leading-[1.3] no-underline transition-[background-color,border-color] duration-200 ease-out motion-reduce:transition-none';
+
+export const compactSecondaryButtonClass = `${compactButtonBase} border-line bg-surface text-text hover:border-[color-mix(in_oklab,var(--color-text)_32%,transparent)]`;
+
+/** One heading style for every section h2 on landing pages. */
+export const sectionHeadingClass =
+  'm-0 font-arvo text-[clamp(28px,3.6vw,40px)] font-bold leading-[1.15] tracking-[-0.015em] text-text';
 
 /* Icon geometry from lucide (ISC): arrow-right and arrow-up-right, 24px grid, 2px stroke. */
 function IconBase(props: SVGProps<SVGSVGElement>) {
@@ -59,8 +72,8 @@ export function ArrowUpRightIcon(props: SVGProps<SVGSVGElement>) {
 export function StatusBadge({ status }: { status: ProductStatus }) {
   const tone: Record<ProductStatus, string> = {
     live: 'border-product bg-product text-on-product',
-    beta: 'border-product text-product',
-    soon: 'border-line text-muted',
+    beta: 'border-product bg-surface text-product',
+    soon: 'border-line bg-surface text-muted',
   };
 
   return (
@@ -73,31 +86,44 @@ export function StatusBadge({ status }: { status: ProductStatus }) {
 }
 
 interface SiteHeaderProps {
+  /** Where "Entrar" goes; product pages pass a `redirect_url` back to the product. */
   signInHref?: string;
-  signUpHref?: string;
 }
 
-export function SiteHeader({ signInHref = '/sign-in', signUpHref = '/sign-up' }: SiteHeaderProps) {
-  return (
-    <header className="mb-[var(--spacing-xl)] flex flex-wrap items-center justify-between gap-[var(--spacing-md)] md:mb-[var(--spacing-x3l)]">
-      <Link href="/" className="inline-flex min-h-11 items-center rounded-md no-underline">
-        <Image
-          src="/logo-17suit@4x.svg"
-          alt="17Suit, inicio"
-          width={196}
-          height={62}
-          className="h-[40px] w-auto dark:brightness-0 dark:invert"
-          priority
-        />
-      </Link>
+/*
+ * Server component: reads the Clerk session so signed-in visitors see
+ * "Mis apps" and "Cerrar sesión" instead of the sign-in entry point.
+ */
+export async function SiteHeader({ signInHref = '/sign-in' }: SiteHeaderProps) {
+  const { userId } = await auth();
 
-      <nav aria-label="Cuenta" className="flex items-center gap-[var(--spacing-sm)]">
-        <Link href={signInHref} className={secondaryButtonClass}>
-          Iniciar sesión
-        </Link>
-        <Link href={signUpHref} className={primaryButtonClass}>
-          Crear cuenta
-        </Link>
+  return (
+    <header className="mb-[var(--spacing-xl)] flex flex-nowrap items-center justify-between gap-[var(--spacing-sm)] md:mb-[var(--spacing-x3l)]">
+      <SiteLogo />
+
+      <nav
+        aria-label="Cuenta"
+        className="flex items-center gap-[var(--spacing-xs)] md:gap-[var(--spacing-sm)]"
+      >
+        {userId ? (
+          <>
+            <Link href="/apps" className={compactSecondaryButtonClass}>
+              Mis apps
+            </Link>
+            <SignOutButton redirectUrl="/">
+              <button
+                type="button"
+                className="inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 text-md font-bold leading-[1.3] text-text underline underline-offset-4"
+              >
+                Cerrar sesión
+              </button>
+            </SignOutButton>
+          </>
+        ) : (
+          <Link href={signInHref} className={compactSecondaryButtonClass}>
+            Entrar
+          </Link>
+        )}
       </nav>
     </header>
   );

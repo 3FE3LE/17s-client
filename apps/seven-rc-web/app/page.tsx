@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { getSevenReservationsClubPostAuthPath } from '@17suit/module-seven-reservations-club';
-import { buttonRecipe, cx, pageContainerRecipe } from '@17suit/ui';
+import { CheckCircle2, buttonRecipe, cx, pageContainerRecipe } from '@17suit/ui';
 import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -25,6 +25,10 @@ const AUDIENCES = [
   },
 ] as const;
 
+/** Sign-up that lands on role onboarding with the matching option pre-selected. */
+const signUpFor = (rol: 'jugador' | 'complejo') =>
+  `/sign-up?redirect_url=${encodeURIComponent(`/onboarding/role?rol=${rol}`)}`;
+
 const PREVIEW_SLOTS = [
   { time: '6:00 p. m.', free: false },
   { time: '7:00 p. m.', free: true, selected: true },
@@ -43,12 +47,14 @@ function SlotPreview() {
             <span
               key={slot.time}
               className={cx(
-                'flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border px-3 text-md tabular-nums',
+                'flex min-h-11 items-center justify-center gap-xs rounded-[var(--radius-md)] border px-3 text-md tabular-nums',
                 !slot.free && 'border-border-default text-muted line-through',
-                slot.free && 'border-border-strong font-bold text-text',
-                'selected' in slot && 'border-action-primary bg-action-primary-soft',
+                slot.free && !('selected' in slot) && 'border-border-strong font-bold text-text',
+                'selected' in slot &&
+                  'border-action-primary bg-action-primary font-bold text-foreground-inverse shadow-[0_2px_8px_rgb(0_0_0/0.16)]',
               )}
             >
+              {'selected' in slot ? <CheckCircle2 size={16} aria-hidden /> : null}
               {slot.time}
             </span>
           ))}
@@ -102,7 +108,8 @@ export default async function HomePage() {
             </span>
           </Link>
 
-          <nav className="flex w-full gap-[var(--spacing-sm)] md:w-auto">
+          {/* Mobile already gets both actions in the hero; the header copy would duplicate them. */}
+          <nav aria-label="Cuenta" className="hidden gap-[var(--spacing-sm)] md:flex">
             <Link
               href="/sign-in?redirect_url=/"
               className={cx(
@@ -112,7 +119,7 @@ export default async function HomePage() {
                   platform: 'web',
                   fullWidth: false,
                 }),
-                'flex-1 md:flex-none',
+                'flex-none',
               )}
             >
               Iniciar sesión
@@ -121,7 +128,7 @@ export default async function HomePage() {
               href="/sign-up?redirect_url=/"
               className={cx(
                 buttonRecipe({ intent: 'primary', size: 'sm', platform: 'web', fullWidth: false }),
-                'flex-1 md:flex-none',
+                'flex-none',
               )}
             >
               Crear cuenta
@@ -143,28 +150,43 @@ export default async function HomePage() {
 
             <div className="mt-[var(--spacing-lg)] flex flex-wrap gap-[var(--spacing-sm)]">
               <Link
-                href="/sign-up?redirect_url=/"
-                className={buttonRecipe({
-                  intent: 'primary',
-                  size: 'lg',
-                  platform: 'web',
-                  fullWidth: false,
-                })}
+                href={signUpFor('jugador')}
+                className={cx(
+                  buttonRecipe({
+                    intent: 'primary',
+                    size: 'lg',
+                    platform: 'web',
+                    fullWidth: false,
+                  }),
+                  'w-full sm:w-auto',
+                )}
               >
-                Crear cuenta
+                Reservar una cancha
               </Link>
               <Link
-                href="/sign-in?redirect_url=/"
-                className={buttonRecipe({
-                  intent: 'secondary',
-                  size: 'lg',
-                  platform: 'web',
-                  fullWidth: false,
-                })}
+                href={signUpFor('complejo')}
+                className={cx(
+                  buttonRecipe({
+                    intent: 'secondary',
+                    size: 'lg',
+                    platform: 'web',
+                    fullWidth: false,
+                  }),
+                  'w-full sm:w-auto',
+                )}
               >
-                Ya tengo cuenta
+                Publicar mi complejo
               </Link>
             </div>
+            <p className="mt-[var(--spacing-sm)] text-md leading-[1.5] text-muted">
+              ¿Ya tienes cuenta?{' '}
+              <Link
+                href="/sign-in?redirect_url=/"
+                className="inline-flex min-h-11 items-center font-bold text-text underline underline-offset-4"
+              >
+                Inicia sesión
+              </Link>
+            </p>
           </div>
 
           <SlotPreview />

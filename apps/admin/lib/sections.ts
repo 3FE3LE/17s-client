@@ -30,7 +30,7 @@ export const consoleSections: ConsoleSection[] = [
     purpose:
       'Listar y gestionar los espacios de trabajo de cada cliente: alta, suspensión y productos contratados.',
     dependency:
-      'Requiere un endpoint de administración de tenants en 17s-server que todavía no existe.',
+      'Requiere un punto de acceso de la API de administración de tenants en 17s-server que todavía no existe.',
   },
   {
     key: 'feature-flags',
@@ -48,7 +48,7 @@ export const consoleSections: ConsoleSection[] = [
     title: 'Facturación',
     purpose: 'Consultar suscripciones, planes y facturas de cada tenant.',
     dependency:
-      'La integración con Stripe vive en 17s-server y aún no expone endpoints para esta consola.',
+      'La integración con Stripe vive en 17s-server y aún no expone puntos de acceso de la API para esta consola.',
   },
   {
     key: 'analytics',

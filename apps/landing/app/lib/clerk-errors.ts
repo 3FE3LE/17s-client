@@ -10,6 +10,7 @@ export interface ClerkApiError {
   code?: string;
   message?: string;
   longMessage?: string;
+  meta?: { paramName?: string };
 }
 
 export function getClerkErrors(error: unknown): ClerkApiError[] {
@@ -68,4 +69,38 @@ const messagesByCode: Record<string, string> = {
 export function getClerkErrorMessage(error: unknown, fallback: string): string {
   const code = getClerkErrors(error)[0]?.code;
   return (code && messagesByCode[code]) || fallback;
+}
+
+/** Which field an error belongs to, so only that input gets `aria-invalid`. */
+export type AuthErrorField = 'email' | 'password' | 'code' | null;
+
+const fieldByCode: Record<string, AuthErrorField> = {
+  form_identifier_not_found: 'email',
+  form_identifier_exists: 'email',
+  form_param_format_invalid: 'email',
+  not_allowed_access: 'email',
+  form_password_incorrect: 'password',
+  form_password_length_too_short: 'password',
+  form_password_pwned: 'password',
+  form_password_not_strong_enough: 'password',
+  form_password_validation_failed: 'password',
+  form_code_incorrect: 'code',
+  verification_expired: 'code',
+  verification_failed: 'code',
+};
+
+const fieldByParam: Record<string, AuthErrorField> = {
+  identifier: 'email',
+  email_address: 'email',
+  password: 'password',
+  code: 'code',
+};
+
+export function getClerkErrorField(error: unknown): AuthErrorField {
+  const first = getClerkErrors(error)[0];
+  if (!first) return null;
+  const byCode = first.code ? fieldByCode[first.code] : undefined;
+  if (byCode) return byCode;
+  const param = first.meta?.paramName;
+  return (param && fieldByParam[param]) || null;
 }

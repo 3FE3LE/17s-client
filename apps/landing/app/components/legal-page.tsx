@@ -111,7 +111,7 @@ export function LegalPage({ title, description, sections }: LegalPageProps) {
               >
                 <h2
                   id={`${section.id}-title`}
-                  className="m-0 text-balance font-amaranth text-[clamp(22px,2.6vw,28px)] font-bold leading-[1.2] text-text"
+                  className="m-0 text-balance font-arvo text-[clamp(22px,2.6vw,28px)] font-bold leading-[1.2] text-text"
                 >
                   {section.title}
                 </h2>

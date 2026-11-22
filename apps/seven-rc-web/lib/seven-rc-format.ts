@@ -168,3 +168,23 @@ const STATUS_COPY: Record<string, { label: string; variant: BadgeVariant }> = {
 export function reservationStatus(status: string): { label: string; variant: BadgeVariant } {
   return STATUS_COPY[status] ?? { label: status.replaceAll('_', ' '), variant: 'neutral' };
 }
+
+/** "Actualizado hace 3 min" from a React Query `dataUpdatedAt` and a ticking `now`. */
+export function formatUpdatedAgo(updatedAt: number, now: number): string {
+  if (!updatedAt) return 'Sin actualizar todavía';
+  const minutes = Math.floor(Math.max(0, now - updatedAt) / 60_000);
+  if (minutes < 1) return 'Actualizado hace un momento';
+  if (minutes < 60) return `Actualizado hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return hours === 1 ? 'Actualizado hace 1 h' : `Actualizado hace ${hours} h`;
+}
+
+/** Venue-local hour (0–23) of an instant, for grouping slots by part of day. */
+export function hourInTimeZone(instant: string, timeZone: string): number {
+  const hour = new Intl.DateTimeFormat('en-GB', {
+    timeZone,
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(instant));
+  return Number(hour) % 24;
+}

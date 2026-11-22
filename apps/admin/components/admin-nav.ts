@@ -14,4 +14,6 @@ export const adminNavItems: AppWorkspaceNavItem[] = consoleSections.map((section
   href: section.href,
   label: section.label,
   icon: sectionIcons[section.key],
+  // Sections with a missing dependency are routes that say "not available yet".
+  ...(section.dependency ? { badge: 'Pendiente' } : {}),
 }));

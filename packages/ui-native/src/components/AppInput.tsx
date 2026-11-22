@@ -16,6 +16,8 @@ export interface AppInputProps {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   onRightIconPress?: () => void;
+  /** Screen-reader label for the right icon button (e.g. "Borrar búsqueda"). */
+  rightIconAccessibilityLabel?: string;
   showPasswordToggle?: boolean;
   keyboardType?: string;
   secureTextEntry?: boolean;
@@ -24,6 +26,8 @@ export interface AppInputProps {
   autoComplete?: TextInputProps['autoComplete'];
   autoCorrect?: boolean;
   accessibilityLabel?: string;
+  returnKeyType?: TextInputProps['returnKeyType'];
+  onSubmitEditing?: () => void;
 }
 
 export function AppInput({
@@ -37,6 +41,7 @@ export function AppInput({
   leftIcon,
   rightIcon,
   onRightIconPress,
+  rightIconAccessibilityLabel,
   showPasswordToggle = true,
   keyboardType,
   autoCapitalize,
@@ -45,6 +50,8 @@ export function AppInput({
   autoComplete,
   autoCorrect,
   accessibilityLabel,
+  returnKeyType,
+  onSubmitEditing,
 }: AppInputProps) {
   const { theme } = useAppTheme();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -81,6 +88,8 @@ export function AppInput({
           autoComplete={autoComplete}
           autoCorrect={autoCorrect}
           accessibilityLabel={accessibilityLabel ?? resolvedLabel}
+          {...(returnKeyType ? { returnKeyType } : {})}
+          {...(onSubmitEditing ? { onSubmitEditing: () => onSubmitEditing() } : {})}
           placeholderTextColor={theme.colors.muted}
           className={inputClasses.control}
           style={{
@@ -104,6 +113,11 @@ export function AppInput({
         {!shouldShowPasswordToggle && rightIcon ? (
           <Pressable
             onPress={onRightIconPress}
+            accessibilityRole="button"
+            {...(rightIconAccessibilityLabel
+              ? { accessibilityLabel: rightIconAccessibilityLabel }
+              : {})}
+            hitSlop={10}
             className="absolute right-[10px] top-1/2 h-6 w-6 -translate-y-[12px] items-center justify-center"
           >
             {rightIcon}

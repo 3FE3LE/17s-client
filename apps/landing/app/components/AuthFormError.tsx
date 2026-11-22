@@ -3,15 +3,17 @@ import { needsContactLink } from '../lib/clerk-errors';
 
 interface AuthFormErrorProps {
   message: string | null;
+  /** Referenced by the invalid input's `aria-describedby`. */
+  id?: string;
 }
 
-export function AuthFormError({ message }: AuthFormErrorProps) {
+export function AuthFormError({ message, id }: AuthFormErrorProps) {
   if (!message) {
     return null;
   }
 
   return (
-    <div role="alert" aria-live="polite" className="grid gap-[2px]">
+    <div id={id} role="alert" aria-live="polite" className="grid gap-[2px]">
       <p className="m-0 text-sm leading-[18px] text-destructive">{message}</p>
       {needsContactLink(message) ? (
         <Link

@@ -44,7 +44,7 @@
 | errors / loading       | `app/(console)/error.tsx`, `app/(console)/loading.tsx`          | Spanish `AppAlert` + retry, `AppSkeleton`                                |
 | 404                    | `app/not-found.tsx`                                             | Spanish, link to Resumen                                                 |
 
-Shell: `components/admin-shell.tsx` wraps `AppWorkspaceShell` and adds a context bar with the environment badge (Producción / Preview / Desarrollo, from `VERCEL_ENV` then `NODE_ENV`) and the operator email. Nav and section copy: `lib/sections.ts`.
+Shell: `components/admin-shell.tsx` wraps `AppWorkspaceShell` (`density="compact"`, no eyebrow, `account` = operator email next to "Cerrar sesión") and adds an environment strip above it ("Entorno de producción / pruebas / desarrollo", from `VERCEL_ENV` then `NODE_ENV`; destructive tone in production). Pending sections carry a "Pendiente" nav badge. While the console is read-only, production does not say "Estás operando sobre datos reales"; add that warning when the first write action lands. Nav and section copy: `lib/sections.ts`.
 
 ## Local conventions
 

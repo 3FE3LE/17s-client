@@ -1,5 +1,5 @@
 import { useAuth } from '@clerk/clerk-expo';
-import { QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import {
   SevenReservationsClubRoleDataSourceProvider,
   createSevenRcQueryClient,
@@ -7,6 +7,19 @@ import {
 } from '@17suit/module-seven-reservations-club/client';
 import Constants from 'expo-constants';
 import { useMemo, useState, type PropsWithChildren } from 'react';
+import { AppState, Platform } from 'react-native';
+
+// React Native has no window focus: treat the app coming to the foreground as
+// focus, so queries that opt into `refetchOnWindowFocus` refresh on return.
+// Registered once at module load; React Query owns the subscription lifecycle.
+if (Platform.OS !== 'web') {
+  focusManager.setEventListener((handleFocus) => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      handleFocus(state === 'active');
+    });
+    return () => subscription.remove();
+  });
+}
 
 function normalizeApiBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');

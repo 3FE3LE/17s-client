@@ -8,7 +8,9 @@ import {
   StatusBadge,
   productButtonClass,
   secondaryButtonClass,
+  sectionHeadingClass,
 } from '../components/landing-ui';
+import { FifteenReviewMock, SevenSlotMock } from '../components/product-mocks';
 import {
   getProduct,
   getProductAppUrl,
@@ -48,17 +50,29 @@ function authHref(path: '/sign-in' | '/sign-up', target: string | null): string 
   return target ? `${path}?redirect_url=${encodeURIComponent(target)}` : path;
 }
 
+const productMocks: Partial<Record<Product['accentKey'], () => React.JSX.Element>> = {
+  fifteen: FifteenReviewMock,
+  seven: SevenSlotMock,
+};
+
 function ProductCta({ product, appUrl }: { product: Product; appUrl: string | null }) {
   if (appUrl) {
     return (
-      <div className="mt-[var(--spacing-xl)] flex flex-wrap items-center gap-[var(--spacing-sm)]">
-        <a href={appUrl} className={productButtonClass}>
-          Probar {product.shortName}
-          <ArrowUpRightIcon />
-        </a>
-        <Link href="/" className={secondaryButtonClass}>
-          Volver al inicio
-        </Link>
+      <div className="mt-[var(--spacing-xl)] grid gap-[var(--spacing-sm)]">
+        {product.status === 'beta' ? (
+          <p className="m-0 max-w-[52ch] text-sm leading-[1.4] text-muted">
+            Beta: ya puedes usarla; algunas pantallas todavía pueden cambiar.
+          </p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-[var(--spacing-sm)]">
+          <a href={appUrl} className={productButtonClass}>
+            Probar {product.shortName}
+            <ArrowUpRightIcon />
+          </a>
+          <Link href="/" className={secondaryButtonClass}>
+            Volver al inicio
+          </Link>
+        </div>
       </div>
     );
   }
@@ -66,8 +80,8 @@ function ProductCta({ product, appUrl }: { product: Product; appUrl: string | nu
   return (
     <div className="mt-[var(--spacing-xl)] grid gap-[var(--spacing-sm)]">
       <p className="m-0 max-w-[48ch] text-md leading-[1.5] text-muted">
-        {product.name} todavía no está disponible. Si creas tu cuenta 17Suit hoy, la misma te
-        servirá cuando abra.
+        {product.name} todavía no abre. Crea tu cuenta 17Suit; cuando {product.shortName} abra,
+        aparecerá en Mis apps y entrarás con la misma cuenta.
       </p>
       <div className="flex flex-wrap items-center gap-[var(--spacing-sm)]">
         <Link href="/sign-up" className={secondaryButtonClass}>
@@ -132,28 +146,54 @@ export default async function ProductLandingPage({ params }: PageProps) {
 
   const appUrl = getProductAppUrl(product);
   const isSoon = product.status === 'soon';
+  const Mock = productMocks[product.accentKey];
 
   return (
     <main data-product={product.accentKey} className="min-h-screen bg-suit-canvas text-text">
       <div className="mx-auto max-w-[1120px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pb-[var(--spacing-x4l)] md:pt-[var(--spacing-lg)]">
-        <SiteHeader
-          signInHref={authHref('/sign-in', appUrl)}
-          signUpHref={authHref('/sign-up', appUrl)}
-        />
+        <SiteHeader signInHref={authHref('/sign-in', appUrl)} />
 
         <section
           aria-labelledby="product-title"
-          className="relative isolate grid grid-cols-1 items-end gap-[var(--spacing-xl)] lg:grid-cols-[minmax(0,1fr)_auto]"
+          className={`grid grid-cols-1 gap-x-[var(--spacing-x3l)] gap-y-[var(--spacing-lg)] ${
+            Mock
+              ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:grid-rows-[auto_1fr]'
+              : 'lg:grid-cols-[minmax(0,1fr)_auto]'
+          }`}
         >
-          <div className="min-w-0">
-            <StatusBadge status={product.status} />
+          <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+            <div className="flex items-center gap-[var(--spacing-md)]">
+              <span
+                aria-hidden="true"
+                className={`select-none font-arvo text-[clamp(48px,5vw,64px)] font-bold leading-[0.8] tracking-[-0.04em] text-product ${Mock ? '' : 'lg:hidden'}`}
+              >
+                {product.numeral}
+              </span>
+              <StatusBadge status={product.status} />
+            </div>
             <h1
               id="product-title"
-              className="m-0 mt-[var(--spacing-md)] text-balance font-arvo text-[clamp(36px,5.6vw,64px)] font-bold leading-[1.05] tracking-[-0.025em] text-text"
+              className="m-0 mt-[var(--spacing-md)] text-balance font-arvo text-[clamp(36px,5vw,60px)] font-bold leading-[1.05] tracking-[-0.025em] text-text"
             >
               {product.name}
             </h1>
-            <p className="m-0 mt-[var(--spacing-md)] max-w-[30ch] text-balance font-amaranth text-[clamp(22px,2.6vw,30px)] leading-[1.25] text-product">
+          </div>
+
+          {Mock ? (
+            <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
+              <Mock />
+            </div>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="hidden select-none self-end font-arvo text-[clamp(120px,16vw,200px)] font-bold leading-[0.78] tracking-[-0.04em] text-product opacity-90 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block"
+            >
+              {product.numeral}
+            </span>
+          )}
+
+          <div className="min-w-0 lg:col-start-1 lg:row-start-2">
+            <p className="m-0 max-w-[30ch] text-balance font-arvo text-[clamp(24px,2.4vw,28px)] font-normal leading-[1.28] text-product">
               {product.headline}
             </p>
             <p className="m-0 mt-[var(--spacing-md)] max-w-[60ch] text-[clamp(16px,1.4vw,18px)] leading-[1.55] text-muted">
@@ -161,20 +201,10 @@ export default async function ProductLandingPage({ params }: PageProps) {
             </p>
             <ProductCta product={product} appUrl={appUrl} />
           </div>
-
-          <span
-            aria-hidden="true"
-            className="order-first select-none font-arvo text-[clamp(120px,22vw,280px)] font-bold leading-[0.78] tracking-[-0.04em] text-product lg:order-none lg:pr-[var(--spacing-md)]"
-          >
-            {product.numeral}
-          </span>
         </section>
 
         <section aria-labelledby="steps-title" className="mt-[var(--spacing-x4l)]">
-          <h2
-            id="steps-title"
-            className="m-0 font-amaranth text-[clamp(30px,4vw,42px)] font-bold leading-[1.15] text-text"
-          >
+          <h2 id="steps-title" className={sectionHeadingClass}>
             {isSoon ? 'Cómo funcionará' : 'Cómo funciona'}
           </h2>
           <ol className="m-0 mt-[var(--spacing-lg)] grid list-none grid-cols-1 gap-[var(--spacing-md)] p-0 md:grid-cols-3">
@@ -203,10 +233,7 @@ export default async function ProductLandingPage({ params }: PageProps) {
           aria-labelledby="highlights-title"
           className="mt-[var(--spacing-x3l)] grid grid-cols-1 items-start gap-[var(--spacing-lg)] border-t border-line pt-[var(--spacing-xl)] md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]"
         >
-          <h2
-            id="highlights-title"
-            className="m-0 font-amaranth text-[clamp(26px,3vw,34px)] font-bold leading-[1.2] text-text"
-          >
+          <h2 id="highlights-title" className={sectionHeadingClass}>
             {isSoon ? 'Lo que podrás hacer' : 'Lo que puedes hacer'}
           </h2>
           <ul className="m-0 grid list-none gap-[var(--spacing-md)] p-0">

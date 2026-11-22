@@ -9,7 +9,6 @@
 
 :root {
   --suit-font-arvo: var(--font-arvo, 'Arvo'), serif;
-  --suit-font-amaranth: var(--font-amaranth, 'Amaranth'), sans-serif;
   --suit-font-zilla: var(--font-zilla, 'Zilla Slab'), serif;
 }
 
@@ -77,6 +76,10 @@
 }
 .dark {
   --product-on-accent: #00151c;
+  /* The shared primary shadow is a green glow; on dark use a neutral offset
+   * shadow (also covers AppButton from ui-web inside landing). */
+  --shadow-action-primary: 0 4px 12px rgb(0 0 0 / 0.28);
+  --shadow-action-primary-soft: 0 4px 12px rgb(0 0 0 / 0.24);
 }
 
 /* suit-tokens.css (imported after variables.css) redeclares surface/text/muted
@@ -120,5 +123,12 @@
   h3,
   dt {
     text-wrap: balance;
+  }
+
+  /* Two families: Arvo for display and headings, Zilla Slab for body. */
+  h1,
+  h2,
+  h3 {
+    font-family: theme(fontFamily.arvo);
   }
 }

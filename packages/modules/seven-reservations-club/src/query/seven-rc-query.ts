@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import type {
   ConfigurePitchSlotsInput,
   CreatePitchInput,
@@ -16,6 +16,18 @@ import type {
   SevenRcPlayerApi,
   VenueReservation,
 } from '../sdk/seven-rc-api';
+
+/**
+ * Opt-in freshness overrides a surface can pass to list queries (e.g. web polling
+ * while the tab is visible). Omitted keys keep the module defaults, so callers that
+ * pass nothing (mobile) are unaffected.
+ */
+export type SevenRcRefreshOptions<TData> = Partial<
+  Pick<
+    UseQueryOptions<TData>,
+    'refetchOnWindowFocus' | 'refetchOnMount' | 'refetchInterval' | 'refetchIntervalInBackground'
+  >
+>;
 
 export const sevenRcQueryKeys = {
   ownerVenues: ['seven-rc', 'owner', 'venues'] as const,
@@ -114,6 +126,7 @@ export function useSevenRcOwnerVenueReservationsQuery(
   venueId: string | null,
   dateFrom: string,
   dateTo: string,
+  options?: SevenRcRefreshOptions<VenueReservation[]>,
 ) {
   return useQuery<VenueReservation[]>({
     queryKey: sevenRcQueryKeys.ownerVenueReservations(venueId ?? 'missing', dateFrom, dateTo),
@@ -128,6 +141,7 @@ export function useSevenRcOwnerVenueReservationsQuery(
     gcTime: 15 * 60 * 1000,
     refetchOnMount: false,
     refetchOnReconnect: false,
+    ...options,
   });
 }
 
@@ -167,7 +181,10 @@ export function useSevenRcRejectVenueReservationMutation(
   });
 }
 
-export function useSevenRcMyReservationsQuery(api: SevenRcPlayerApi) {
+export function useSevenRcMyReservationsQuery(
+  api: SevenRcPlayerApi,
+  options?: SevenRcRefreshOptions<ReservationWithVenuePitch[]>,
+) {
   return useQuery<ReservationWithVenuePitch[]>({
     queryKey: sevenRcQueryKeys.playerReservations,
     queryFn: () => api.listMyReservations(),
@@ -175,6 +192,7 @@ export function useSevenRcMyReservationsQuery(api: SevenRcPlayerApi) {
     gcTime: 15 * 60 * 1000,
     refetchOnMount: false,
     refetchOnReconnect: false,
+    ...options,
   });
 }
 

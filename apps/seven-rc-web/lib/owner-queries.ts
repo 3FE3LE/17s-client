@@ -6,6 +6,7 @@ import {
   type CreatePitchInput,
   type CreateVenueInput,
   type ReservationBase,
+  type SevenRcRefreshOptions,
   type VenueReservation,
   useSevenRcConfirmVenueReservationMutation,
   useSevenRcConfigurePitchSlotsMutation,
@@ -58,9 +59,10 @@ export function useOwnerVenueReservationsQuery(
   venueId: string | null,
   dateFrom: string,
   dateTo: string,
+  options?: SevenRcRefreshOptions<VenueReservation[]>,
 ) {
   const api = useOwnerApi();
-  return useSevenRcOwnerVenueReservationsQuery(api, venueId, dateFrom, dateTo);
+  return useSevenRcOwnerVenueReservationsQuery(api, venueId, dateFrom, dateTo, options);
 }
 
 export function useConfirmVenueReservationMutation(venueId?: string | null) {
