@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { resolveRedirectTarget } from '../../lib/auth-redirect';
+import { getProductForRedirect } from '../../lib/products';
 import { SignUpClient } from './sign-up-client';
 
 interface PageProps {
@@ -18,5 +19,14 @@ export default async function SignUpPage({ searchParams }: PageProps) {
     redirect(redirectTarget);
   }
 
-  return <SignUpClient redirectTarget={redirectTarget} />;
+  // Only already-validated targets reach here, so the match is against allow-listed origins.
+  const product = getProductForRedirect(redirectTarget);
+  const productContext = product
+    ? {
+        accentKey: product.accentKey,
+        text: `Crearás tu cuenta para entrar a ${product.name}.`,
+      }
+    : undefined;
+
+  return <SignUpClient redirectTarget={redirectTarget} productContext={productContext} />;
 }

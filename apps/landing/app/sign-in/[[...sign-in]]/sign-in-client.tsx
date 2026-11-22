@@ -120,14 +120,14 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
           o con tu correo
         </p>
 
-        <form className="grid gap-sm" onSubmit={handlePasswordSignIn}>
+        <form method="post" className="grid gap-sm" onSubmit={handlePasswordSignIn}>
           <AppInput
             type="email"
             name="email"
             value={email}
             onChangeText={setEmail}
             label="Correo electrónico"
-            placeholder="tu@empresa.com"
+            placeholder="tu@correo.com"
             autoComplete="email"
             spellCheck={false}
             required

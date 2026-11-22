@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import {
+  ArrowDownIcon,
   ArrowRightIcon,
   ArrowUpRightIcon,
   SiteHeader,
@@ -9,8 +10,15 @@ import {
   productButtonClass,
   secondaryButtonClass,
   sectionHeadingClass,
+  textLinkClass,
 } from '../components/landing-ui';
-import { FifteenReviewMock, SevenSlotMock } from '../components/product-mocks';
+import {
+  ConceptSketch,
+  FifteenReviewMock,
+  SevenSlotMock,
+  isConceptKey,
+} from '../components/product-mocks';
+import { LEGAL_PUBLISHED } from '../lib/legal';
 import {
   getProduct,
   getProductAppUrl,
@@ -69,7 +77,11 @@ function ProductCta({ product, appUrl }: { product: Product; appUrl: string | nu
             Probar {product.shortName}
             <ArrowUpRightIcon />
           </a>
-          <Link href="/" className={secondaryButtonClass}>
+          <a href="#como-funciona" className={secondaryButtonClass}>
+            Cómo funciona
+            <ArrowDownIcon />
+          </a>
+          <Link href="/" className={textLinkClass}>
             Volver al inicio
           </Link>
         </div>
@@ -84,15 +96,12 @@ function ProductCta({ product, appUrl }: { product: Product; appUrl: string | nu
         aparecerá en Mis apps y entrarás con la misma cuenta.
       </p>
       <div className="flex flex-wrap items-center gap-[var(--spacing-sm)]">
-        <Link href="/sign-up" className={secondaryButtonClass}>
+        <Link href="/sign-up" className={productButtonClass}>
           Crear cuenta 17Suit
         </Link>
-        <Link
-          href="/"
-          className="inline-flex min-h-11 items-center px-[var(--spacing-sm)] font-bold text-text underline"
-        >
-          Volver al inicio
-        </Link>
+        <a href="#como-funciona" className={textLinkClass}>
+          Cómo funcionará
+        </a>
       </div>
     </div>
   );
@@ -101,9 +110,30 @@ function ProductCta({ product, appUrl }: { product: Product; appUrl: string | nu
 /*
  * Neutral pointer to the privacy policy for products that ask for account access
  * (Fifteen's Gmail step). Make no claims here about scopes, storage or retention:
- * that text belongs to the owner-written /privacidad page.
+ * that text belongs to the owner-written /privacidad page. Until LEGAL_PUBLISHED
+ * is true there is no policy to read, so the block says so instead of linking.
  */
 function DataNotice({ anchor }: { anchor: string }) {
+  if (!LEGAL_PUBLISHED) {
+    return (
+      <aside
+        aria-labelledby="data-notice-title"
+        className="mt-[var(--spacing-md)] rounded-[var(--radius-lg)] border border-line bg-surface px-[var(--spacing-lg)] py-[var(--spacing-sm)]"
+      >
+        <h3
+          id="data-notice-title"
+          className="m-0 font-arvo text-md font-bold leading-[1.3] text-text"
+        >
+          Tus datos
+        </h3>
+        {/* TODO(legal): restore the policy link below by setting LEGAL_PUBLISHED. */}
+        <p className="m-0 mt-[2px] text-md leading-[1.5] text-muted">
+          La política de privacidad está en revisión.
+        </p>
+      </aside>
+    );
+  }
+
   return (
     <aside
       aria-labelledby="data-notice-title"
@@ -147,6 +177,8 @@ export default async function ProductLandingPage({ params }: PageProps) {
   const appUrl = getProductAppUrl(product);
   const isSoon = product.status === 'soon';
   const Mock = productMocks[product.accentKey];
+  const concept = isConceptKey(product.accentKey) ? product.accentKey : null;
+  const hasVisual = Boolean(Mock || concept);
 
   return (
     <main data-product={product.accentKey} className="min-h-screen bg-suit-canvas text-text">
@@ -156,16 +188,14 @@ export default async function ProductLandingPage({ params }: PageProps) {
         <section
           aria-labelledby="product-title"
           className={`grid grid-cols-1 gap-x-[var(--spacing-x3l)] gap-y-[var(--spacing-lg)] ${
-            Mock
-              ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:grid-rows-[auto_1fr]'
-              : 'lg:grid-cols-[minmax(0,1fr)_auto]'
+            hasVisual ? 'lg:grid-cols-[minmax(0,1fr)_minmax(0,440px)] lg:grid-rows-[auto_1fr]' : ''
           }`}
         >
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <div className="flex items-center gap-[var(--spacing-md)]">
               <span
                 aria-hidden="true"
-                className={`select-none font-arvo text-[clamp(48px,5vw,64px)] font-bold leading-[0.8] tracking-[-0.04em] text-product ${Mock ? '' : 'lg:hidden'}`}
+                className="select-none font-arvo text-[clamp(48px,5vw,64px)] font-bold leading-[0.8] tracking-[-0.04em] text-product"
               >
                 {product.numeral}
               </span>
@@ -179,18 +209,11 @@ export default async function ProductLandingPage({ params }: PageProps) {
             </h1>
           </div>
 
-          {Mock ? (
+          {hasVisual ? (
             <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-center">
-              <Mock />
+              {Mock ? <Mock /> : concept ? <ConceptSketch concept={concept} /> : null}
             </div>
-          ) : (
-            <span
-              aria-hidden="true"
-              className="hidden select-none self-end font-arvo text-[clamp(120px,16vw,200px)] font-bold leading-[0.78] tracking-[-0.04em] text-product opacity-90 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block"
-            >
-              {product.numeral}
-            </span>
-          )}
+          ) : null}
 
           <div className="min-w-0 lg:col-start-1 lg:row-start-2">
             <p className="m-0 max-w-[30ch] text-balance font-arvo text-[clamp(24px,2.4vw,28px)] font-normal leading-[1.28] text-product">
@@ -203,7 +226,11 @@ export default async function ProductLandingPage({ params }: PageProps) {
           </div>
         </section>
 
-        <section aria-labelledby="steps-title" className="mt-[var(--spacing-x4l)]">
+        <section
+          id="como-funciona"
+          aria-labelledby="steps-title"
+          className="mt-[var(--spacing-x4l)] scroll-mt-[var(--spacing-lg)]"
+        >
           <h2 id="steps-title" className={sectionHeadingClass}>
             {isSoon ? 'Cómo funcionará' : 'Cómo funciona'}
           </h2>
@@ -211,7 +238,7 @@ export default async function ProductLandingPage({ params }: PageProps) {
             {product.steps.map((step, index) => (
               <li
                 key={step.title}
-                className="rounded-[var(--radius-lg)] border border-line bg-[color-mix(in_oklab,var(--color-product)_7%,var(--color-surface))] p-[var(--spacing-lg)]"
+                className="rounded-[var(--radius-lg)] border border-line bg-[color-mix(in_oklab,var(--landing-product)_13%,var(--color-surface))] p-[var(--spacing-lg)]"
               >
                 <span className="flex size-10 items-center justify-center rounded-full bg-product font-arvo text-lg font-bold leading-none text-on-product">
                   <span className="sr-only">Paso </span>
