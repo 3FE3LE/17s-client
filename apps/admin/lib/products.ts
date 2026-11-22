@@ -3,6 +3,24 @@
 // Directory = apps/admin) cannot read it. Keep this list in sync by hand when
 // the registry changes: same app keys, subdomains, dev ports and `active` flags.
 
+/**
+ * Date (ISO, YYYY-MM-DD) the snapshot below was last checked against the
+ * registry. Update it together with the list; the overview shows it.
+ */
+export const REGISTRY_SNAPSHOT_DATE = '2026-11-21';
+
+/** Registry slug of this console. Its row is shown as "Esta consola", without links. */
+export const CONSOLE_PRODUCT_SLUG = 'admin';
+
+export function formatSnapshotDate(isoDate: string): string {
+  return new Intl.DateTimeFormat('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 export type SuiteSurface = 'web' | 'mobile' | 'landing' | 'admin';
 
 export interface SuiteApp {

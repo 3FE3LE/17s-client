@@ -14,6 +14,7 @@ export const adminNavItems: AppWorkspaceNavItem[] = consoleSections.map((section
   href: section.href,
   label: section.label,
   icon: sectionIcons[section.key],
-  // Sections with a missing dependency are routes that say "not available yet".
-  ...(section.dependency ? { badge: 'Pendiente' } : {}),
+  // Pending sections are grouped under the "Próximamente" divider instead of
+  // carrying a per-item badge: the divider already says they are not built.
+  ...(section.group ? { group: section.group } : {}),
 }));

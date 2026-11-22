@@ -1,20 +1,33 @@
 import { buttonRecipe, cx } from '@17suit/ui';
-import Link from 'next/link';
-import type { DeploymentEnvironment } from '@/lib/environment';
-import { suiteProducts, surfaceLabel, type SuiteProduct } from '@/lib/products';
-import { consoleSections } from '@/lib/sections';
+import { getProductionLinkCopy, type DeploymentEnvironment } from '@/lib/environment';
+import {
+  CONSOLE_PRODUCT_SLUG,
+  REGISTRY_SNAPSHOT_DATE,
+  formatSnapshotDate,
+  suiteProducts,
+  surfaceLabel,
+  type SuiteProduct,
+} from '@/lib/products';
 
 const linkButton = cx(
   buttonRecipe({ intent: 'secondary', size: 'sm', shape: 'md', fullWidth: false }),
-  'whitespace-nowrap no-underline',
+  'gap-[var(--spacing-xs)] whitespace-nowrap no-underline',
 );
 
-const pendingSections = consoleSections.filter((section) => section.key !== 'overview');
+// Data cells (subdomains, ports, counts) use the system UI sans with tabular
+// figures so values align and scan; Arvo stays on headings, Zilla on prose.
+const dataFace = 'font-sans tabular-nums';
 
-const cell = 'px-[var(--spacing-md)] py-[var(--spacing-sm)]';
+const cell = 'px-[var(--spacing-md)] py-[6px]';
+
+const snapshotDate = formatSnapshotDate(REGISTRY_SNAPSHOT_DATE);
 
 function isProductActive(product: SuiteProduct): boolean {
   return product.apps.some((app) => app.active);
+}
+
+function isThisConsole(product: SuiteProduct): boolean {
+  return product.slug === CONSOLE_PRODUCT_SLUG;
 }
 
 // Only show status when at least one product is inactive: a column where every
@@ -41,48 +54,55 @@ function StatusLabel({ active }: { active: boolean }) {
 
 function ProductLinks({
   product,
-  isDevelopment,
+  environment,
 }: {
   product: SuiteProduct;
-  isDevelopment: boolean;
+  environment: DeploymentEnvironment;
 }) {
-  const localApps = product.apps.filter((app) => app.surface !== 'mobile');
+  if (isThisConsole(product)) {
+    // Linking the console to itself is a dead loop; name it instead.
+    return <span className="text-muted">Esta consola</span>;
+  }
+
+  const { label, crossesIntoProduction } = getProductionLinkCopy(environment);
+  const localApps =
+    environment === 'development' ? product.apps.filter((app) => app.surface !== 'mobile') : [];
+
   return (
     <div className="flex flex-wrap gap-[var(--spacing-xs)]">
+      {localApps.map((app) => (
+        <a
+          key={app.key}
+          href={`http://localhost:${app.devPort}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={linkButton}
+        >
+          Local · puerto <span className={dataFace}>{app.devPort}</span>
+          <span className="sr-only"> ({app.key}, se abre en otra pestaña)</span>
+        </a>
+      ))}
       <a
         href={`https://${product.subdomain}`}
         target="_blank"
         rel="noopener noreferrer"
         className={linkButton}
       >
-        Abrir
+        {crossesIntoProduction ? (
+          <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-destructive" />
+        ) : null}
+        {label}
         <span className="sr-only">
           {' '}
           {product.name} en {product.subdomain} (se abre en otra pestaña)
         </span>
       </a>
-      {isDevelopment
-        ? localApps.map((app) => (
-            <a
-              key={app.key}
-              href={`http://localhost:${app.devPort}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={linkButton}
-            >
-              Local · puerto <span className="tabular-nums">{app.devPort}</span>
-              <span className="sr-only"> ({app.key}, se abre en otra pestaña)</span>
-            </a>
-          ))
-        : null}
     </div>
   );
 }
 
 // Server component: static registry snapshot plus console status. No live data.
 export function Overview({ environment, operatorCount }: OverviewProps) {
-  const isDevelopment = environment === 'development';
-
   return (
     <>
       <section aria-labelledby="productos" className="grid min-w-0 gap-[var(--spacing-sm)]">
@@ -90,11 +110,13 @@ export function Overview({ environment, operatorCount }: OverviewProps) {
           <h2 id="productos" className="m-0 font-arvo text-lg font-bold leading-[1.25] text-text">
             Productos de la suite
           </h2>
-          <p className="m-0 max-w-[65ch] text-sm leading-[1.45] text-muted">
-            Copia del registro de apps del workspace (apps-registry.json).{' '}
+          {/* Source: hand-synced copy of apps-registry.json (lib/products.ts). */}
+          <p className="m-0 max-w-[65ch] text-pretty text-sm leading-[1.45] text-muted">
+            Lista mantenida a mano, revisada el{' '}
+            <time dateTime={REGISTRY_SNAPSHOT_DATE}>{snapshotDate}</time>.{' '}
             {showStatus
-              ? 'El estado refleja el campo «active» del registro, no una comprobación en vivo del despliegue.'
-              : 'Todos figuran como activos en el campo «active» del registro; no es una comprobación en vivo del despliegue.'}
+              ? 'El estado indica si el producto está dado de alta, no si su despliegue responde ahora.'
+              : 'Todos figuran como activos; no es una comprobación en vivo del despliegue.'}
           </p>
         </div>
 
@@ -103,7 +125,7 @@ export function Overview({ environment, operatorCount }: OverviewProps) {
           {suiteProducts.map((product) => (
             <li
               key={product.slug}
-              className="grid gap-[var(--spacing-xs)] rounded-[var(--radius-lg)] border border-border-default bg-surface p-[var(--spacing-md)] text-sm leading-[1.4]"
+              className="grid gap-[var(--spacing-xs)] rounded-[var(--radius-lg)] border border-border-strong bg-surface p-[var(--spacing-md)] text-sm leading-[1.4]"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-x-[var(--spacing-sm)]">
                 <h3 className="m-0 text-md font-bold leading-[1.3] text-brand-dark">
@@ -111,41 +133,41 @@ export function Overview({ environment, operatorCount }: OverviewProps) {
                 </h3>
                 {showStatus ? <StatusLabel active={isProductActive(product)} /> : null}
               </div>
-              <p className="m-0 break-all text-text">{product.subdomain}</p>
+              <p className={cx('m-0 break-all text-text', dataFace)}>{product.subdomain}</p>
               <p className="m-0 text-muted">
                 {product.apps.map((app) => surfaceLabel[app.surface]).join(' · ')}
               </p>
               <div className="mt-[var(--spacing-xs)]">
-                <ProductLinks product={product} isDevelopment={isDevelopment} />
+                <ProductLinks product={product} environment={environment} />
               </div>
             </li>
           ))}
         </ul>
 
-        <div className="hidden w-0 min-w-full overflow-x-auto rounded-[var(--radius-lg)] border border-border-default bg-surface md:block">
-          <table className="w-full border-collapse whitespace-nowrap text-left text-sm leading-[1.4]">
+        <div className="hidden w-0 min-w-full overflow-x-auto rounded-[var(--radius-lg)] border border-border-strong bg-surface md:block">
+          <table className="w-full border-collapse whitespace-nowrap text-left text-sm leading-[1.35]">
             <caption className="sr-only">
               {showStatus
                 ? 'Productos registrados con su subdominio, superficies, estado y enlaces'
                 : 'Productos registrados con su subdominio, superficies y enlaces'}
             </caption>
             <thead>
-              <tr className="border-b border-border-default text-muted">
-                <th scope="col" className={cx(cell, 'font-bold')}>
+              <tr className="border-b border-border-emphasis bg-background text-muted">
+                <th scope="col" className={cx(cell, 'py-[var(--spacing-sm)] font-bold')}>
                   Producto
                 </th>
-                <th scope="col" className={cx(cell, 'font-bold')}>
+                <th scope="col" className={cx(cell, 'py-[var(--spacing-sm)] font-bold')}>
                   Subdominio
                 </th>
-                <th scope="col" className={cx(cell, 'font-bold')}>
+                <th scope="col" className={cx(cell, 'py-[var(--spacing-sm)] font-bold')}>
                   Superficies
                 </th>
                 {showStatus ? (
-                  <th scope="col" className={cx(cell, 'font-bold')}>
+                  <th scope="col" className={cx(cell, 'py-[var(--spacing-sm)] font-bold')}>
                     Estado
                   </th>
                 ) : null}
-                <th scope="col" className={cx(cell, 'font-bold')}>
+                <th scope="col" className={cx(cell, 'py-[var(--spacing-sm)] font-bold')}>
                   Accesos
                 </th>
               </tr>
@@ -154,12 +176,12 @@ export function Overview({ environment, operatorCount }: OverviewProps) {
               {suiteProducts.map((product) => (
                 <tr
                   key={product.slug}
-                  className="border-b border-border-hairline align-middle last:border-b-0"
+                  className="border-b border-border-default align-middle last:border-b-0"
                 >
                   <th scope="row" className={cx(cell, 'font-bold text-brand-dark')}>
                     {product.name}
                   </th>
-                  <td className={cx(cell, 'text-text')}>{product.subdomain}</td>
+                  <td className={cx(cell, dataFace, 'text-text')}>{product.subdomain}</td>
                   <td className={cx(cell, 'text-text')}>
                     {product.apps.map((app) => surfaceLabel[app.surface]).join(' · ')}
                   </td>
@@ -169,7 +191,7 @@ export function Overview({ environment, operatorCount }: OverviewProps) {
                     </td>
                   ) : null}
                   <td className={cell}>
-                    <ProductLinks product={product} isDevelopment={isDevelopment} />
+                    <ProductLinks product={product} environment={environment} />
                   </td>
                 </tr>
               ))}
@@ -185,32 +207,20 @@ export function Overview({ environment, operatorCount }: OverviewProps) {
         >
           Estado de la consola
         </h2>
-        <dl className="m-0 grid gap-x-[var(--spacing-lg)] gap-y-[var(--spacing-sm)] rounded-[var(--radius-lg)] border border-border-default bg-surface p-[var(--spacing-md)] text-sm leading-[1.45] md:grid-cols-[180px_1fr]">
+        <dl className="m-0 grid gap-x-[var(--spacing-lg)] gap-y-[var(--spacing-sm)] rounded-[var(--radius-lg)] border border-border-strong bg-surface p-[var(--spacing-md)] text-sm leading-[1.45] md:grid-cols-[180px_1fr]">
+          {/* Access = Clerk session + ADMIN_ALLOWED_EMAILS (lib/operator-access.ts). */}
           <dt className="font-bold text-muted">Acceso</dt>
           <dd className="m-0 text-text">
-            Sesión de Clerk más lista de emails autorizados (ADMIN_ALLOWED_EMAILS):{' '}
-            {operatorCount === 1 ? '1 email' : `${operatorCount} emails`}.
+            Solo entran las cuentas con un email verificado de la lista de operadores autorizados:{' '}
+            <span className={cx('font-bold', dataFace)}>{operatorCount}</span>{' '}
+            {operatorCount === 1 ? 'email' : 'emails'}.
           </dd>
 
-          <dt className="font-bold text-muted">Datos de backend</dt>
+          {/* No 17s-server reads yet. */}
+          <dt className="font-bold text-muted">Datos</dt>
           <dd className="m-0 text-text">
-            Esta consola todavía no consulta 17s-server. Nada de lo que ves aquí es un dato en vivo.
-          </dd>
-
-          <dt className="font-bold text-muted">Secciones pendientes</dt>
-          <dd className="m-0">
-            <ul className="m-0 flex list-none flex-wrap gap-x-[var(--spacing-md)] gap-y-[var(--spacing-xs)] p-0">
-              {pendingSections.map((section) => (
-                <li key={section.key}>
-                  <Link
-                    href={section.href}
-                    className="font-bold text-info underline underline-offset-4"
-                  >
-                    {section.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            La consola todavía no está conectada a la plataforma. Nada de lo que ves aquí es un dato
+            en vivo.
           </dd>
         </dl>
       </section>

@@ -1,17 +1,11 @@
 'use client';
 
 import { AppBadge } from '@17suit/ui';
-import { environmentLabel, type DeploymentEnvironment } from '@/lib/environment';
-
-const badgeVariant = {
-  production: 'destructive',
-  preview: 'warning',
-  development: 'neutral',
-} as const satisfies Record<DeploymentEnvironment, string>;
+import { environmentLabel, environmentTone, type DeploymentEnvironment } from '@/lib/environment';
 
 export function EnvironmentBadge({ environment }: { environment: DeploymentEnvironment }) {
   return (
-    <AppBadge variant={badgeVariant[environment]} rounded={false}>
+    <AppBadge variant={environmentTone[environment]} rounded={false}>
       Entorno de {environmentLabel[environment].toLowerCase()}
     </AppBadge>
   );

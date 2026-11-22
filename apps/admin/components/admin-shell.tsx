@@ -1,6 +1,6 @@
 'use client';
 
-import { AppWorkspaceShell, cx } from '@17suit/ui';
+import { AppWorkspaceShell } from '@17suit/ui';
 import { useClerk } from '@clerk/nextjs';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -17,9 +17,11 @@ interface AdminShellProps {
   children: ReactNode;
 }
 
-// The environment strip sits directly above the shell on every console route so
-// production is always visually distinct (destructive tone). The operator identity
-// lives in the shell sidebar next to "Cerrar sesión" (`account` prop).
+// The environment badge rides in the shell's sticky sidebar (`statusSlot`), so it
+// stays in view on every console route from lg up. Production adds a fixed
+// destructive rail along the top edge of the viewport: quiet, persistent at every
+// breakpoint, and it takes no layout space. The badge text carries the meaning;
+// the rail is the at-a-glance cue.
 export function AdminShell({ environment, operatorEmail, children }: AdminShellProps) {
   const { signOut } = useClerk();
   const pathname = usePathname();
@@ -27,7 +29,7 @@ export function AdminShell({ environment, operatorEmail, children }: AdminShellP
   const isProduction = environment === 'production';
 
   return (
-    <div>
+    <>
       <a
         href="#contenido"
         className="sr-only focus:not-sr-only focus:fixed focus:left-[var(--spacing-md)] focus:top-[var(--spacing-md)] focus:z-50 focus:rounded-[var(--radius-md)] focus:bg-surface focus:px-[var(--spacing-md)] focus:py-[var(--spacing-sm)] focus:text-sm focus:font-bold focus:text-brand-dark"
@@ -35,22 +37,18 @@ export function AdminShell({ environment, operatorEmail, children }: AdminShellP
         Saltar al contenido
       </a>
       {/*
-        Copy rule: the console is read-only today, so the strip only names the
-        environment ("Entorno de producción"). When the first write action
-        (mutation against 17s-server) lands, production must also warn
+        Copy rule: the console is read-only today, so production only names the
+        environment ("Entorno de producción") plus the rail. When the first write
+        action (mutation against 17s-server) lands, production must also warn
         "Estás operando sobre datos reales." next to the badge. Do not show that
         warning before mutations exist: it contradicts the read-only console.
       */}
-      <header
-        className={cx(
-          'relative z-10 flex items-center border-b px-[var(--spacing-md)] py-[var(--spacing-xs)] text-sm leading-[1.4] md:px-[var(--spacing-lg)]',
-          isProduction
-            ? 'border-destructive/50 bg-feedback-error-soft'
-            : 'border-border-default bg-surface',
-        )}
-      >
-        <EnvironmentBadge environment={environment} />
-      </header>
+      {isProduction ? (
+        <div
+          aria-hidden
+          className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[3px] bg-destructive"
+        />
+      ) : null}
       <AppWorkspaceShell
         productName="Admin"
         productKicker="17Suit"
@@ -61,10 +59,15 @@ export function AdminShell({ environment, operatorEmail, children }: AdminShellP
         homeHref="/"
         onSignOut={() => signOut({ redirectUrl: '/sign-in' })}
         signOutLabel="Cerrar sesión"
+        statusSlot={<EnvironmentBadge environment={environment} />}
         account={
           <p className="m-0 min-w-0 text-muted">
-            <span className="block">Sesión iniciada como</span>
-            <EmailAddress email={operatorEmail} className="block font-bold text-brand-dark" />
+            <span className="hidden lg:block">Sesión iniciada como</span>
+            <span className="sr-only lg:hidden">Sesión iniciada como </span>
+            <EmailAddress
+              email={operatorEmail}
+              className="block font-sans font-bold text-brand-dark"
+            />
           </p>
         }
         linkComponent={Link}
@@ -77,6 +80,6 @@ export function AdminShell({ environment, operatorEmail, children }: AdminShellP
           {children}
         </div>
       </AppWorkspaceShell>
-    </div>
+    </>
   );
 }
