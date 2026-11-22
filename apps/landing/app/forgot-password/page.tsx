@@ -8,6 +8,7 @@ import { Suspense, useMemo, useState, type FormEvent } from 'react';
 import { AuthFormError } from '../components/AuthFormError';
 import { AuthShell } from '../components/AuthShell';
 import { resolveRedirectTarget } from '../lib/auth-redirect';
+import { afterAuthPath } from '../lib/session-handoff';
 import { getClerkErrorMessage } from '../lib/clerk-errors';
 
 const GENERIC_ERROR = 'No pudimos restablecer tu contraseña. Inténtalo de nuevo en unos minutos.';
@@ -65,7 +66,7 @@ function ForgotPasswordPageContent() {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
 

@@ -13,6 +13,7 @@ import {
   isAlreadySignedInError,
   type AuthErrorField,
 } from '../../lib/clerk-errors';
+import { afterAuthPath } from '../../lib/session-handoff';
 
 const GENERIC_ERROR = 'No pudimos crear tu cuenta. Inténtalo de nuevo en unos minutos.';
 const ERROR_ID = 'sign-up-error';
@@ -80,12 +81,12 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
       await signUp.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: `/sso-callback?redirect_url=${encodeURIComponent(redirectTarget)}`,
-        redirectUrlComplete: redirectTarget,
+        redirectUrlComplete: afterAuthPath(redirectTarget),
       });
     } catch (err) {
       // Session already active: skip SSO and continue to the target.
       if (isAlreadySignedInError(err)) {
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
       fail(err, GENERIC_ERROR);
@@ -115,7 +116,7 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
 
@@ -128,7 +129,7 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
       setError('No pudimos crear tu cuenta. Inténtalo de nuevo.');
     } catch (err) {
       if (isAlreadySignedInError(err)) {
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
       fail(err, GENERIC_ERROR);
@@ -149,7 +150,7 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
       const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
 
