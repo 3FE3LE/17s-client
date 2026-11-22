@@ -1,7 +1,6 @@
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProductFooter, buttonRecipe } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { SignOutButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
@@ -9,6 +8,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { RoleSwitch } from '@/components/role-switch';
 import { SevenRcClientProviders } from '@/components/seven-rc-client-providers';
+import { SignOutControl } from '@/components/sign-out-control';
 import './globals.css';
 
 const amaranth = Amaranth({
@@ -63,11 +63,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 <header className="bg-background px-lg pt-sm">
                   <div className="mx-auto flex w-full max-w-[var(--container-content)] flex-wrap justify-end gap-sm">
                     <RoleSwitch />
-                    <SignOutButton redirectUrl="/sign-in?redirect_url=/">
-                      <button type="button" className={footerButton('secondary')}>
-                        Cerrar sesión
-                      </button>
-                    </SignOutButton>
+                    <SignOutControl className={footerButton('secondary')} />
                   </div>
                 </header>
               ) : null}
@@ -83,11 +79,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                       <Link href="/" className={footerButton('secondary')}>
                         Ir a mi panel
                       </Link>
-                      <SignOutButton redirectUrl="/sign-in?redirect_url=/">
-                        <button type="button" className={footerButton('secondary')}>
-                          Cerrar sesión
-                        </button>
-                      </SignOutButton>
+                      <SignOutControl className={footerButton('secondary')} />
                     </>
                   ) : (
                     <>

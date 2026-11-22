@@ -5,12 +5,12 @@ import {
   appProductFooterTextLinkStyle,
 } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { SignOutButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { SignOutControl } from './_components/sign-out-control';
 import './globals.css';
 
 const amaranth = Amaranth({
@@ -79,11 +79,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                     Ir al inicio
                   </Link>
                   {isSignedIn ? (
-                    <SignOutButton redirectUrl="/sign-in?redirect_url=/">
-                      <button type="button" style={appProductFooterButtonStyle}>
-                        Cerrar sesion
-                      </button>
-                    </SignOutButton>
+                    <SignOutControl style={appProductFooterButtonStyle} />
                   ) : (
                     <>
                       <Link
