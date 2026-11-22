@@ -8,6 +8,8 @@ export interface AppScrollViewProps extends Pick<
   | 'refreshControl'
   | 'keyboardShouldPersistTaps'
   | 'showsVerticalScrollIndicator'
+  | 'horizontal'
+  | 'showsHorizontalScrollIndicator'
 > {
   children: ReactNode;
 }
@@ -19,7 +21,8 @@ export interface AppScrollViewProps extends Pick<
  *
  * Contract: 1:1 passthrough of `style`, `contentContainerStyle`,
  * `refreshControl`, `keyboardShouldPersistTaps` and
- * `showsVerticalScrollIndicator`. Behaviour identical to the underlying RN
+ * `showsVerticalScrollIndicator`, `horizontal` and
+ * `showsHorizontalScrollIndicator`. Behaviour identical to the underlying RN
  * component.
  */
 export function AppScrollView({
@@ -29,6 +32,8 @@ export function AppScrollView({
   refreshControl,
   keyboardShouldPersistTaps,
   showsVerticalScrollIndicator,
+  horizontal,
+  showsHorizontalScrollIndicator,
 }: AppScrollViewProps) {
   return (
     <ScrollView
@@ -37,6 +42,8 @@ export function AppScrollView({
       refreshControl={refreshControl}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+      horizontal={horizontal}
+      showsHorizontalScrollIndicator={showsHorizontalScrollIndicator}
     >
       {children}
     </ScrollView>

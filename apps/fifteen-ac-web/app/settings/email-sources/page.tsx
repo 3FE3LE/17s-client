@@ -119,7 +119,7 @@ export default async function Page({
                   {isGmailConnected ? null : (
                     <div className="relative grid gap-2 text-sm">
                       <form action={connectGmailAction}>
-                        <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px">
+                        <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-4 py-[10px] font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.24)] transition-transform duration-200 hover:-translate-y-px">
                           <Link2 size={16} strokeWidth={2.2} aria-hidden />
                           Connect Google
                         </button>
@@ -175,7 +175,7 @@ export default async function Page({
                     </form>
                   ) : (
                     <form action={connectGmailAction}>
-                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px">
+                      <button className="inline-flex w-full items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px">
                         <Link2 size={16} strokeWidth={2.2} aria-hidden />
                         Reconnect
                       </button>
@@ -217,7 +217,7 @@ export default async function Page({
                     mode="approved"
                     body={{ maxResults: 100 }}
                     disabled={!isGmailConnected || channels.length === 0}
-                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#00916e,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:border-[rgba(0,23,31,0.12)] disabled:bg-none disabled:bg-brand-light disabled:text-muted disabled:shadow-none"
+                    className="inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[#01695b] bg-[linear-gradient(95deg,#007f60,#007666)] px-4 py-[10px] text-sm font-bold text-white shadow-[0_12px_26px_rgba(0,145,110,0.22)] transition-transform duration-200 hover:-translate-y-px disabled:cursor-not-allowed disabled:border-[rgba(0,23,31,0.12)] disabled:bg-none disabled:bg-brand-light disabled:text-muted disabled:shadow-none"
                   >
                     Sync approved
                   </SyncButton>

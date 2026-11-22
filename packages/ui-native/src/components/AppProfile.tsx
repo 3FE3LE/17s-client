@@ -5,6 +5,7 @@ import { AppButton } from './AppButton';
 export interface AppProfileProps {
   fullName?: string | null;
   email?: string | null;
+  /** Shown as a small "ID:" line only when provided. */
   userId?: string | null;
   onSignOut?: () => void;
 }
@@ -51,21 +52,23 @@ export function AppProfile({ fullName, email, userId, onSignOut }: AppProfilePro
       >
         {email || 'Sin email'}
       </Text>
-      <Text
-        style={{
-          color: theme.colors.muted,
-          fontFamily: captionType.nativeFamily,
-          fontSize: captionType.fontSize,
-          lineHeight: Math.round(captionType.fontSize * captionType.lineHeightRecommended),
-          letterSpacing: captionType.letterSpacingPx,
-          marginBottom: spacing,
-        }}
-      >
-        {`ID: ${userId || '-'}`}
-      </Text>
+      {userId ? (
+        <Text
+          style={{
+            color: theme.colors.muted,
+            fontFamily: captionType.nativeFamily,
+            fontSize: captionType.fontSize,
+            lineHeight: Math.round(captionType.fontSize * captionType.lineHeightRecommended),
+            letterSpacing: captionType.letterSpacingPx,
+            marginBottom: spacing,
+          }}
+        >
+          {`ID: ${userId}`}
+        </Text>
+      ) : null}
       <View style={{ marginTop: theme.spacing.xs }}>
         <AppButton variant="destructive" onPress={onSignOut}>
-          Cerrar sesion
+          Cerrar sesión
         </AppButton>
       </View>
     </View>

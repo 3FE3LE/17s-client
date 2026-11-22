@@ -144,7 +144,7 @@ export function inputRecipe({
         : 'leading-[24px]',
       compact ? 'h-10' : 'h-11',
       hasLeftAccessory ? 'pl-10' : 'pl-3',
-      hasRightAccessory ? 'pr-10' : 'pr-3',
+      hasRightAccessory ? 'pr-11' : 'pr-3',
       state === 'error' ? 'border-destructive' : 'border-border-strong',
       state === 'disabled' && 'opacity-60',
     ),

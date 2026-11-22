@@ -27,6 +27,7 @@ export function AppCard({
   return (
     <Container
       onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
       className={cx(
         cardRecipe({ variant: 'feature' }),
         'w-full gap-sm',

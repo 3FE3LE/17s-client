@@ -2,7 +2,7 @@ import {
   useCurrentUserRoleQuery,
   getSevenReservationsClubRoleHomePath,
 } from '@17suit/module-seven-reservations-club/client';
-import { useAppTheme } from '@17suit/ui';
+import { useAppTheme } from '@17suit/ui-native';
 import { usePulseAnimation, useRouteRoleSplash } from '@17suit/ui-native';
 import { useRouter, useRootNavigationState } from 'expo-router';
 import { useAuth, useUser } from '@clerk/clerk-expo';

@@ -1,31 +1,29 @@
 /* Suit design-system theme tokens — web only.
  *
- * Theme is resolved by the browser via `prefers-color-scheme`, so server
- * and first client render produce the same DOM. No `useEffect`, no
- * inline `<style>`, no hydration mismatch.
+ * Light is the default (matches `variables.css` :root). Dark is opt-in through
+ * the `.dark` class on <html>, the same switch `variables.css` and the JS theme
+ * (`ui-web` ThemeProvider) read, so CSS tokens, Tailwind classes and inline JS
+ * styles always agree. A `prefers-color-scheme` media query here used to flip
+ * only these five tokens, leaving light surfaces with light text.
  *
  * Tokens mirror `packages/design-system/src/tokens.ts` (darkColors /
  * lightColors). Keep them in sync if the JS theme changes.
- *
- * Mobile keeps the JS theme (`@17suit/ui-native`) because it supports a
- * user-controlled toggle; CSS-only would not handle the override.
  */
 :root {
+  --suit-color-bg: #f7f8fa;
+  --suit-color-surface: #ffffff;
+  --suit-color-accent: #35a7ff;
+  --suit-color-text: #00151c;
+  --suit-color-muted: #394448;
+}
+
+:root.dark {
+  color-scheme: dark;
   --suit-color-bg: #00151c;
   --suit-color-surface: #394448;
   --suit-color-accent: #35a7ff;
   --suit-color-text: #f0f0f0;
   --suit-color-muted: #cfcfcf;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --suit-color-bg: #f7f8fa;
-    --suit-color-surface: #ffffff;
-    --suit-color-accent: #35a7ff;
-    --suit-color-text: #00151c;
-    --suit-color-muted: #394448;
-  }
 }
 
 html,
