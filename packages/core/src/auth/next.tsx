@@ -1,6 +1,7 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import type { ReactNode } from 'react';
+import { expireStaleDevBrowserCookies } from './dev-browser-handoff';
 
 export interface NextClerkMiddlewareOptions {
   publicRoutes?: string[];
@@ -52,7 +53,7 @@ export function createNextClerkMiddleware(
   const signInUrl = resolveSignInUrl(options?.signInUrl);
   const signUpUrl = resolveSignUpUrl(options?.signUpUrl);
 
-  return clerkMiddleware(
+  const middleware = clerkMiddleware(
     async (auth, req) => {
       if (!isPublicRoute(req)) {
         await auth.protect();
@@ -63,6 +64,14 @@ export function createNextClerkMiddleware(
       signUpUrl,
     },
   ) as NextClerkMiddleware;
+
+  return async (request, event) => {
+    const response = await middleware(request, event);
+    if (response instanceof Response) {
+      expireStaleDevBrowserCookies(request as Request, response, resolvePublishableKey());
+    }
+    return response;
+  };
 }
 
 export interface WebAuthProviderProps {
