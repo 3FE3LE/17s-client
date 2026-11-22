@@ -114,6 +114,12 @@ export function formatTime(instant: string, timeZone: string): string {
   }).format(new Date(instant));
 }
 
+/** "antes de las 7:30 p. m." / "antes de la 1:05 p. m." */
+export function formatBeforeTime(instant: string, timeZone: string): string {
+  const time = formatTime(instant, timeZone);
+  return `antes de ${time.startsWith('1:') ? 'la' : 'las'} ${time}`;
+}
+
 export function formatTimeRange(startAt: string, endAt: string, timeZone: string): string {
   return `${formatTime(startAt, timeZone)} – ${formatTime(endAt, timeZone)}`;
 }

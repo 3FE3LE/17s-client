@@ -43,6 +43,27 @@ const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchA
       message: () => 'Esta solicitud ya fue atendida. La lista se actualizó.',
     },
     {
+      match: /^Only confirmed reservations can be (completed|marked as no-show)$/i,
+      message: () => 'Solo una reserva confirmada se puede cerrar así. La lista se actualizó.',
+    },
+    {
+      match: /^The reservation has not started yet$/i,
+      message: () => 'El turno aún no empieza. Podrás marcarlo cuando haya pasado la hora.',
+    },
+    {
+      match: /^Cannot record a payment on a \w+ reservation$/i,
+      message: () =>
+        'Esta reserva ya no admite pagos. Si devolviste dinero, regístralo como devolución.',
+    },
+    {
+      match: /^Refund exceeds the amount paid$/i,
+      message: () => 'La devolución supera lo que el jugador ha pagado.',
+    },
+    {
+      match: /^endTime must be greater than startTime/i,
+      message: () => 'Cada tarifa por horario debe terminar después de empezar.',
+    },
+    {
       match: /^closeTime must be greater than openTime/i,
       message: () => 'La hora de cierre debe ser posterior a la de apertura.',
     },

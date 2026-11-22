@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { RoleSwitch } from '@/components/role-switch';
 import { SevenRcClientProviders } from '@/components/seven-rc-client-providers';
 import './globals.css';
 
@@ -58,6 +59,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <WebAuthProvider>
           <AppProviders>
             <SevenRcClientProviders>
+              {isSignedIn ? (
+                <header className="bg-background px-lg pt-sm">
+                  <div className="mx-auto flex w-full max-w-[var(--container-content)] flex-wrap justify-end gap-sm">
+                    <RoleSwitch />
+                    <SignOutButton redirectUrl="/sign-in?redirect_url=/">
+                      <button type="button" className={footerButton('secondary')}>
+                        Cerrar sesión
+                      </button>
+                    </SignOutButton>
+                  </div>
+                </header>
+              ) : null}
               {children}
               <AppProductFooter
                 productName="Seven Reservations Club"

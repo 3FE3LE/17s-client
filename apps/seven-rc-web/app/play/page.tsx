@@ -1,7 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useCallback, useRef, useState, type FormEvent } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useRef, useState, type FormEvent } from 'react';
 import {
   useCurrentUserRoleQuery,
   useRoleGate,
@@ -29,6 +29,7 @@ import { describeError, isSlotConflict } from '@/lib/seven-rc-errors';
 import {
   addDaysToDateKey,
   dateKeyInTimeZone,
+  formatBeforeTime,
   formatDateKey,
   formatDuration,
   formatLongDate,
@@ -45,7 +46,6 @@ import {
 import {
   useCancelReservationMutation,
   useCreateReservationMutation,
-  useInvalidatePitchAvailability,
   useMyReservationsQuery,
   usePitchAvailabilityQuery,
   usePlayerVenuePitchesQuery,
@@ -77,6 +77,50 @@ const SLOT_UNAVAILABLE_LABEL: Record<string, string> = {
   PAST: 'ya pasó',
 };
 
+/**
+ * The server stores "no price configured" and "free" the same way (0). A slot priced 0
+ * on a pitch whose base price is also 0 is read as unconfigured; 0 on a priced pitch
+ * means the venue set a free rule for that time.
+ */
+function describeSlotPrice(
+  priceMinor: number,
+  pitch: Pick<Pitch, 'basePriceMinor'> | null,
+  currency: string,
+): { short: string; full: string } {
+  if (priceMinor > 0) {
+    const amount = formatMoneyMinor(priceMinor, currency);
+    return { short: amount, full: amount };
+  }
+  if (!pitch || pitch.basePriceMinor <= 0) {
+    return { short: 'A confirmar', full: 'Precio a confirmar con el complejo' };
+  }
+  return { short: 'Sin costo', full: 'Sin costo' };
+}
+
+/** Mirrors the server's deposit rule (`ceil(price × percent / 100)`). */
+function depositEstimate(priceMinor: number, depositPercent: number): number {
+  return Math.ceil((priceMinor * depositPercent) / 100);
+}
+
+/**
+ * A reservation keeps a price snapshot, so a 0 only reads as free while the pitch is
+ * unchanged since booking: a price set later says nothing about this reservation.
+ */
+function pitchAtBooking(reservation: ReservationWithVenuePitch): Pitch | null {
+  return new Date(reservation.pitch.updatedAt) <= new Date(reservation.createdAt)
+    ? reservation.pitch
+    : null;
+}
+
+/** An unpaid hold past its deadline is already free, up to a minute before the status says so. */
+function isHoldExpired(reservation: ReservationBase, now: number): boolean {
+  return (
+    reservation.status === 'pending_confirmation' &&
+    Boolean(reservation.holdExpiresAt) &&
+    new Date(reservation.holdExpiresAt as string).getTime() <= now
+  );
+}
+
 interface CompletedBooking {
   reservation: ReservationBase;
   venue: PublicVenue;
@@ -96,7 +140,50 @@ export default function PlayPage() {
     );
   }
 
-  return <PlayerWorkspace />;
+  // useSearchParams needs a Suspense boundary so the shell can prerender.
+  return (
+    <Suspense
+      fallback={
+        <AppFrame appName="Reservar cancha" subtitle="Cargando complejos…">
+          <ListSkeleton rows={3} label="Cargando complejos" />
+        </AppFrame>
+      }
+    >
+      <PlayerWorkspace />
+    </Suspense>
+  );
+}
+
+type SelectionParam = 'venue' | 'pitch' | 'date';
+
+/**
+ * Venue, pitch and date live in the URL so a refresh or a shared link keeps the
+ * choice. Local state answers the tap immediately; the URL is replaced alongside it.
+ */
+function useSelectionParams() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [initial] = useState(() => ({
+    venue: searchParams.get('venue'),
+    pitch: searchParams.get('pitch'),
+    date: searchParams.get('date'),
+  }));
+
+  const write = useCallback(
+    (next: Partial<Record<SelectionParam, string | null>>) => {
+      const params = new URLSearchParams(window.location.search);
+      for (const [key, value] of Object.entries(next)) {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [pathname, router],
+  );
+
+  return { initial, write };
 }
 
 function PlayerWorkspace() {
@@ -104,16 +191,22 @@ function PlayerWorkspace() {
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selection = useSelectionParams();
 
   const venuesQuery = usePlayerVenuesQuery(searchTerm || undefined);
   const venues = venuesQuery.data ?? [];
-  const visibleVenues = venues.slice(0, MAX_VENUE_RESULTS);
-  const [explicitVenueId, setExplicitVenueId] = useState<string | null>(null);
+  const [explicitVenueId, setExplicitVenueId] = useState<string | null>(selection.initial.venue);
   const selectedVenue = venues.find((venue) => venue.id === explicitVenueId) ?? venues[0] ?? null;
+  // A venue restored from the URL can sit past the cap; it must still show as chosen.
+  const firstVenues = venues.slice(0, MAX_VENUE_RESULTS);
+  const visibleVenues =
+    selectedVenue && !firstVenues.includes(selectedVenue)
+      ? [selectedVenue, ...firstVenues.slice(0, MAX_VENUE_RESULTS - 1)]
+      : firstVenues;
 
   const pitchesQuery = usePlayerVenuePitchesQuery(selectedVenue?.id ?? null);
   const pitches = pitchesQuery.data ?? [];
-  const [explicitPitchId, setExplicitPitchId] = useState<string | null>(null);
+  const [explicitPitchId, setExplicitPitchId] = useState<string | null>(selection.initial.pitch);
   const selectedPitch = pitches.find((pitch) => pitch.id === explicitPitchId) ?? pitches[0] ?? null;
 
   const timeZone = safeTimeZone(selectedVenue?.timezone);
@@ -125,16 +218,25 @@ function PlayerWorkspace() {
   const dateKeys = Array.from({ length: stripLength }, (_, index) =>
     addDaysToDateKey(todayKey, index),
   );
-  const [explicitDate, setExplicitDate] = useState<string | null>(null);
+  const [explicitDate, setExplicitDate] = useState<string | null>(selection.initial.date);
   const selectedDate =
     explicitDate && dateKeys.includes(explicitDate) ? explicitDate : (dateKeys[0] ?? todayKey);
 
   const availabilityQuery = usePitchAvailabilityQuery(selectedPitch?.id ?? null, selectedDate);
   const slots = availabilityQuery.data?.slots ?? [];
   const currency = availabilityQuery.data?.currency ?? selectedVenue?.currency ?? 'COP';
-  const [explicitSlotStart, setExplicitSlotStart] = useState<string | null>(null);
+  // A slot belongs to its pitch: when a search or refetch swaps the default venue,
+  // the same hour on another pitch must not inherit the choice.
+  const [explicitSlot, setExplicitSlot] = useState<{ pitchId: string; startAt: string } | null>(
+    null,
+  );
   const selectedSlot =
-    slots.find((slot) => slot.startAt === explicitSlotStart && slot.status === 'AVAILABLE') ?? null;
+    slots.find(
+      (slot) =>
+        explicitSlot?.pitchId === selectedPitch?.id &&
+        slot.startAt === explicitSlot?.startAt &&
+        slot.status === 'AVAILABLE',
+    ) ?? null;
 
   const [invitedCount, setInvitedCount] = useState('0');
   const [notes, setNotes] = useState('');
@@ -142,10 +244,33 @@ function PlayerWorkspace() {
   const [completedBooking, setCompletedBooking] = useState<CompletedBooking | null>(null);
 
   const createReservationMutation = useCreateReservationMutation();
-  const invalidateAvailability = useInvalidatePitchAvailability();
+  const slotPrice = selectedSlot
+    ? describeSlotPrice(selectedSlot.priceMinor, selectedPitch, currency)
+    : null;
+
+  // Venue and pitch may still be defaults (first in the list), so every choice writes
+  // them along: the defaults can differ after a refresh.
+  function choosePitch(pitchId: string) {
+    setExplicitVenueId(selectedVenue?.id ?? null);
+    setExplicitPitchId(pitchId);
+    selection.write({ venue: selectedVenue?.id ?? null, pitch: pitchId, date: selectedDate });
+    resetSlotChoice();
+  }
+
+  function chooseDate(dateKey: string) {
+    setExplicitVenueId(selectedVenue?.id ?? null);
+    setExplicitPitchId(selectedPitch?.id ?? null);
+    setExplicitDate(dateKey);
+    selection.write({
+      venue: selectedVenue?.id ?? null,
+      pitch: selectedPitch?.id ?? null,
+      date: dateKey,
+    });
+    resetSlotChoice();
+  }
 
   function resetSlotChoice() {
-    setExplicitSlotStart(null);
+    setExplicitSlot(null);
     setBookingError(null);
   }
 
@@ -179,14 +304,12 @@ function PlayerWorkspace() {
         ...(notes.trim() ? { notes: notes.trim() } : {}),
       });
       setCompletedBooking({ reservation, venue: selectedVenue, pitch: selectedPitch });
-      setExplicitSlotStart(null);
+      setExplicitSlot(null);
       setNotes('');
       setInvitedCount('0');
     } catch (error) {
       setBookingError(describeError(error, 'No se pudo enviar la reserva.'));
-      if (isSlotConflict(error)) setExplicitSlotStart(null);
-    } finally {
-      void invalidateAvailability(selectedPitch.id);
+      if (isSlotConflict(error)) setExplicitSlot(null);
     }
   }
 
@@ -235,6 +358,7 @@ function PlayerWorkspace() {
                 onSelect={(id) => {
                   setExplicitVenueId(id);
                   setExplicitPitchId(null);
+                  selection.write({ venue: id, pitch: null });
                   resetSlotChoice();
                 }}
                 onClearSearch={() => {
@@ -254,10 +378,7 @@ function PlayerWorkspace() {
                   onRetry={() => void pitchesQuery.refetch()}
                   pitches={pitches}
                   selectedId={selectedPitch?.id ?? null}
-                  onSelect={(id) => {
-                    setExplicitPitchId(id);
-                    resetSlotChoice();
-                  }}
+                  onSelect={choosePitch}
                 />
               ) : null}
 
@@ -272,10 +393,7 @@ function PlayerWorkspace() {
                           name="fecha"
                           value={dateKey}
                           checked={dateKey === selectedDate}
-                          onSelect={(value) => {
-                            setExplicitDate(value);
-                            resetSlotChoice();
-                          }}
+                          onSelect={chooseDate}
                           ariaLabel={formatLongDate(dateKey)}
                           className="min-w-[68px] shrink-0 items-center text-center"
                         >
@@ -307,21 +425,19 @@ function PlayerWorkspace() {
                     }
                     onRetry={() => void availabilityQuery.refetch()}
                     slots={slots}
+                    pitch={selectedPitch}
                     timeZone={timeZone}
                     currency={currency}
                     dateLabel={formatLongDate(selectedDate)}
                     selectedStart={selectedSlot?.startAt ?? null}
                     onSelect={(startAt) => {
-                      setExplicitSlotStart(startAt);
+                      if (selectedPitch) setExplicitSlot({ pitchId: selectedPitch.id, startAt });
                       setBookingError(null);
                     }}
                     onNextDay={() => {
                       const index = dateKeys.indexOf(selectedDate);
                       const next = dateKeys[index + 1];
-                      if (next) {
-                        setExplicitDate(next);
-                        resetSlotChoice();
-                      }
+                      if (next) chooseDate(next);
                     }}
                     hasNextDay={dateKeys.indexOf(selectedDate) < dateKeys.length - 1}
                   />
@@ -342,6 +458,7 @@ function PlayerWorkspace() {
                 venue={selectedVenue}
                 pitch={selectedPitch}
                 slot={selectedSlot}
+                priceLabel={slotPrice?.full ?? null}
                 timeZone={timeZone}
                 currency={currency}
               />
@@ -381,15 +498,15 @@ function PlayerWorkspace() {
           </div>
         )}
 
-        {!completedBooking && selectedSlot ? (
+        {!completedBooking && (selectedSlot || bookingError) ? (
           <MobileBookingBar
-            when={formatTimeRange(selectedSlot.startAt, selectedSlot.endAt, timeZone)}
-            pitchName={selectedPitch?.name ?? ''}
-            price={
-              selectedSlot.priceMinor > 0
-                ? formatMoneyMinor(selectedSlot.priceMinor, currency)
-                : 'Sin costo'
+            when={
+              selectedSlot
+                ? formatTimeRange(selectedSlot.startAt, selectedSlot.endAt, timeZone)
+                : null
             }
+            pitchName={selectedPitch?.name ?? ''}
+            price={slotPrice?.full ?? ''}
             isPending={createReservationMutation.isPending}
             error={bookingError}
           />
@@ -446,7 +563,7 @@ function VenuePicker({
       <AppEmpty
         icon={<Inbox size={18} aria-hidden />}
         title="Todavía no hay complejos publicados"
-        description="Cuando un complejo abra sus canchas en Seven RC, aparecerá aquí."
+        description="Cuando un complejo abra sus canchas en Seven Reservations Club, aparecerá aquí."
       />
     );
   }
@@ -543,6 +660,7 @@ function SlotPicker({
   error,
   onRetry,
   slots,
+  pitch,
   timeZone,
   currency,
   dateLabel,
@@ -555,6 +673,7 @@ function SlotPicker({
   error: string | null;
   onRetry: () => void;
   slots: AvailabilitySlot[];
+  pitch: Pitch | null;
   timeZone: string;
   currency: string;
   dateLabel: string;
@@ -618,6 +737,7 @@ function SlotPicker({
                     <SlotChip
                       key={slot.startAt}
                       slot={slot}
+                      pitch={pitch}
                       timeZone={timeZone}
                       currency={currency}
                       checked={slot.startAt === selectedStart}
@@ -636,12 +756,14 @@ function SlotPicker({
 
 function SlotChip({
   slot,
+  pitch,
   timeZone,
   currency,
   checked,
   onSelect,
 }: {
   slot: AvailabilitySlot;
+  pitch: Pitch | null;
   timeZone: string;
   currency: string;
   checked: boolean;
@@ -650,7 +772,7 @@ function SlotChip({
   const isAvailable = slot.status === 'AVAILABLE';
   const start = formatTime(slot.startAt, timeZone);
   const unavailable = SLOT_UNAVAILABLE_LABEL[slot.status] ?? 'no disponible';
-  const price = slot.priceMinor > 0 ? formatMoneyMinor(slot.priceMinor, currency) : 'Sin costo';
+  const price = describeSlotPrice(slot.priceMinor, pitch, currency);
   return (
     <ChoiceChip
       name="horario"
@@ -658,7 +780,7 @@ function SlotChip({
       checked={checked}
       disabled={!isAvailable}
       onSelect={onSelect}
-      ariaLabel={isAvailable ? `${start}, ${price}` : `${start}, ${unavailable}`}
+      ariaLabel={isAvailable ? `${start}, ${price.full}` : `${start}, ${unavailable}`}
       className="items-center text-center"
     >
       <span
@@ -670,7 +792,9 @@ function SlotChip({
       >
         {start}
       </span>
-      <span className="text-xs leading-[1.3] text-muted">{isAvailable ? price : unavailable}</span>
+      <span className="text-xs leading-[1.3] text-muted">
+        {isAvailable ? price.short : unavailable}
+      </span>
     </ChoiceChip>
   );
 }
@@ -687,7 +811,8 @@ function MobileBookingBar({
   isPending,
   error,
 }: {
-  when: string;
+  /** Null when the chosen slot was just lost: the bar stays to announce why. */
+  when: string | null;
   pitchName: string;
   price: string;
   isPending: boolean;
@@ -700,16 +825,25 @@ function MobileBookingBar({
         <div className="mx-auto grid max-w-[640px] gap-xs">
           <div className="flex items-center gap-md">
             <div className="grid min-w-0 flex-1">
-              <p className="m-0 truncate font-bold leading-[1.3] tabular-nums text-text">{when}</p>
-              <p className="m-0 truncate text-sm leading-[18px] text-muted">
-                {pitchName} · {price}
+              <p className="m-0 truncate font-bold leading-[1.3] tabular-nums text-text">
+                {when ?? 'Elige otro horario'}
+              </p>
+              <p className="m-0 break-words text-sm leading-[18px] text-muted">
+                {when ? `${pitchName} · ${price}` : pitchName}
               </p>
             </div>
-            <AppButton type="submit" form={RESERVE_FORM_ID} fullWidth={false} disabled={isPending}>
+            <AppButton
+              type="submit"
+              form={RESERVE_FORM_ID}
+              fullWidth={false}
+              disabled={!when || isPending}
+            >
               {isPending ? 'Enviando…' : 'Reservar'}
             </AppButton>
           </div>
-          {error ? <p className="m-0 text-sm leading-[18px] text-text">{error}</p> : null}
+          <p aria-live="polite" className="m-0 text-sm leading-[18px] text-text empty:sr-only">
+            {error ?? ''}
+          </p>
         </div>
       </div>
     </>
@@ -720,12 +854,14 @@ function BookingSummary({
   venue,
   pitch,
   slot,
+  priceLabel,
   timeZone,
   currency,
 }: {
   venue: PublicVenue | null;
   pitch: Pitch | null;
   slot: AvailabilitySlot | null;
+  priceLabel: string | null;
   timeZone: string;
   currency: string;
 }) {
@@ -744,7 +880,13 @@ function BookingSummary({
     ['Hora', formatTimeRange(slot.startAt, slot.endAt, timeZone)],
     ['Duración', formatDuration(minutesBetween(slot.startAt, slot.endAt))],
   ];
-  if (slot.priceMinor > 0) rows.push(['Precio', formatMoneyMinor(slot.priceMinor, currency)]);
+  if (priceLabel) rows.push(['Precio', priceLabel]);
+  if (slot.priceMinor > 0 && venue.depositPercent > 0) {
+    rows.push([
+      'Anticipo',
+      `${formatMoneyMinor(depositEstimate(slot.priceMinor, venue.depositPercent), currency)} (${venue.depositPercent} %) para apartar el turno`,
+    ]);
+  }
 
   return (
     <dl className="m-0 grid gap-xs">
@@ -767,7 +909,11 @@ function BookingSuccess({
   booking: CompletedBooking;
   onBookAnother: () => void;
 }) {
-  const { reservation, venue, pitch } = booking;
+  const { reservation, pitch } = booking;
+  // The venue search returns only name, address and time zone. Payment and cancellation
+  // terms come with the reservation list, which refetches right after booking.
+  const details = useMyReservationsQuery().data?.find((item) => item.id === reservation.id);
+  const venue = details?.venue ?? booking.venue;
   const timeZone = safeTimeZone(venue.timezone);
   const isPending = reservation.status === 'pending_confirmation';
   const focusOnMount = useCallback((node: HTMLDivElement | null) => node?.focus(), []);
@@ -790,11 +936,9 @@ function BookingSuccess({
           {venue.name} · {pitch.name} ·{' '}
           {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
         </p>
-        {reservation.priceMinor > 0 ? (
-          <p className="m-0 text-md leading-[1.5] text-muted">
-            Precio: {formatMoneyMinor(reservation.priceMinor, reservation.currency)}
-          </p>
-        ) : null}
+        <p className="m-0 text-md leading-[1.5] text-muted">
+          Precio: {describeSlotPrice(reservation.priceMinor, pitch, reservation.currency).full}
+        </p>
       </div>
 
       <div className="grid gap-xs text-md leading-[1.5] text-text">
@@ -807,7 +951,7 @@ function BookingSuccess({
                 {formatMoneyMinor(reservation.depositMinor, reservation.currency)} para confirmar el
                 turno
                 {reservation.holdExpiresAt
-                  ? `. Si no se confirma antes de las ${formatTime(reservation.holdExpiresAt, timeZone)}, el horario se libera.`
+                  ? `. Si no se confirma ${formatBeforeTime(reservation.holdExpiresAt, timeZone)}, el horario se libera.`
                   : '.'}
               </p>
             ) : (
@@ -819,20 +963,25 @@ function BookingSuccess({
             {venue.contactPhone ? (
               <p className="m-0 text-muted">
                 Contacto del complejo:{' '}
-                <a href={`tel:${venue.contactPhone}`} className="text-text underline">
+                <a
+                  href={`tel:${venue.contactPhone.replace(/[^\d+]/g, '')}`}
+                  className="text-text underline underline-offset-2"
+                >
                   {venue.contactPhone}
                 </a>
               </p>
             ) : null}
             <p className="m-0 text-muted">
-              Mientras tengas esta página abierta, revisamos el estado cada 30 segundos en “Mis
-              próximas reservas”, más abajo. También puedes tocar “Actualizar”.
+              Cuando el complejo confirme, el estado cambiará en “Mis próximas reservas”, más abajo.
+              Ahí también verás estos datos de pago.
             </p>
           </>
         ) : (
           <p className="m-0">
-            Tu turno está apartado. Si no puedes ir, cancela con al menos{' '}
-            {venue.cancellationWindowHours} h de anticipación desde “Mis próximas reservas”.
+            Tu turno está apartado.{' '}
+            {details
+              ? `Si no puedes ir, cancela con al menos ${details.venue.cancellationWindowHours} h de anticipación desde “Mis próximas reservas”.`
+              : 'Si no puedes ir, revisa el plazo de cancelación en “Mis próximas reservas”.'}
           </p>
         )}
       </div>
@@ -865,7 +1014,6 @@ function MyReservations() {
     refetchIntervalInBackground: false,
   });
   const cancelReservationMutation = useCancelReservationMutation();
-  const invalidateAvailability = useInvalidatePitchAvailability();
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const [cancelTarget, setCancelTarget] = useState<ReservationWithVenuePitch | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -875,9 +1023,14 @@ function MyReservations() {
   const now = tick || mountedAt;
 
   const reservations = myReservationsQuery.data ?? [];
+  // Requests still waiting on payment or the venue come first: they need action.
   const upcoming = reservations
     .filter((reservation) => new Date(reservation.endAt).getTime() > now)
-    .sort((a, b) => a.startAt.localeCompare(b.startAt));
+    .sort(
+      (a, b) =>
+        Number(b.status === 'pending_confirmation') - Number(a.status === 'pending_confirmation') ||
+        a.startAt.localeCompare(b.startAt),
+    );
   const past = reservations
     .filter((reservation) => new Date(reservation.endAt).getTime() <= now)
     .sort((a, b) => b.startAt.localeCompare(a.startAt));
@@ -894,7 +1047,6 @@ function MyReservations() {
     setCancelError(null);
     try {
       await cancelReservationMutation.mutateAsync(cancelTarget.id);
-      void invalidateAvailability(cancelTarget.pitchId);
       setCancelledNotice(`Cancelaste la reserva en ${cancelTarget.pitch.name}.`);
       dialogRef.current?.close();
     } catch (error) {
@@ -1014,11 +1166,12 @@ function ReservationItem({
 }) {
   const timeZone = safeTimeZone(reservation.venue.timezone);
   const status = reservationStatus(reservation.status);
-  const isActive =
-    reservation.status === 'pending_confirmation' || reservation.status === 'confirmed';
+  const isPending = reservation.status === 'pending_confirmation';
+  const isActive = isPending || reservation.status === 'confirmed';
   const windowHours = reservation.venue.cancellationWindowHours;
   const cancelDeadline = new Date(reservation.startAt).getTime() - windowHours * 3_600_000;
-  const canCancel = isActive && now < cancelDeadline && Boolean(onCancel);
+  const holdExpired = isHoldExpired(reservation, now);
+  const canCancel = isActive && !holdExpired && now < cancelDeadline && Boolean(onCancel);
 
   return (
     <li className="grid gap-sm rounded-[var(--radius-lg)] border border-border-default bg-background p-md sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -1032,15 +1185,22 @@ function ReservationItem({
         <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
           {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
         </p>
-        {reservation.priceMinor > 0 ? (
-          <p className="m-0 text-sm leading-[18px] text-muted">
-            {formatMoneyMinor(reservation.priceMinor, reservation.currency)}
-            {reservation.depositMinor > 0
-              ? ` · anticipo ${formatMoneyMinor(reservation.depositMinor, reservation.currency)}`
-              : ''}
-          </p>
+        <p className="m-0 text-sm leading-[18px] text-muted">
+          {
+            describeSlotPrice(
+              reservation.priceMinor,
+              pitchAtBooking(reservation),
+              reservation.currency,
+            ).full
+          }
+          {!isPending && reservation.depositMinor > 0
+            ? ` · anticipo ${formatMoneyMinor(reservation.depositMinor, reservation.currency)}`
+            : ''}
+        </p>
+        {isPending && onCancel ? (
+          <PendingPaymentInfo reservation={reservation} timeZone={timeZone} now={now} />
         ) : null}
-        {isActive && onCancel && !canCancel ? (
+        {isActive && !holdExpired && onCancel && !canCancel ? (
           <p className="m-0 text-sm leading-[18px] text-muted">
             Ya no se puede cancelar en línea: el complejo acepta cancelaciones hasta {windowHours} h
             antes.
@@ -1053,5 +1213,73 @@ function ReservationItem({
         </AppButton>
       ) : null}
     </li>
+  );
+}
+
+/**
+ * What a pending request still needs from the player: the deposit, the deadline before
+ * the hold releases the slot, how to pay and who to call. Stays on the reservation so it
+ * survives leaving the success screen.
+ */
+function PendingPaymentInfo({
+  reservation,
+  timeZone,
+  now,
+}: {
+  reservation: ReservationWithVenuePitch;
+  timeZone: string;
+  now: number;
+}) {
+  const { venue } = reservation;
+  const owesDeposit =
+    reservation.depositMinor > 0 && reservation.paidMinor < reservation.depositMinor;
+  const holdExpiresAt = reservation.holdExpiresAt;
+  const deadline = holdExpiresAt
+    ? dateKeyInTimeZone(holdExpiresAt, timeZone) === dateKeyInTimeZone(new Date(now), timeZone)
+      ? `Paga ${formatBeforeTime(holdExpiresAt, timeZone)}`
+      : `Paga ${formatBeforeTime(holdExpiresAt, timeZone)} del ${formatLongDate(dateKeyInTimeZone(holdExpiresAt, timeZone))}`
+    : null;
+  const expired = isHoldExpired(reservation, now);
+  const instructions = expired ? null : venue.paymentInstructions?.trim() || null;
+  const phone = venue.contactPhone?.trim() || null;
+
+  return (
+    <div className="grid gap-xs rounded-[var(--radius-md)] bg-feedback-warning-soft p-sm text-sm leading-[18px] text-text">
+      {expired ? (
+        <>
+          <p className="m-0 font-bold">
+            Anticipo: {formatMoneyMinor(reservation.depositMinor, reservation.currency)} · venció el
+            plazo para pagarlo
+          </p>
+          <p className="m-0">El horario se liberó. No pagues sin hablar antes con el complejo.</p>
+        </>
+      ) : owesDeposit ? (
+        <>
+          <p className="m-0 font-bold">
+            Anticipo: {formatMoneyMinor(reservation.depositMinor, reservation.currency)}
+            {deadline ? ` · ${deadline}` : ''}
+          </p>
+          {deadline ? (
+            <p className="m-0 text-muted">Si no se registra a tiempo, el horario se libera.</p>
+          ) : null}
+        </>
+      ) : reservation.depositMinor > 0 ? (
+        <p className="m-0 font-bold">Anticipo registrado. Falta la confirmación del complejo.</p>
+      ) : (
+        <p className="m-0 font-bold">El complejo revisará tu solicitud y la confirmará.</p>
+      )}
+      {instructions ? <p className="m-0 whitespace-pre-line">{instructions}</p> : null}
+      {phone ? (
+        <p className="m-0">
+          Contacto del complejo:{' '}
+          <a
+            href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+            className="font-bold text-text underline underline-offset-2"
+          >
+            {phone}
+          </a>
+        </p>
+      ) : null}
+    </div>
   );
 }
