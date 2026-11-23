@@ -71,18 +71,18 @@ describe('badge contract reproduces the previous inline colors', () => {
   const previous = {
     primary: ['bg-brand-primary', 'text-brand-dark'],
     success: ['bg-success', 'text-brand-dark'],
-    destructive: ['bg-destructive', 'text-brand-light'],
+    destructive: ['bg-destructive', 'text-white', 'dark:text-brand-dark'],
     warning: ['bg-warning', 'text-brand-dark'],
-    info: ['bg-info', 'text-brand-light'],
+    info: ['bg-info', 'text-white', 'dark:text-brand-dark'],
     neutral: ['bg-neutral', 'text-brand-dark'],
   } as const;
 
   it.each(BADGE_VARIANTS)('%s', (variant) => {
-    const [surface, label] = previous[variant];
+    const [surface, ...labels] = previous[variant];
     for (const platform of ['web', 'native'] as const) {
       expect(badgeRecipe({ variant, platform })).toContain(surface);
       const labelClasses = badgeLabelRecipe({ variant, platform });
-      expect(labelClasses).toContain(label);
+      for (const label of labels) expect(labelClasses).toContain(label);
       expect(labelClasses).not.toContain('text-text');
     }
   });
