@@ -4,9 +4,12 @@ import {
   createSevenRcOwnerApi,
   type ConfigurePitchPricingInput,
   type ConfigurePitchSlotsInput,
+  type CreatePitchBlockInput,
+  type CreateOwnerReservationInput,
   type CreatePitchInput,
   type CreateVenueInput,
   type OwnerVenue,
+  type PitchBlock,
   type PitchWithPricing,
   type RecordReservationPaymentInput,
   type ReservationBase,
@@ -16,6 +19,7 @@ import {
   type UpdateVenueSettingsInput,
   type VenueReservation,
   useSevenRcCompleteReservationMutation,
+  useSevenRcCreateOwnerReservationMutation,
   useSevenRcConfigurePitchPricingMutation,
   useSevenRcConfirmVenueReservationMutation,
   useSevenRcConfigurePitchSlotsMutation,
@@ -23,7 +27,10 @@ import {
   useSevenRcOwnerCancelReservationMutation,
   useSevenRcRecordReservationPaymentMutation,
   useSevenRcUpdateVenueSettingsMutation,
+  useSevenRcCreatePitchBlockMutation,
   useSevenRcCreateVenueMutation,
+  useSevenRcDeletePitchBlockMutation,
+  useSevenRcPitchBlocksQuery,
   useSevenRcCreateVenuePitchMutation,
   useSevenRcOwnerVenuePitchesQuery,
   useSevenRcOwnerVenueReservationsQuery,
@@ -101,6 +108,11 @@ export function useRecordReservationPaymentMutation(venueId?: string | null) {
   return useSevenRcRecordReservationPaymentMutation(api, venueId);
 }
 
+export function useCreateOwnerReservationMutation(venueId: string) {
+  const api = useOwnerApi();
+  return useSevenRcCreateOwnerReservationMutation(api, venueId);
+}
+
 export function useMarkNoShowMutation(venueId?: string | null) {
   const api = useOwnerApi();
   return useSevenRcMarkNoShowMutation(api, venueId);
@@ -116,12 +128,30 @@ export function useOwnerCancelReservationMutation(venueId?: string | null) {
   return useSevenRcOwnerCancelReservationMutation(api, venueId);
 }
 
+export function usePitchBlocksQuery(pitchId: string | null, from: string) {
+  const api = useOwnerApi();
+  return useSevenRcPitchBlocksQuery(api, pitchId, from);
+}
+
+export function useCreatePitchBlockMutation(pitchId: string) {
+  const api = useOwnerApi();
+  return useSevenRcCreatePitchBlockMutation(api, pitchId);
+}
+
+export function useDeletePitchBlockMutation(pitchId: string) {
+  const api = useOwnerApi();
+  return useSevenRcDeletePitchBlockMutation(api, pitchId);
+}
+
 export type {
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
+  CreateOwnerReservationInput,
+  CreatePitchBlockInput,
   CreatePitchInput,
   CreateVenueInput,
   OwnerVenue,
+  PitchBlock,
   PitchWithPricing,
   RecordReservationPaymentInput,
   ReservationBase,

@@ -1,10 +1,18 @@
 import type { Metadata } from 'next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
+import { ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { Arvo, Zilla_Slab } from 'next/font/google';
+import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { SiteFooter } from './components/site-footer';
 import './globals.css';
+
+const amaranth = Amaranth({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-amaranth',
+  display: 'swap',
+});
 
 const arvo = Arvo({
   subsets: ['latin'],
@@ -36,7 +44,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${arvo.variable} ${zillaSlab.variable}`}>
+    <html
+      lang="es"
+      className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
+      // ThemeScript sets the `dark` class before hydration.
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>
         <WebAuthProvider
           signInUrl="/sign-in"

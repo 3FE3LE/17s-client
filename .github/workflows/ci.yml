@@ -55,8 +55,18 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Lint and typecheck affected packages
         run: pnpm exec turbo run lint typecheck --affected
+      # PRs: Vitest follows the import graph and runs only specs related to the
+      # diff (docs/e2e-selection.md). Pushes run the whole affected packages.
+      - name: Test affected packages (changed specs only)
+        if: github.event_name == 'pull_request'
+        run: pnpm exec turbo run test --affected -- --changed "$TURBO_SCM_BASE" --passWithNoTests
       - name: Test affected packages
+        if: github.event_name != 'pull_request'
         run: pnpm exec turbo run test --affected
+      # Coverage floor on domain and services only (lib + server actions). Fast, so it runs
+      # unconditionally; thresholds live in each app's vitest.config.ts.
+      - name: Coverage gate (seven-rc-web)
+        run: pnpm --filter @17suit/seven-rc-web test:coverage
       # API contract drift gate. Fetches the latest openapi.json artifact
       # from 17Suit/17s-server main and diffs the regenerated
       # packages/core/src/api-schema.ts against the committed version. Fails
@@ -66,6 +76,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm verify:api-schema
+      # Design-token drift gate. CSS token files in packages/tailwind-config
+      # are generated from packages/design-system/src/tokens.ts; fails when a
+      # committed CSS file no longer matches the canonical TS theme.
+      - name: Verify design tokens
+        run: pnpm tokens:check
       # App registry drift gate. Asserts every apps/<slug>/ and
       # packages/modules/<slug>/ referenced in apps-registry.json exists on
       # disk and vice versa. Passes cleanly when the registry is not

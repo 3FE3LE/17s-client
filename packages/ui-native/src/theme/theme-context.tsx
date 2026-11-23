@@ -2,10 +2,10 @@ import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { getSuitTheme } from '@17suit/design-system';
-import type { SuitTheme, ThemeMode } from '@17suit/design-system';
+import type { SuitTheme, ThemeMode, ThemePreference } from '@17suit/design-system';
 import { Uniwind } from 'uniwind';
 
-export type ThemeModePreference = ThemeMode | 'system';
+export type ThemeModePreference = ThemePreference;
 
 interface ThemeContextValue {
   theme: SuitTheme;

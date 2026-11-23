@@ -8,9 +8,6 @@
   "exports": {
     ".": {
       "default": "./src/index.ts"
-    },
-    "./poc/*": {
-      "default": "./src/poc/*.ts"
     }
   },
   "scripts": {

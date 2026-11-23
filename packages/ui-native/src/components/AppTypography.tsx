@@ -1,47 +1,40 @@
-import type { SuitTheme } from '@17suit/design-system';
+import {
+  typographyRecipe,
+  type TypographyAlign,
+  type TypographyVariant,
+} from '@17suit/design-system';
 import type { PropsWithChildren } from 'react';
 import { Text, type TextStyle } from 'react-native';
-import { useAppTheme } from '../theme/theme-context';
-
-type TypographyVariant = keyof SuitTheme['typography']['styles'];
 
 export interface AppTypographyProps extends PropsWithChildren {
   variant?: TypographyVariant;
+  /** Overrides the theme text color. */
   color?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: TypographyAlign;
+  className?: string;
   style?: TextStyle;
   numberOfLines?: number;
   /** Pass `'header'` when the text titles a section, so screen readers can jump to it. */
   accessibilityRole?: 'header' | 'text';
 }
 
+/** Native renderer of the shared typography contract (Uniwind classes). */
 export function AppTypography({
   children,
   variant = 'body',
   color,
   align = 'left',
+  className,
   style,
   numberOfLines,
   accessibilityRole,
 }: AppTypographyProps) {
-  const { theme } = useAppTheme();
-  const typeStyle = theme.typography.styles[variant];
-
   return (
     <Text
       numberOfLines={numberOfLines}
       {...(accessibilityRole ? { accessibilityRole } : {})}
-      style={[
-        {
-          color: color ?? theme.colors.text,
-          textAlign: align,
-          fontFamily: typeStyle.nativeFamily,
-          fontSize: typeStyle.fontSize,
-          lineHeight: Math.round(typeStyle.fontSize * typeStyle.lineHeightRecommended),
-          letterSpacing: typeStyle.letterSpacingPx,
-        },
-        style,
-      ]}
+      className={typographyRecipe({ variant, align, platform: 'native', className })}
+      style={color ? [{ color }, style] : style}
     >
       {children}
     </Text>

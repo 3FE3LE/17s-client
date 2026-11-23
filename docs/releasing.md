@@ -24,6 +24,10 @@ validated on `preview` is what reaches `production`.
 ./tooling/scripts/release.sh tag production v0.4.2
 ```
 
+`tag` also creates the GitHub Release, with the PRs that landed since the previous tag. Versions
+with a suffix (`-rc.1`) become pre-releases, plain versions become "Latest". This repository is
+public, and so are those notes.
+
 `quality` runs on the PR. The `build` job runs after the merge, on the push to `preview` or
 `production`, so check it on `preview` before promoting to `production`.
 
