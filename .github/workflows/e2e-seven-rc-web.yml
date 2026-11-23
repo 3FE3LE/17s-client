@@ -1,0 +1,56 @@
+name: E2E seven-rc-web
+
+# Playwright E2E for the public booking flow (/c/[slug]).
+# - Only PRs into development and preview (decision in 17Suit/17s-workspace#65); `quality` in
+#   ci.yml stays the gate for lint, typecheck and unit/component tests.
+# - Runs in GitHub Actions, never on Vercel, so it adds no deploys.
+# - The Next server is pointed at e2e/support/stub-api.mjs (see playwright.config.ts): no Docker,
+#   Postgres or real Clerk session. Clerk keys below are placeholders, not credentials.
+on:
+  pull_request:
+    branches: [development, preview]
+    paths:
+      - 'apps/seven-rc-web/**'
+      - 'packages/ui/**'
+      - 'packages/ui-web/**'
+      - 'packages/core/**'
+      - 'packages/design-system/**'
+      - 'packages/tailwind-config/**'
+      - 'packages/modules/seven-reservations-club/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/e2e-seven-rc-web.yml'
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: e2e-seven-rc-web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZmFrZS5jbGVyay5hY2NvdW50cy5kZXYk
+      CLERK_SECRET_KEY: sk_test_e2e_placeholder
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm --filter @17suit/seven-rc-web exec playwright install --with-deps chromium
+      - name: Run E2E
+        run: pnpm --filter @17suit/seven-rc-web test:e2e
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-seven-rc-web
+          path: apps/seven-rc-web/playwright-report/
+          retention-days: 7
