@@ -59,6 +59,6 @@ describe('createExternalPlatformRoleDataSource', () => {
 
     expect(result.role).toBe('OWNER');
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('http://api.test/api/me');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/api/me');
   });
 });
