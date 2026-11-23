@@ -11,7 +11,9 @@
     "clean": "rm -rf .next",
     "dev:product": "pnpm run dev",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
@@ -27,6 +29,7 @@
     "@17suit/eslint-config": "workspace:*",
     "@17suit/tailwind-config": "workspace:*",
     "@17suit/typescript-config": "workspace:*",
+    "@playwright/test": "1.61.1",
     "@sentry/nextjs": "10.62.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@testing-library/react": "^16.3.2",
