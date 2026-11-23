@@ -18,6 +18,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { PitchPriceRules } from '@/components/pitch-price-rules';
 import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
@@ -1662,6 +1663,12 @@ function PitchConfig({
       )}
       <PitchPriceForm
         key={`precio-${pitch.id}`}
+        venueId={venueId}
+        currency={currency}
+        pitch={pitch}
+      />
+      <PitchPriceRules
+        key={`tarifas-${pitch.id}-${JSON.stringify(pitch.priceRules)}-${pitch.basePriceMinor}`}
         venueId={venueId}
         currency={currency}
         pitch={pitch}
