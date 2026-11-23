@@ -17,6 +17,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { PublishVenueForm } from '@/components/publish-venue-form';
 import {
   ConfirmDialog,
@@ -823,6 +824,15 @@ function OwnerWorkspace() {
           <CheckCircle2 size={18} aria-hidden className="text-success" />
           Tu complejo quedó configurado. Puedes cambiarlo cuando quieras en “Configuración”.
         </p>
+      ) : null}
+
+      {selectedVenue && pitchesReady ? (
+        <PitchBlocksSection
+          key={selectedVenue.id}
+          pitches={pitches}
+          timeZone={timeZone}
+          todayKey={todayKey}
+        />
       ) : null}
 
       <details
