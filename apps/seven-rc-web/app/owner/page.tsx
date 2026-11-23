@@ -18,6 +18,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { PublishVenueForm } from '@/components/publish-venue-form';
@@ -784,6 +785,14 @@ function OwnerWorkspace() {
               </div>
             )}
           </section>
+
+          <OwnerBalances
+            key={selectedVenue.id}
+            venueId={selectedVenue.id}
+            timeZone={timeZone}
+            todayKey={todayKey}
+            onRecordPayment={(reservation) => openPayment(reservation, 'agenda')}
+          />
         </>
       ) : null}
 
