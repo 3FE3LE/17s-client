@@ -9,8 +9,13 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     coverage: {
       provider: 'v8',
-      include: ['lib/**/*.ts', 'app/**/actions.ts', 'components/**/*.tsx'],
+      // Gate scope: domain (lib) and services (server actions) only. Components are covered by
+      // component tests and E2E, not by a number.
+      include: ['lib/**/*.ts', 'app/**/actions.ts'],
       exclude: ['**/*.spec.{ts,tsx}'],
+      // Ratchet: floors sit just under the measured baseline (2026-11-23: 48.8 / 67.7 / 27.4 / 46.4).
+      // Raise them when coverage grows; never lower them to land a change.
+      thresholds: { statements: 45, branches: 62, functions: 25, lines: 43 },
     },
   },
   resolve: {

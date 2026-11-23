@@ -63,6 +63,10 @@ jobs:
       - name: Test affected packages
         if: github.event_name != 'pull_request'
         run: pnpm exec turbo run test --affected
+      # Coverage floor on domain and services only (lib + server actions). Fast, so it runs
+      # unconditionally; thresholds live in each app's vitest.config.ts.
+      - name: Coverage gate (seven-rc-web)
+        run: pnpm --filter @17suit/seven-rc-web test:coverage
       # API contract drift gate. Fetches the latest openapi.json artifact
       # from 17Suit/17s-server main and diffs the regenerated
       # packages/core/src/api-schema.ts against the committed version. Fails
