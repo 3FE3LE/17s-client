@@ -17,6 +17,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { PublishVenueForm } from '@/components/publish-venue-form';
 import {
   ConfirmDialog,
   HintedInput,
@@ -346,6 +347,15 @@ function OwnerWorkspace() {
     missing.length > 0 && pitches.length > 1
       ? ` Falta en ${missing.map((pitch) => pitch.name).join(', ')}.`
       : '';
+  const publishMissing = [
+    ...(hasPitch ? [] : ['una cancha']),
+    ...(hasPitch && withoutHours.length > 0
+      ? [`horario en ${withoutHours.map((pitch) => pitch.name).join(', ')}`]
+      : []),
+    ...(hasPitch && withoutPrice.length > 0
+      ? [`precio en ${withoutPrice.map((pitch) => pitch.name).join(', ')}`]
+      : []),
+  ];
   const setupItems: SetupItem[] = [
     {
       key: 'complejo',
@@ -386,6 +396,15 @@ function OwnerWorkspace() {
         (selectedVenue.depositPercent === 0 || selectedVenue.paymentInstructions?.trim()),
       ),
       target: hasVenue ? 'ajustes-title' : null,
+    },
+    {
+      key: 'publicar',
+      label: 'Publicar',
+      description: publishMissing.length
+        ? `Para publicar falta: ${publishMissing.join('; ')}.`
+        : 'Define tu enlace y publica la página para que los jugadores reserven.',
+      done: Boolean(selectedVenue?.isPublished),
+      target: hasVenue ? 'publicar-title' : null,
     },
   ];
   const setupKnown = !venuesQuery.isLoading && !venuesQuery.error && (!hasVenue || pitchesReady);
@@ -824,6 +843,11 @@ function OwnerWorkspace() {
           {selectedVenue ? (
             <>
               <VenueSettingsForm key={selectedVenue.id} venue={selectedVenue} />
+              <PublishVenueForm
+                key={`publish-${selectedVenue.id}`}
+                venue={selectedVenue}
+                missing={publishMissing}
+              />
               <PitchConfig
                 venueId={selectedVenue.id}
                 currency={selectedVenue.currency}
