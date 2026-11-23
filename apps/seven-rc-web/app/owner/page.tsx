@@ -562,6 +562,10 @@ function OwnerWorkspace() {
           <Link href="/owner/reports" className="text-text underline">
             Ver reportes de ingresos y ocupación
           </Link>
+          {' · '}
+          <Link href="/owner/customers" className="text-text underline">
+            Ver clientes
+          </Link>
         </p>
       ) : null}
 
