@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
+import { GuestBookingForm } from '@/components/guest-booking-form';
 import { fetchPublicVenue, fetchPublicVenueAvailability } from '@/lib/public-venue-api';
 import {
   addDaysToDateKey,
   formatDuration,
   formatLongDate,
   formatMoneyMinor,
+  formatSlotWhen,
   formatTime,
   safeTimeZone,
   sportLabel,
@@ -28,7 +30,11 @@ const SLOT_STATUS: Record<
 
 interface PageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fecha?: string | string[] }>;
+  searchParams: Promise<{
+    fecha?: string | string[];
+    turno?: string | string[];
+    conflicto?: string | string[];
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -55,13 +61,22 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
   const venue = await fetchPublicVenue(slug);
   if (!venue) notFound();
 
-  const { fecha } = await searchParams;
+  const { fecha, turno, conflicto } = await searchParams;
   const date = resolveDate(fecha, venue.today, venue.bookingHorizonDays);
   const maxDate = addDaysToDateKey(venue.today, venue.bookingHorizonDays);
   const availability = await fetchPublicVenueAvailability(slug, date);
   if (!availability) notFound();
 
   const timeZone = safeTimeZone(venue.timezone);
+
+  // `turno` = "<pitchId>|<startAt>". Honored only while that slot is still free on this date.
+  const turnoRaw = Array.isArray(turno) ? turno[0] : turno;
+  const [turnoPitchId, turnoStartAt] = (turnoRaw ?? '').split('|');
+  const selectedPitch = availability.pitches.find((pitch) => pitch.pitchId === turnoPitchId);
+  const selectedSlot = selectedPitch?.slots.find(
+    (slot) => slot.startAt === turnoStartAt && slot.status === 'AVAILABLE',
+  );
+  const hadConflict = (Array.isArray(conflicto) ? conflicto[0] : conflicto) === '1';
 
   return (
     <main className="mx-auto grid w-full max-w-[var(--container-content)] gap-xl px-lg py-xl">
@@ -77,6 +92,15 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           </p>
         ) : null}
       </header>
+
+      {hadConflict ? (
+        <p
+          role="alert"
+          className="m-0 rounded-[var(--radius-md)] border border-destructive/50 bg-feedback-error-soft px-3 py-2 text-sm leading-[18px] text-text"
+        >
+          Otra persona acaba de reservar ese horario. Actualizamos la lista: elige otro.
+        </p>
+      ) : null}
 
       <section aria-labelledby="canchas-titulo" className="grid gap-sm">
         <h2 id="canchas-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
@@ -165,7 +189,29 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
                           {' · '}
                           {formatMoneyMinor(slot.priceMinor, availability.currency)}
                         </span>
-                        <AppBadge variant={status.variant}>{status.label}</AppBadge>
+                        {free ? (
+                          <a
+                            href={`?${new URLSearchParams({
+                              fecha: date,
+                              turno: `${pitch.pitchId}|${slot.startAt}`,
+                            }).toString()}#reservar`}
+                            aria-current={
+                              selectedSlot?.startAt === slot.startAt &&
+                              selectedPitch?.pitchId === pitch.pitchId
+                                ? 'true'
+                                : undefined
+                            }
+                            className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-border-strong px-md text-sm font-bold text-text"
+                          >
+                            Reservar
+                            <span className="sr-only">
+                              {' '}
+                              {pitch.pitchName} a las {formatTime(slot.startAt, timeZone)}
+                            </span>
+                          </a>
+                        ) : (
+                          <AppBadge variant={status.variant}>{status.label}</AppBadge>
+                        )}
                       </li>
                     );
                   })}
@@ -175,6 +221,27 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           ))
         )}
       </section>
+
+      {selectedPitch && selectedSlot ? (
+        <div id="reservar" className="scroll-mt-lg">
+          <GuestBookingForm
+            key={`${selectedPitch.pitchId}|${selectedSlot.startAt}`}
+            slug={venue.slug}
+            date={date}
+            pitchId={selectedPitch.pitchId}
+            startAt={selectedSlot.startAt}
+            when={formatSlotWhen(selectedSlot.startAt, selectedSlot.endAt, timeZone)}
+            pitchName={selectedPitch.pitchName}
+            priceLabel={formatMoneyMinor(selectedSlot.priceMinor, availability.currency)}
+            depositPercent={venue.depositPercent}
+            depositLabel={formatMoneyMinor(
+              Math.ceil((selectedSlot.priceMinor * venue.depositPercent) / 100),
+              availability.currency,
+            )}
+            holdMinutes={venue.holdMinutes}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }
