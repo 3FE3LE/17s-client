@@ -52,6 +52,21 @@ describe('resolveRedirectTarget', () => {
       expect(resolveRedirectTarget(undefined)).toBe('/');
     });
 
+    it.each([
+      '/\\example.org',
+      '/\t/example.org',
+      '/\n/example.org',
+      '/\r/example.org',
+      '/.//example.org',
+      '/%2e//example.org',
+    ])('falls back to / when %j does not normalize to a path on this site', (value) => {
+      expect(resolveRedirectTarget(value)).toBe('/');
+    });
+
+    it('keeps query, hash and encoded characters of a relative path', () => {
+      expect(resolveRedirectTarget('/apps?tab=a%2Fb#top')).toBe('/apps?tab=a%2Fb#top');
+    });
+
     it('takes the first value when an array is provided', () => {
       expect(resolveRedirectTarget(['/home', '/admin'])).toBe('/home');
     });

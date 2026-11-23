@@ -1,0 +1,38 @@
+/* [next]/internal/font/google/arvo_64345f9a.module.css [app-client] (css) */
+@font-face {
+  font-family: Arvo;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../media/63f26fe34c987908-s.p.e5023865.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Arvo;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../media/e2f3d2dfca5b1593-s.p.89fd9991.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Arvo Fallback;
+  src: local(Times New Roman);
+  ascent-override: 79.95%;
+  descent-override: 20.56%;
+  line-gap-override: 2.23%;
+  size-adjust: 120.19%;
+}
+
+.arvo_64345f9a-module__XxeC0q__className {
+  font-family: Arvo, Arvo Fallback;
+  font-style: normal;
+}
+
+.arvo_64345f9a-module__XxeC0q__variable {
+  --font-arvo: "Arvo", "Arvo Fallback";
+}
+
+/*# sourceMappingURL=%5Bnext%5D_internal_font_google_arvo_64345f9a_module_css_bad6b30c._.single.css.map*/

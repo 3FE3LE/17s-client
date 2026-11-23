@@ -31,7 +31,7 @@ const containerStyle: CSSProperties = {
   width: '100%',
   // Theme-reactive: follows the `dark` class on <html> via token vars.
   background: 'color-mix(in srgb, var(--suit-color-surface) 88%, transparent)',
-  borderTop: '1px solid rgba(0, 23, 31, 0.12)',
+  borderTop: '1px solid var(--color-border-default, rgba(0, 23, 31, 0.12))',
 };
 
 const contentStyle: CSSProperties = {
@@ -62,7 +62,8 @@ const baseButtonStyle: CSSProperties = {
   justifyContent: 'center',
   textDecoration: 'none',
   borderRadius: 'var(--radius-md, 8px)',
-  border: '1px solid rgba(0, 23, 31, 0.12)',
+  border: '1px solid var(--color-border-default, rgba(0, 23, 31, 0.12))',
+  minHeight: 44,
   padding: '10px 16px',
   fontFamily: '"Zilla Slab", serif',
   fontSize: 16,
@@ -74,6 +75,9 @@ const baseButtonStyle: CSSProperties = {
 export const appProductFooterButtonStyle = baseButtonStyle;
 
 const textLinkStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 44,
   color: 'var(--color-muted, #394448)',
   textDecoration: 'none',
   fontFamily: '"Zilla Slab", serif',
@@ -164,7 +168,7 @@ export function AppProductFooter({
                       href={signInHref}
                       style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
                     >
-                      Iniciar sesion
+                      Iniciar sesión
                     </a>
                     <a
                       href={signUpHref}
@@ -172,7 +176,8 @@ export function AppProductFooter({
                         ...baseButtonStyle,
                         color: '#ffffff',
                         border: '1px solid #01695b',
-                        background: 'linear-gradient(95deg, #00916e, #007666)',
+                        background:
+                          'linear-gradient(95deg, var(--color-action-primary, #007f60), var(--color-action-primary-hover, #007666))',
                         boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
                       }}
                     >
@@ -219,7 +224,7 @@ export function AppProductFooter({
               lineHeight: 1.5,
             }}
           >
-            {year} {suiteName}. Todos los derechos reservados.
+            © {year} {suiteName}. Todos los derechos reservados.
           </p>
           {themeControl === false ? null : (themeControl ?? <AppThemeToggle />)}
         </div>

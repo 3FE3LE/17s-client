@@ -1,56 +1,48 @@
 import { useSignUp } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppInput, AppLinkAction, GapView, useAppTheme } from '@17suit/ui';
+import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
-import { Alert, Text } from 'react-native';
 import { useState } from 'react';
-
-function getClerkErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
-  }
-  return 'No fue posible crear la cuenta.';
-}
+import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
+import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpScreen() {
   const router = useRouter();
   const { isLoaded, signUp, setActive } = useSignUp();
-  const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const passwordsMatch = password === confirmPassword;
-  const isFormValid =
-    email.trim().length > 0 &&
-    password.trim().length > 0 &&
-    confirmPassword.trim().length > 0 &&
-    passwordsMatch;
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const emailError = submitAttempted && email.trim().length === 0 ? 'Ingresa tu correo.' : null;
+  const passwordError =
+    submitAttempted && password.trim().length === 0 ? 'Crea una contraseña.' : null;
+  const confirmError = !submitAttempted
+    ? null
+    : confirmPassword.trim().length === 0
+      ? 'Repite la contraseña.'
+      : password !== confirmPassword
+        ? 'Las contraseñas no coinciden.'
+        : null;
 
   const handleCreateAccount = async () => {
     if (!isLoaded) return;
     setSubmitAttempted(true);
-    if (!isFormValid) {
-      if (!passwordsMatch) {
-        Alert.alert('Registro', 'Las contrasenas no coinciden.');
-      }
+    setFormError(null);
+    if (
+      email.trim().length === 0 ||
+      password.trim().length === 0 ||
+      confirmPassword.trim().length === 0 ||
+      password !== confirmPassword
+    ) {
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await signUp.create({
-        emailAddress: email.trim(),
-        password,
-      });
+      const result = await signUp.create({ emailAddress: email.trim(), password });
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive?.({ session: result.createdSessionId });
@@ -60,53 +52,54 @@ export default function SignUpScreen() {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       router.push('/sign-up-verify');
     } catch (err) {
-      Alert.alert('Registro', getClerkErrorMessage(err));
+      setFormError(humanizeClerkError(err, 'No pudimos crear la cuenta. Inténtalo de nuevo.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <AppFrame appName="Seven Reservations Club" subtitle="Crea tu cuenta con correo y contrasena.">
+    <Screen
+      back={false}
+      title="Crear cuenta"
+      subtitle="Te enviaremos un código para verificar tu correo."
+    >
       <GapView gap="sm">
-        <AppInput
+        <FormField
+          label="Correo"
+          kind="email"
           value={email}
           onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="tu@empresa.com"
+          placeholder="tu@correo.com"
+          error={emailError}
+          returnKeyType="next"
         />
-        {submitAttempted && email.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu correo.</Text>
-        ) : null}
-        <AppInput
+        <FormField
+          label="Contraseña"
+          kind="new-password"
           value={password}
           onChangeText={setPassword}
-          secureTextEntry
-          placeholder="Contrasena"
+          placeholder="Mínimo 8 caracteres"
+          error={passwordError}
+          returnKeyType="next"
         />
-        {submitAttempted && password.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu contrasena.</Text>
-        ) : null}
-        <AppInput
+        <FormField
+          label="Repetir contraseña"
+          kind="new-password"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
-          secureTextEntry
-          placeholder="Confirmar contrasena"
+          error={confirmError}
+          returnKeyType="go"
+          onSubmitEditing={() => {
+            void handleCreateAccount();
+          }}
         />
-        {submitAttempted && confirmPassword.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>Confirma tu contrasena.</Text>
-        ) : null}
-        {submitAttempted && !passwordsMatch ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-            Las contrasenas no coinciden.
-          </Text>
-        ) : null}
-        <AppButton onPress={handleCreateAccount} disabled={!isFormValid || isSubmitting}>
-          {isSubmitting ? 'Creando...' : 'Crear cuenta'}
+        <FormError message={formError} />
+        <AppButton onPress={handleCreateAccount} disabled={isSubmitting}>
+          {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
         </AppButton>
         <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo una cuenta</AppLinkAction>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }

@@ -1,8 +1,21 @@
+const RELATIVE_BASE = 'https://relative.invalid';
+
+function staysOnSite(path: string): boolean {
+  try {
+    const url = new URL(path, RELATIVE_BASE);
+    // Check the normalized pathname too: a router may navigate to it on its own.
+    return url.origin === RELATIVE_BASE && !url.pathname.startsWith('//');
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolves a safe post-auth redirect target from a `redirect_url` param.
  *
  * Rules:
- * - Relative paths starting with a single `/` are always allowed.
+ * - Relative paths starting with a single `/` are allowed only if they still
+ *   resolve to this site after URL normalization.
  * - Absolute URLs are allowed only if their origin is in the allow-list
  *   (env: NEXT_PUBLIC_FIFTEEN_AC_WEB_URL, NEXT_PUBLIC_SEVEN_RC_WEB_URL,
  *    NEXT_PUBLIC_NINE_CC_WEB_URL, NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS)
@@ -16,7 +29,7 @@ export function resolveRedirectTarget(rawValue: string | string[] | null | undef
     return '/';
   }
   if (value.startsWith('/') && !value.startsWith('//')) {
-    return value;
+    return staysOnSite(value) ? value : '/';
   }
 
   const allowedOrigins = [

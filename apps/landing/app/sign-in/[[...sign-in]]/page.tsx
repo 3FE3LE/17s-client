@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { resolveRedirectTarget } from '../../lib/auth-redirect';
+import { afterAuthPath } from '../../lib/session-handoff';
 import { SignInClient } from './sign-in-client';
 
 interface PageProps {
@@ -13,7 +14,7 @@ export default async function SignInPage({ searchParams }: PageProps) {
   const { userId } = await auth();
 
   if (userId) {
-    redirect(redirectTarget);
+    redirect(afterAuthPath(redirectTarget));
   }
 
   return <SignInClient redirectTarget={redirectTarget} />;

@@ -1,0 +1,38 @@
+/* [next]/internal/font/google/amaranth_d265ffec.module.css [app-client] (css) */
+@font-face {
+  font-family: Amaranth;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../media/997ad33dc58d23c8-s.p.34a2d6fb.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Amaranth;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../media/813f3f6970d4b897-s.p.e652b6f2.woff2") format("woff2");
+  unicode-range: U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Amaranth Fallback;
+  src: local(Arial);
+  ascent-override: 100.95%;
+  descent-override: 24.41%;
+  line-gap-override: 0.0%;
+  size-adjust: 96.68%;
+}
+
+.amaranth_d265ffec-module__KDV0ma__className {
+  font-family: Amaranth, Amaranth Fallback;
+  font-style: normal;
+}
+
+.amaranth_d265ffec-module__KDV0ma__variable {
+  --font-amaranth: "Amaranth", "Amaranth Fallback";
+}
+
+/*# sourceMappingURL=%5Bnext%5D_internal_font_google_amaranth_d265ffec_module_css_bad6b30c._.single.css.map*/

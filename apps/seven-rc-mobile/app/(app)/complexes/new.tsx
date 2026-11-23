@@ -1,20 +1,23 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppButton, AppInput, AppSelect, useAppToast, GapView, useAppTheme } from '@17suit/ui';
+import { AppButton, AppInput, AppSelect, AppSkeleton, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { z } from 'zod';
-import { AuthTabScreen } from '../../../components/auth-tab-screen';
+import { Screen } from '../../../components/screen';
+import { FormError } from '../../../components/form-field';
+import { humanizeError } from '../../../lib/error-messages';
+import { feedback } from '../../../lib/feedback';
 import { IANA_TIMEZONES } from '../../../lib/iana-timezones';
+import { timeZoneCity } from '../../../lib/timezone-label';
 import { useCreateVenueMutation } from '../../../lib/owner-queries';
-import { Text } from 'react-native';
 
 const createComplexSchema = z.object({
   name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres.'),
-  location: z.string().trim().max(255, 'Maximo 255 caracteres.').optional().or(z.literal('')),
-  timezone: z.string().trim().max(80, 'Maximo 80 caracteres.').optional().or(z.literal('')),
+  location: z.string().trim().max(255, 'Máximo 255 caracteres.').optional().or(z.literal('')),
+  timezone: z.string().trim().max(80, 'Máximo 80 caracteres.').optional().or(z.literal('')),
 });
 
 type CreateComplexFormValues = z.infer<typeof createComplexSchema>;
@@ -39,16 +42,18 @@ function detectLocalTimezone(): string {
 
 export default function CreateComplexScreen() {
   const router = useRouter();
-  const toast = useAppToast();
-  const { theme } = useAppTheme();
   const { user } = useUser();
-  const { role } = useCurrentUserRoleQuery({ userId: user?.id, enabled: Boolean(user?.id) });
+  const { role, isLoading } = useCurrentUserRoleQuery({
+    userId: user?.id,
+    enabled: Boolean(user?.id),
+  });
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const detectedTimezone = useMemo(() => detectLocalTimezone(), []);
   const timezoneOptions = useMemo(() => {
     const unique = new Set<string>([detectedTimezone, ...IANA_TIMEZONES]);
     return Array.from(unique).map((value) => ({
       value,
-      label: value,
+      label: `${timeZoneCity(value)} · ${value}`,
     }));
   }, [detectedTimezone]);
   const createVenueMutation = useCreateVenueMutation();
@@ -62,43 +67,68 @@ export default function CreateComplexScreen() {
     },
   });
 
+  if (isLoading || !user) {
+    return (
+      <Screen title="Nuevo complejo">
+        <AppSkeleton height={180} rounded="lg" />
+      </Screen>
+    );
+  }
+
   if (role !== 'OWNER') {
     return (
-      <AuthTabScreen
-        appName="Nuevo complejo"
-        subtitle="Solo disponible para cuentas OWNER."
-        role={role}
+      <Screen
+        title="Nuevo complejo"
+        subtitle="Solo las cuentas que administran complejos pueden crear uno."
       >
         <GapView gap="md">
           <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
         </GapView>
-      </AuthTabScreen>
+      </Screen>
     );
   }
 
   const onSubmit = handleSubmit(async (values) => {
+    setSubmitError(null);
     try {
       const location = toOptionalValue(values.location);
       const timezone = toOptionalValue(values.timezone);
 
-      await createVenueMutation.mutateAsync({
+      const created = await createVenueMutation.mutateAsync({
         name: values.name.trim(),
         ...(location ? { location } : {}),
         ...(timezone ? { timezone } : {}),
       });
-      toast.success('Complejo creado', 'Ya puedes agregar canchas.');
-      router.replace('/home');
+      feedback.success('Complejo creado', 'Ya puedes agregar canchas.');
+      router.replace(`/complexes/${created.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo crear el complejo.';
-      toast.error('Error al crear complejo', message);
+      setSubmitError(humanizeError(error, 'save'));
     }
   });
 
   return (
-    <AuthTabScreen
-      appName="Nuevo complejo"
-      subtitle="Crea un complejo para luego cargar canchas y gestionar reservas."
-      role={role}
+    <Screen
+      title="Nuevo complejo"
+      subtitle="Crea el complejo; después agregas sus canchas y horarios."
+      footer={
+        <>
+          <FormError message={submitError} />
+          <AppButton
+            onPress={onSubmit}
+            disabled={!formState.isValid || formState.isSubmitting}
+            busy={formState.isSubmitting}
+          >
+            {formState.isSubmitting ? 'Creando…' : 'Guardar complejo'}
+          </AppButton>
+          <AppButton
+            variant="neutral"
+            onPress={() => router.back()}
+            disabled={formState.isSubmitting}
+          >
+            Cancelar
+          </AppButton>
+        </>
+      }
     >
       <GapView gap="md">
         <Controller
@@ -109,14 +139,11 @@ export default function CreateComplexScreen() {
               <AppInput
                 value={field.value}
                 onChangeText={field.onChange}
-                placeholder="Nombre del complejo"
+                label="Nombre del complejo"
+                placeholder="Ej. Club La Cancha"
                 error={fieldState.invalid}
               />
-              {fieldState.error ? (
-                <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                  {fieldState.error.message}
-                </Text>
-              ) : null}
+              <FormError message={fieldState.error?.message ?? null} />
             </>
           )}
         />
@@ -128,14 +155,11 @@ export default function CreateComplexScreen() {
               <AppInput
                 value={field.value ?? ''}
                 onChangeText={field.onChange}
-                placeholder="Direccion (opcional)"
+                label="Dirección (opcional)"
+                placeholder="Calle, número y ciudad"
                 error={fieldState.invalid}
               />
-              {fieldState.error ? (
-                <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                  {fieldState.error.message}
-                </Text>
-              ) : null}
+              <FormError message={fieldState.error?.message ?? null} />
             </>
           )}
         />
@@ -148,25 +172,17 @@ export default function CreateComplexScreen() {
                 value={field.value ?? ''}
                 onChangeValue={field.onChange}
                 options={timezoneOptions}
-                label="Timezone"
-                placeholder="Seleccionar timezone"
+                label="Zona horaria"
+                placeholder="Seleccionar zona horaria"
+                searchable
+                searchPlaceholder="Buscar ciudad o zona"
                 error={fieldState.invalid}
               />
-              {fieldState.error ? (
-                <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                  {fieldState.error.message}
-                </Text>
-              ) : null}
+              <FormError message={fieldState.error?.message ?? null} />
             </>
           )}
         />
-        <AppButton onPress={onSubmit} disabled={!formState.isValid || formState.isSubmitting}>
-          {formState.isSubmitting ? 'Creando...' : 'Guardar complejo'}
-        </AppButton>
-        <AppButton variant="neutral" onPress={() => router.replace('/home')}>
-          Cancelar
-        </AppButton>
       </GapView>
-    </AuthTabScreen>
+    </Screen>
   );
 }

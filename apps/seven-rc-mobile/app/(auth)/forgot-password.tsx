@@ -1,28 +1,14 @@
 import { useSignIn } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppInput, AppLinkAction, GapView, useAppTheme } from '@17suit/ui';
+import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
-import { Alert, Text } from 'react-native';
 import { useState } from 'react';
-
-function getClerkErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
-  }
-  return 'No fue posible restablecer la contrasena.';
-}
+import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
+import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
-  const { theme } = useAppTheme();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -30,22 +16,28 @@ export default function ForgotPasswordScreen() {
   const [step, setStep] = useState<'request' | 'reset'>('request');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const required = (value: string, message: string) =>
+    submitAttempted && value.trim().length === 0 ? message : null;
+  const confirmError =
+    required(confirmNewPassword, 'Repite la nueva contraseña.') ??
+    (submitAttempted && newPassword !== confirmNewPassword
+      ? 'Las contraseñas no coinciden.'
+      : null);
 
   const sendResetCode = async () => {
     if (!isLoaded) return;
     setSubmitAttempted(true);
-    if (email.trim().length === 0) {
-      return;
-    }
+    setFormError(null);
+    if (email.trim().length === 0) return;
     setIsSubmitting(true);
     try {
-      await signIn.create({
-        strategy: 'reset_password_email_code',
-        identifier: email.trim(),
-      });
+      await signIn.create({ strategy: 'reset_password_email_code', identifier: email.trim() });
+      setSubmitAttempted(false);
       setStep('reset');
     } catch (err) {
-      Alert.alert('Recuperar contrasena', getClerkErrorMessage(err));
+      setFormError(humanizeClerkError(err, 'No pudimos enviar el código. Inténtalo de nuevo.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -54,15 +46,13 @@ export default function ForgotPasswordScreen() {
   const resetPassword = async () => {
     if (!isLoaded) return;
     setSubmitAttempted(true);
-    const isResetValid =
-      code.trim().length > 0 &&
-      newPassword.trim().length > 0 &&
-      confirmNewPassword.trim().length > 0;
-    if (!isResetValid) {
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      Alert.alert('Recuperar contrasena', 'Las contrasenas no coinciden.');
+    setFormError(null);
+    if (
+      code.trim().length === 0 ||
+      newPassword.trim().length === 0 ||
+      confirmNewPassword.trim().length === 0 ||
+      newPassword !== confirmNewPassword
+    ) {
       return;
     }
 
@@ -80,97 +70,83 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
-      Alert.alert(
-        'Recuperar contrasena',
-        'No se pudo completar el restablecimiento de contrasena.',
-      );
+      setFormError('No pudimos completar el cambio de contraseña. Inténtalo de nuevo.');
     } catch (err) {
-      Alert.alert('Recuperar contrasena', getClerkErrorMessage(err));
+      setFormError(
+        humanizeClerkError(err, 'No pudimos cambiar la contraseña. Inténtalo de nuevo.'),
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <AppFrame
-      appName="Seven Reservations Club"
-      subtitle="Recupera tu contrasena con un codigo por correo."
+    <Screen
+      back={false}
+      title="Recuperar contraseña"
+      subtitle={
+        step === 'request'
+          ? 'Te enviaremos un código a tu correo.'
+          : `Escribe el código que enviamos a ${email.trim()} y tu nueva contraseña.`
+      }
     >
       <GapView gap="sm">
         {step === 'request' ? (
           <>
-            <AppInput
+            <FormField
+              label="Correo"
+              kind="email"
               value={email}
               onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholder="tu@empresa.com"
+              placeholder="tu@correo.com"
+              error={required(email, 'Ingresa tu correo.')}
+              returnKeyType="send"
+              onSubmitEditing={() => {
+                void sendResetCode();
+              }}
             />
-            {submitAttempted && email.trim().length === 0 ? (
-              <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa tu correo.</Text>
-            ) : null}
-            <AppButton onPress={sendResetCode} disabled={email.trim().length === 0 || isSubmitting}>
-              {isSubmitting ? 'Enviando...' : 'Enviar codigo'}
+            <FormError message={formError} />
+            <AppButton onPress={sendResetCode} disabled={isSubmitting}>
+              {isSubmitting ? 'Enviando…' : 'Enviar código'}
             </AppButton>
           </>
         ) : (
           <>
-            <AppInput
+            <FormField
+              label="Código de verificación"
+              kind="code"
               value={code}
               onChangeText={setCode}
-              autoCapitalize="none"
-              placeholder="Codigo de verificacion"
-              compact
+              error={required(code, 'Ingresa el código.')}
             />
-            {submitAttempted && code.trim().length === 0 ? (
-              <Text style={{ color: theme.colors.error, fontSize: 12 }}>Ingresa el codigo.</Text>
-            ) : null}
-            <AppInput
+            <FormField
+              label="Nueva contraseña"
+              kind="new-password"
               value={newPassword}
               onChangeText={setNewPassword}
-              secureTextEntry
-              placeholder="Nueva contrasena"
+              placeholder="Mínimo 8 caracteres"
+              error={required(newPassword, 'Crea una nueva contraseña.')}
             />
-            {submitAttempted && newPassword.trim().length === 0 ? (
-              <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                Ingresa la nueva contrasena.
-              </Text>
-            ) : null}
-            <AppInput
+            <FormField
+              label="Repetir nueva contraseña"
+              kind="new-password"
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
-              secureTextEntry
-              placeholder="Confirmar nueva contrasena"
+              error={confirmError}
+              returnKeyType="go"
+              onSubmitEditing={() => {
+                void resetPassword();
+              }}
             />
-            {submitAttempted && confirmNewPassword.trim().length === 0 ? (
-              <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                Confirma la nueva contrasena.
-              </Text>
-            ) : null}
-            {submitAttempted && newPassword !== confirmNewPassword ? (
-              <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-                Las contrasenas no coinciden.
-              </Text>
-            ) : null}
-            <AppButton
-              onPress={resetPassword}
-              disabled={
-                code.trim().length === 0 ||
-                newPassword.trim().length === 0 ||
-                confirmNewPassword.trim().length === 0 ||
-                newPassword !== confirmNewPassword ||
-                isSubmitting
-              }
-            >
-              {isSubmitting ? 'Actualizando...' : 'Actualizar contrasena'}
+            <FormError message={formError} />
+            <AppButton onPress={resetPassword} disabled={isSubmitting}>
+              {isSubmitting ? 'Actualizando…' : 'Cambiar contraseña'}
             </AppButton>
           </>
         )}
 
-        <AppLinkAction onPress={() => router.push('/sign-in')}>
-          Volver a iniciar sesion
-        </AppLinkAction>
+        <AppLinkAction onPress={() => router.back()}>Volver a iniciar sesión</AppLinkAction>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }

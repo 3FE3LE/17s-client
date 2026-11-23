@@ -1,0 +1,17 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/apps/seven-rc-web/app/page": [
+      "static/media/997ad33dc58d23c8-s.p.34a2d6fb.woff2",
+      "static/media/813f3f6970d4b897-s.p.e652b6f2.woff2",
+      "static/media/63f26fe34c987908-s.p.e5023865.woff2",
+      "static/media/e2f3d2dfca5b1593-s.p.89fd9991.woff2",
+      "static/media/1290964ae90bfd6c-s.p.6af13b8c.woff2",
+      "static/media/f8a66589f2577848-s.p.747539f4.woff2",
+      "static/media/49bcce62f8e09af8-s.p.07817659.woff2",
+      "static/media/b8256b1b99fdd790-s.p.0242e5c4.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}

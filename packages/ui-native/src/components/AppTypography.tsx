@@ -11,6 +11,8 @@ export interface AppTypographyProps extends PropsWithChildren {
   align?: 'left' | 'center' | 'right';
   style?: TextStyle;
   numberOfLines?: number;
+  /** Pass `'header'` when the text titles a section, so screen readers can jump to it. */
+  accessibilityRole?: 'header' | 'text';
 }
 
 export function AppTypography({
@@ -20,6 +22,7 @@ export function AppTypography({
   align = 'left',
   style,
   numberOfLines,
+  accessibilityRole,
 }: AppTypographyProps) {
   const { theme } = useAppTheme();
   const typeStyle = theme.typography.styles[variant];
@@ -27,6 +30,7 @@ export function AppTypography({
   return (
     <Text
       numberOfLines={numberOfLines}
+      {...(accessibilityRole ? { accessibilityRole } : {})}
       style={[
         {
           color: color ?? theme.colors.text,

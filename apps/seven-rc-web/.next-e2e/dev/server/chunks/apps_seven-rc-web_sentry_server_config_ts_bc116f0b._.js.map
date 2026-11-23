@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///home/fl/17s-workspace/17s-client/apps/seven-rc-web/sentry.server.config.ts"],"sourcesContent":["// This file configures the initialization of Sentry on the server.\n// The config you add here will be used whenever the server handles a request.\n//\n// See https://docs.sentry.io/platforms/javascript/guides/nextjs/ for more information.\n\nimport * as Sentry from '@sentry/nextjs';\n\nconst dsn = process.env.SENTRY_DSN;\nif (dsn) {\n  Sentry.init({\n    dsn,\n    environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,\n    tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE\n      ? Number(process.env.SENTRY_TRACES_SAMPLE_RATE)\n      : 0.1,\n    // Don't send PII by default; route through beforeSend if we ever need to.\n    sendDefaultPii: false,\n  });\n}\n"],"names":[],"mappings":"AAAA,mEAAmE;AACnE,8EAA8E;AAC9E,EAAE;AACF,uFAAuF;;;AAIvF,MAAM;AACN"}}]
+}

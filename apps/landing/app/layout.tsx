@@ -1,25 +1,11 @@
 import type { Metadata } from 'next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
-import {
-  AppProductFooter,
-  appProductFooterButtonStyle,
-  appProductFooterTextLinkStyle,
-  ThemeScript,
-} from '@17suit/ui';
+import { ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { SignOutButton } from '@clerk/nextjs';
-import { auth } from '@clerk/nextjs/server';
-import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
-import Link from 'next/link';
+import { Arvo, Zilla_Slab } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { SiteFooter } from './components/site-footer';
 import './globals.css';
-
-const amaranth = Amaranth({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-amaranth',
-  display: 'swap',
-});
 
 const arvo = Arvo({
   subsets: ['latin'],
@@ -36,8 +22,9 @@ const zillaSlab = Zilla_Slab({
 });
 
 export const metadata: Metadata = {
-  title: '17Suit | Suite de apps',
-  description: 'Suite de apps y herramientas para facilitar operaciones y flujos diarios.',
+  title: '17Suit | Una cuenta para todas tus apps',
+  description:
+    'Revisa tus gastos, reserva cancha y, pronto, planea viajes, ordena tu clóset y agenda tu corte con una sola cuenta 17Suit.',
   icons: {
     icon: [
       { url: '/icon-17suit.ico', type: 'image/x-icon' },
@@ -48,21 +35,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  const { userId } = await auth();
-  const isSignedIn = Boolean(userId);
-  const productLinks = [
-    { label: 'Seven Reservations Club', href: '/seven-reservations-club' },
-    { label: 'Six Sense Proof', href: '/six-sense-proof' },
-    { label: 'Five Barber Go', href: '/five-barber-go' },
-    { label: 'Nine To Nine Nurse', href: '/nine-to-nine-nurse' },
-    { label: 'Two Split Bill', href: '/two-split-bill' },
-    { label: 'One Plan Trip', href: '/one-plan-trip' },
-    { label: 'Four You Closet', href: '/four-you-closet' },
-    { label: 'Eight Dream Dishes', href: '/eight-dream-dishes' },
-    { label: 'Fifteen All Check', href: '/fifteen-all-check' },
-  ];
-
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="es"
@@ -78,64 +51,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
           signInForceRedirectUrl="/"
-          signUpForceRedirectUrl="/"
+          signUpForceRedirectUrl="/apps"
         >
           <AppProviders>
             {children}
-            <AppProductFooter
-              productName="17Suit"
-              productTagline="Suite de apps y herramientas conectadas."
-              suiteName="17Suit"
-              actionControls={
-                <>
-                  <Link
-                    href="/"
-                    style={{
-                      ...appProductFooterButtonStyle,
-                      color: 'var(--color-brand-dark, #00171f)',
-                    }}
-                  >
-                    Ir al inicio
-                  </Link>
-                  {isSignedIn ? (
-                    <SignOutButton redirectUrl="/sign-in">
-                      <button type="button" style={appProductFooterButtonStyle}>
-                        Cerrar sesion
-                      </button>
-                    </SignOutButton>
-                  ) : (
-                    <>
-                      <Link
-                        href="/sign-in"
-                        style={{
-                          ...appProductFooterButtonStyle,
-                          color: 'var(--color-brand-dark, #00171f)',
-                        }}
-                      >
-                        Iniciar sesion
-                      </Link>
-                      <Link
-                        href="/sign-up"
-                        style={{
-                          ...appProductFooterButtonStyle,
-                          color: '#ffffff',
-                          border: '1px solid #01695b',
-                          background: 'linear-gradient(95deg, #00916e, #007666)',
-                          boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
-                        }}
-                      >
-                        Crear cuenta
-                      </Link>
-                    </>
-                  )}
-                </>
-              }
-              productLinkControls={productLinks.map((link) => (
-                <Link key={link.href} href={link.href} style={appProductFooterTextLinkStyle}>
-                  {link.label}
-                </Link>
-              ))}
-            />
+            <SiteFooter />
           </AppProviders>
         </WebAuthProvider>
       </body>

@@ -1,7 +1,7 @@
 import { inputRecipe } from '@17suit/design-system';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { useAppTheme } from '../theme/theme-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,10 +16,18 @@ export interface AppInputProps {
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   onRightIconPress?: () => void;
+  /** Screen-reader label for the right icon button (e.g. "Borrar búsqueda"). */
+  rightIconAccessibilityLabel?: string;
   showPasswordToggle?: boolean;
   keyboardType?: string;
   secureTextEntry?: boolean;
   autoCapitalize?: string;
+  textContentType?: TextInputProps['textContentType'];
+  autoComplete?: TextInputProps['autoComplete'];
+  autoCorrect?: boolean;
+  accessibilityLabel?: string;
+  returnKeyType?: TextInputProps['returnKeyType'];
+  onSubmitEditing?: () => void;
 }
 
 export function AppInput({
@@ -33,10 +41,17 @@ export function AppInput({
   leftIcon,
   rightIcon,
   onRightIconPress,
+  rightIconAccessibilityLabel,
   showPasswordToggle = true,
   keyboardType,
   autoCapitalize,
   secureTextEntry,
+  textContentType,
+  autoComplete,
+  autoCorrect,
+  accessibilityLabel,
+  returnKeyType,
+  onSubmitEditing,
 }: AppInputProps) {
   const { theme } = useAppTheme();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -69,6 +84,12 @@ export function AppInput({
           onChangeText={onChangeText}
           keyboardType={keyboardType as never}
           autoCapitalize={autoCapitalize as never}
+          textContentType={textContentType}
+          autoComplete={autoComplete}
+          autoCorrect={autoCorrect}
+          accessibilityLabel={accessibilityLabel ?? resolvedLabel}
+          {...(returnKeyType ? { returnKeyType } : {})}
+          {...(onSubmitEditing ? { onSubmitEditing: () => onSubmitEditing() } : {})}
           placeholderTextColor={theme.colors.muted}
           className={inputClasses.control}
           style={{
@@ -78,7 +99,9 @@ export function AppInput({
         {shouldShowPasswordToggle ? (
           <Pressable
             onPress={() => setIsPasswordVisible((current) => !current)}
-            className="absolute right-[10px] top-1/2 h-6 w-6 -translate-y-[12px] items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel={isPasswordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            className="absolute right-0 top-1/2 h-11 w-11 -translate-y-[22px] items-center justify-center"
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off' : 'eye'}
@@ -90,6 +113,11 @@ export function AppInput({
         {!shouldShowPasswordToggle && rightIcon ? (
           <Pressable
             onPress={onRightIconPress}
+            accessibilityRole="button"
+            {...(rightIconAccessibilityLabel
+              ? { accessibilityLabel: rightIconAccessibilityLabel }
+              : {})}
+            hitSlop={10}
             className="absolute right-[10px] top-1/2 h-6 w-6 -translate-y-[12px] items-center justify-center"
           >
             {rightIcon}
