@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
+import { CancelReservation, ShareReservation } from '@/components/reservation-link-actions';
 import { fetchPublicReservation } from '@/lib/public-venue-api';
 import {
   dateKeyInTimeZone,
@@ -40,6 +42,14 @@ export default async function PublicReservationPage({ params }: PageProps) {
   const instructions = reservation.venue.paymentInstructions?.trim();
   const phone = reservation.venue.contactPhone;
   const venueSlug = reservation.venue.slug ?? slug;
+  const active = pending || reservation.status === 'confirmed';
+  const canCancel = active && Date.now() <= Date.parse(reservation.cancellableUntil);
+  const requestHeaders = await headers();
+  const host = requestHeaders.get('x-forwarded-host') ?? requestHeaders.get('host');
+  const proto = requestHeaders.get('x-forwarded-proto') ?? 'https';
+  const shareUrl = host
+    ? `${proto}://${host}/c/${encodeURIComponent(slug)}/reserva/${encodeURIComponent(token)}`
+    : null;
 
   return (
     <main className="mx-auto grid w-full max-w-[var(--container-content)] gap-lg px-lg py-xl">
@@ -124,10 +134,36 @@ export default async function PublicReservationPage({ params }: PageProps) {
         </section>
       ) : null}
 
+      {active ? (
+        <section aria-labelledby="cancelar-titulo" className="grid gap-xs">
+          <h2 id="cancelar-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
+            Cancelar
+          </h2>
+          {canCancel ? (
+            <>
+              <p className="m-0 text-sm leading-[18px] text-muted">
+                Puedes cancelar sin costo hasta el{' '}
+                {formatLongDate(dateKeyInTimeZone(reservation.cancellableUntil, timeZone))} a las{' '}
+                {formatTime(reservation.cancellableUntil, timeZone)}.
+              </p>
+              <CancelReservation slug={venueSlug} token={token} />
+            </>
+          ) : (
+            <p className="m-0 text-sm leading-[18px] text-muted">
+              El plazo para cancelar en línea terminó el{' '}
+              {formatLongDate(dateKeyInTimeZone(reservation.cancellableUntil, timeZone))} a las{' '}
+              {formatTime(reservation.cancellableUntil, timeZone)}. Para cambios, escribe al
+              complejo{phone ? ` al ${phone}` : ''}.
+            </p>
+          )}
+        </section>
+      ) : null}
+
       <section aria-labelledby="guardar-titulo" className="grid gap-xs">
         <h2 id="guardar-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
           Guarda este enlace
         </h2>
+        {shareUrl ? <ShareReservation url={shareUrl} venueName={reservation.venue.name} /> : null}
         <p className="m-0 text-sm leading-[18px] text-muted">
           Esta página es tu comprobante: no necesitas cuenta. Cualquiera con el enlace puede verla,
           así que no lo compartas más de lo necesario.

@@ -81,3 +81,19 @@ export async function createPublicReservation(
   }
   return { ok: true, reservation: body as PublicReservation };
 }
+
+export type CancelPublicReservationResult =
+  | { ok: true; reservation: PublicReservation }
+  | { ok: false; status: number };
+
+/** Outside the cancellation window the server answers 400; only network errors throw. */
+export async function cancelPublicReservation(
+  token: string,
+): Promise<CancelPublicReservationResult> {
+  const response = await fetch(
+    `${apiBaseUrl()}/api/7rc/public/reservations/${encodeURIComponent(token)}/cancel`,
+    { method: 'POST', cache: 'no-store', headers: { Accept: 'application/json' } },
+  );
+  if (!response.ok) return { ok: false, status: response.status };
+  return { ok: true, reservation: (await response.json()) as PublicReservation };
+}
