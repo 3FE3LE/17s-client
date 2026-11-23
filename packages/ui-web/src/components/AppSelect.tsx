@@ -1,7 +1,7 @@
 'use client';
 
 import type { SelectHTMLAttributes } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 export interface AppSelectOption {
   label: string;
@@ -32,6 +32,7 @@ export function AppSelect({
   ...rest
 }: AppSelectProps) {
   const [open, setOpen] = useState(false);
+  const triggerId = useId();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const resolvedLabel = label ?? placeholder;
   const selectedOption = useMemo(
@@ -73,7 +74,10 @@ export function AppSelect({
   return (
     <div ref={rootRef} className="relative grid w-full gap-xs">
       {resolvedLabel ? (
-        <label className="font-zilla text-sm leading-[1.5] tracking-normal text-muted">
+        <label
+          htmlFor={triggerId}
+          className="font-zilla text-sm leading-[1.5] tracking-normal text-muted"
+        >
           {resolvedLabel}
         </label>
       ) : null}
@@ -103,6 +107,7 @@ export function AppSelect({
       </select>
 
       <button
+        id={triggerId}
         type="button"
         disabled={disabled}
         aria-haspopup="listbox"
@@ -144,6 +149,8 @@ export function AppSelect({
                 type="button"
                 role="option"
                 aria-selected={isSelected}
+                // Closed listbox stays mounted for the transition; keep it out of the tab order.
+                tabIndex={open ? 0 : -1}
                 onClick={() => {
                   onChangeValue(option.value);
                   setOpen(false);

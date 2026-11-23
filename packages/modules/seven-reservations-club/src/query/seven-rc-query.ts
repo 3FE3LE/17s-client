@@ -1,20 +1,41 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import type {
+  ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
+  CreateOwnerReservationInput,
+  CreatePitchBlockInput,
   CreatePitchInput,
   CreateReservationInput,
   CreateVenueInput,
   OwnerVenue,
   Pitch,
+  PitchAvailability,
+  PitchBlock,
+  PitchWithPricing,
   PublicVenue,
+  RecordReservationPaymentInput,
   ReservationBase,
   ReservationWithVenuePitch,
   SevenRcOwnerApi,
   SevenRcPlayerApi,
+  UpdateVenueSettingsInput,
   VenueReservation,
+  VenueSettings,
 } from '../sdk/seven-rc-api';
+
+/**
+ * Opt-in freshness overrides a surface can pass to list queries (e.g. web polling
+ * while the tab is visible). Omitted keys keep the module defaults, so callers that
+ * pass nothing (mobile) are unaffected.
+ */
+export type SevenRcRefreshOptions<TData> = Partial<
+  Pick<
+    UseQueryOptions<TData>,
+    'refetchOnWindowFocus' | 'refetchOnMount' | 'refetchInterval' | 'refetchIntervalInBackground'
+  >
+>;
 
 export const sevenRcQueryKeys = {
   ownerVenues: ['seven-rc', 'owner', 'venues'] as const,
@@ -28,6 +49,11 @@ export const sevenRcQueryKeys = {
   playerVenues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
   playerVenuePitches: (venueId: string) =>
     ['seven-rc', 'player', 'venues', venueId, 'pitches'] as const,
+  pitchBlocks: (pitchId: string) => ['seven-rc', 'pitches', pitchId, 'blocks'] as const,
+  pitchAvailabilityBase: (pitchId: string) =>
+    ['seven-rc', 'pitches', pitchId, 'availability'] as const,
+  pitchAvailability: (pitchId: string, date: string) =>
+    ['seven-rc', 'pitches', pitchId, 'availability', date] as const,
 };
 
 export function useSevenRcOwnerVenuesQuery(api: SevenRcOwnerApi) {
@@ -53,7 +79,7 @@ export function useSevenRcCreateVenueMutation(api: SevenRcOwnerApi) {
 }
 
 export function useSevenRcOwnerVenuePitchesQuery(api: SevenRcOwnerApi, venueId: string | null) {
-  return useQuery<Pitch[]>({
+  return useQuery<PitchWithPricing[]>({
     queryKey: sevenRcQueryKeys.ownerVenuePitches(venueId ?? 'missing'),
     queryFn: () => {
       if (!venueId) {
@@ -94,12 +120,19 @@ export function useSevenRcConfigurePitchSlotsMutation(
 
   return useMutation({
     mutationFn: (input: ConfigurePitchSlotsInput) => api.configurePitchSlots(pitchId, input),
-    onSuccess: () => {
+    onSuccess: (result) => {
       if (venueId) {
-        void queryClient.invalidateQueries({
-          queryKey: sevenRcQueryKeys.ownerVenuePitches(venueId),
-        });
+        const queryKey = sevenRcQueryKeys.ownerVenuePitches(venueId);
+        // The endpoint replaces the whole week: the next save must start from this result,
+        // not from the list that is still refetching.
+        queryClient.setQueryData<PitchWithPricing[]>(queryKey, (pitches) =>
+          pitches?.map((pitch) => (pitch.id === result.id ? { ...pitch, ...result } : pitch)),
+        );
+        void queryClient.invalidateQueries({ queryKey });
       }
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
+      });
     },
   });
 }
@@ -109,6 +142,7 @@ export function useSevenRcOwnerVenueReservationsQuery(
   venueId: string | null,
   dateFrom: string,
   dateTo: string,
+  options?: SevenRcRefreshOptions<VenueReservation[]>,
 ) {
   return useQuery<VenueReservation[]>({
     queryKey: sevenRcQueryKeys.ownerVenueReservations(venueId ?? 'missing', dateFrom, dateTo),
@@ -123,6 +157,7 @@ export function useSevenRcOwnerVenueReservationsQuery(
     gcTime: 15 * 60 * 1000,
     refetchOnMount: false,
     refetchOnReconnect: false,
+    ...options,
   });
 }
 
@@ -130,17 +165,11 @@ export function useSevenRcConfirmVenueReservationMutation(
   api: SevenRcOwnerApi,
   venueId?: string | null,
 ) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidateOwnerReservation(venueId);
 
   return useMutation<ReservationBase, Error, string>({
     mutationFn: (reservationId: string) => api.confirmReservation(reservationId),
-    onSuccess: () => {
-      if (venueId) {
-        void queryClient.invalidateQueries({
-          queryKey: sevenRcQueryKeys.ownerVenueReservationsBase(venueId),
-        });
-      }
-    },
+    onSuccess: invalidate,
   });
 }
 
@@ -148,21 +177,126 @@ export function useSevenRcRejectVenueReservationMutation(
   api: SevenRcOwnerApi,
   venueId?: string | null,
 ) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidateOwnerReservation(venueId);
 
   return useMutation<ReservationBase, Error, string>({
     mutationFn: (reservationId: string) => api.rejectReservation(reservationId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcUpdateVenueSettingsMutation(api: SevenRcOwnerApi, venueId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<VenueSettings, Error, UpdateVenueSettingsInput>({
+    mutationFn: (input) => api.updateVenueSettings(venueId, input),
     onSuccess: () => {
-      if (venueId) {
-        void queryClient.invalidateQueries({
-          queryKey: sevenRcQueryKeys.ownerVenueReservationsBase(venueId),
-        });
-      }
+      void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues });
     },
   });
 }
 
-export function useSevenRcMyReservationsQuery(api: SevenRcPlayerApi) {
+export function useSevenRcConfigurePitchPricingMutation(
+  api: SevenRcOwnerApi,
+  pitchId: string,
+  venueId?: string | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<PitchWithPricing, Error, ConfigurePitchPricingInput>({
+    mutationFn: (input) => api.configurePitchPricing(pitchId, input),
+    onSuccess: () => {
+      if (venueId) {
+        void queryClient.invalidateQueries({
+          queryKey: sevenRcQueryKeys.ownerVenuePitches(venueId),
+        });
+      }
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
+      });
+    },
+  });
+}
+
+/** Owner reservation actions change the agenda, the venue counts and the free slots. */
+function useInvalidateOwnerReservation(venueId?: string | null) {
+  const queryClient = useQueryClient();
+  return (reservation: ReservationBase) => {
+    const targetVenueId = venueId ?? reservation.venueId;
+    void queryClient.invalidateQueries({
+      queryKey: sevenRcQueryKeys.ownerVenueReservationsBase(targetVenueId),
+    });
+    // `exact`: every other owner key nests under `ownerVenues`, so a prefix match
+    // would refetch the reservations of all venues after each action.
+    void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues, exact: true });
+    void queryClient.invalidateQueries({
+      queryKey: sevenRcQueryKeys.pitchAvailabilityBase(reservation.pitchId),
+    });
+  };
+}
+
+export function useSevenRcRecordReservationPaymentMutation(
+  api: SevenRcOwnerApi,
+  venueId?: string | null,
+) {
+  const invalidate = useInvalidateOwnerReservation(venueId);
+
+  return useMutation<
+    ReservationBase,
+    Error,
+    { reservationId: string; input: RecordReservationPaymentInput }
+  >({
+    mutationFn: ({ reservationId, input }) => api.recordReservationPayment(reservationId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcMarkNoShowMutation(api: SevenRcOwnerApi, venueId?: string | null) {
+  const invalidate = useInvalidateOwnerReservation(venueId);
+
+  return useMutation<ReservationBase, Error, string>({
+    mutationFn: (reservationId) => api.markNoShow(reservationId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcCompleteReservationMutation(
+  api: SevenRcOwnerApi,
+  venueId?: string | null,
+) {
+  const invalidate = useInvalidateOwnerReservation(venueId);
+
+  return useMutation<ReservationBase, Error, string>({
+    mutationFn: (reservationId) => api.completeReservation(reservationId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcOwnerCancelReservationMutation(
+  api: SevenRcOwnerApi,
+  venueId?: string | null,
+) {
+  const invalidate = useInvalidateOwnerReservation(venueId);
+
+  return useMutation<ReservationBase, Error, string>({
+    mutationFn: (reservationId) => api.ownerCancelReservation(reservationId),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcCreateOwnerReservationMutation(api: SevenRcOwnerApi, venueId: string) {
+  const invalidate = useInvalidateOwnerReservation(venueId);
+
+  return useMutation<ReservationBase, Error, CreateOwnerReservationInput>({
+    mutationFn: (input) => api.createOwnerReservation(venueId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcMyReservationsQuery(
+  api: SevenRcPlayerApi,
+  options?: SevenRcRefreshOptions<ReservationWithVenuePitch[]>,
+) {
   return useQuery<ReservationWithVenuePitch[]>({
     queryKey: sevenRcQueryKeys.playerReservations,
     queryFn: () => api.listMyReservations(),
@@ -170,6 +304,7 @@ export function useSevenRcMyReservationsQuery(api: SevenRcPlayerApi) {
     gcTime: 15 * 60 * 1000,
     refetchOnMount: false,
     refetchOnReconnect: false,
+    ...options,
   });
 }
 
@@ -201,6 +336,32 @@ export function useSevenRcPlayerVenuePitchesQuery(api: SevenRcPlayerApi, venueId
   });
 }
 
+/**
+ * Slot availability for one pitch on a venue-local date (`YYYY-MM-DD`). Short stale
+ * time and an unconditional refetch on mount: slots change as other players book, so
+ * a revisit must never show stale chips.
+ */
+export function useSevenRcPitchAvailabilityQuery(
+  api: SevenRcPlayerApi,
+  pitchId: string | null,
+  date: string | null,
+) {
+  return useQuery<PitchAvailability>({
+    queryKey: sevenRcQueryKeys.pitchAvailability(pitchId ?? 'missing', date ?? 'missing'),
+    queryFn: () => {
+      if (!pitchId || !date) {
+        throw new Error('Pitch id and date are required');
+      }
+      return api.getPitchAvailability(pitchId, date);
+    },
+    enabled: Boolean(pitchId && date),
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    refetchOnMount: 'always',
+    refetchOnReconnect: false,
+  });
+}
+
 export function useSevenRcCreateReservationMutation(api: SevenRcPlayerApi) {
   const queryClient = useQueryClient();
 
@@ -208,6 +369,12 @@ export function useSevenRcCreateReservationMutation(api: SevenRcPlayerApi) {
     mutationFn: (input: CreateReservationInput) => api.createReservation(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.playerReservations });
+    },
+    // Success takes the slot; a conflict means the list on screen is stale. Both refetch.
+    onSettled: (_reservation, _error, input) => {
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(input.pitchId),
+      });
     },
   });
 }
@@ -217,8 +384,58 @@ export function useSevenRcCancelReservationMutation(api: SevenRcPlayerApi) {
 
   return useMutation<ReservationBase, Error, string>({
     mutationFn: (reservationId: string) => api.cancelReservation(reservationId),
-    onSuccess: () => {
+    onSuccess: (reservation) => {
       void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.playerReservations });
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(reservation.pitchId),
+      });
     },
+  });
+}
+
+/** Active blocks that have not ended yet. `from` is fixed per mount so the key stays stable. */
+export function useSevenRcPitchBlocksQuery(
+  api: SevenRcOwnerApi,
+  pitchId: string | null,
+  from: string,
+) {
+  return useQuery<PitchBlock[]>({
+    queryKey: sevenRcQueryKeys.pitchBlocks(pitchId ?? 'missing'),
+    queryFn: () => {
+      if (!pitchId) {
+        throw new Error('Pitch id is required');
+      }
+      return api.listPitchBlocks(pitchId, from);
+    },
+    enabled: Boolean(pitchId),
+    staleTime: 60 * 1000,
+    refetchOnReconnect: false,
+  });
+}
+
+/** A block changes which slots are free: refresh the list and the pitch availability. */
+function useInvalidatePitchBlocks(pitchId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.pitchBlocks(pitchId) });
+    void queryClient.invalidateQueries({
+      queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
+    });
+  };
+}
+
+export function useSevenRcCreatePitchBlockMutation(api: SevenRcOwnerApi, pitchId: string) {
+  const invalidate = useInvalidatePitchBlocks(pitchId);
+  return useMutation({
+    mutationFn: (input: CreatePitchBlockInput) => api.createPitchBlock(pitchId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcDeletePitchBlockMutation(api: SevenRcOwnerApi, pitchId: string) {
+  const invalidate = useInvalidatePitchBlocks(pitchId);
+  return useMutation({
+    mutationFn: (blockId: string) => api.deletePitchBlock(pitchId, blockId),
+    onSuccess: invalidate,
   });
 }

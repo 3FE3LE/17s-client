@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { Text, View, type ViewStyle } from 'react-native';
 import { useAppTheme } from '../theme/theme-context';
@@ -44,6 +45,8 @@ export function AppEmpty({
       ]}
     >
       <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
         style={{
           width: 44,
           height: 44,
@@ -53,16 +56,7 @@ export function AppEmpty({
           justifyContent: 'center',
         }}
       >
-        <Text
-          style={{
-            color: theme.colors.brandPrimary,
-            fontFamily: subtitleType.nativeFamily,
-            fontSize: 18,
-            lineHeight: 22,
-          }}
-        >
-          {icon ?? '...'}
-        </Text>
+        {icon ?? <Feather name="inbox" size={20} color={theme.colors.brandPrimary} />}
       </View>
       <Text
         style={{

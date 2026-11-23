@@ -59,7 +59,7 @@ export function AppAlert({
         display: 'grid',
         gridTemplateColumns: 'auto 1fr',
         gap: theme.spacing.sm,
-        borderLeft: `4px solid ${variantStyles[variant].border}`,
+        border: `1px solid ${variantStyles[variant].border}`,
         borderRadius: theme.borderRadius.md,
         padding: theme.spacing.md,
         backgroundColor: variantStyles[variant].background,

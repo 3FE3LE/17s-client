@@ -1,41 +1,26 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction } from '@17suit/ui';
+import { AppButton, AppInput } from '@17suit/ui';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { AuthFormError } from '../../components/AuthFormError';
 import { AuthShell } from '../../components/AuthShell';
+import {
+  getClerkErrorField,
+  getClerkErrorMessage,
+  isAlreadySignedInError,
+  type AuthErrorField,
+} from '../../lib/clerk-errors';
+import { afterAuthPath } from '../../lib/session-handoff';
 
-function getClerkErrors(error: unknown): Array<{ code?: string; message?: string }> {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    return (error as { errors?: Array<{ code?: string; message?: string }> }).errors ?? [];
-  }
-  return [];
-}
+const GENERIC_ERROR = 'No pudimos iniciar sesión. Inténtalo de nuevo en unos minutos.';
+const ERROR_ID = 'sign-in-error';
 
-// Clerk rejects sign-in attempts when a session is already active
-// (single-session). Treat that as "continue to the product".
-function isAlreadySignedInError(error: unknown): boolean {
-  return getClerkErrors(error).some(
-    (e) =>
-      e.code === 'session_exists' ||
-      e.code === 'identifier_already_signed_in' ||
-      (e.message ?? '').toLowerCase().includes('already signed in'),
-  );
-}
-
-function getClerkErrorMessage(error: unknown): string {
-  const errors = getClerkErrors(error) as Array<{
-    code?: string;
-    message?: string;
-    longMessage?: string;
-  }>;
-  const first = errors[0];
-  if (first?.longMessage) return first.longMessage;
-  if (first?.message) return first.message;
-  if (first?.code) return first.code;
-  return 'No fue posible iniciar sesion.';
+// Only forward `redirect_url` when there is a real destination; '/' is the default.
+function withRedirect(path: string, target: string): string {
+  return target === '/' ? path : `${path}?redirect_url=${encodeURIComponent(target)}`;
 }
 
 export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
@@ -44,7 +29,16 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<AuthErrorField>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGooglePending, setIsGooglePending] = useState(false);
+
+  const fail = (err: unknown, fallback: string) => {
+    setError(getClerkErrorMessage(err, fallback));
+    setErrorField(getClerkErrorField(err));
+  };
+  const fieldProps = (field: Exclude<AuthErrorField, null>) =>
+    error && errorField === field ? { error: true, 'aria-describedby': ERROR_ID } : {};
 
   const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -52,6 +46,7 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
 
     setIsSubmitting(true);
     setError(null);
+    setErrorField(null);
 
     try {
       const result = await signIn.create({
@@ -61,100 +56,140 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
 
-      setError('Tu sesion necesita un paso adicional para completarse.');
+      setError(
+        'No pudimos completar el inicio de sesión. Inténtalo de nuevo o restablece tu contraseña.',
+      );
+      setErrorField(null);
     } catch (err) {
       if (isAlreadySignedInError(err)) {
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
-      setError(getClerkErrorMessage(err));
+      fail(err, GENERIC_ERROR);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const onGoogleSSO = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || isGooglePending) return;
+
+    setIsGooglePending(true);
+    setError(null);
+    setErrorField(null);
 
     try {
       await signIn.authenticateWithRedirect({
         strategy: 'oauth_google',
         redirectUrl: `/sso-callback?redirect_url=${encodeURIComponent(redirectTarget)}`,
-        redirectUrlComplete: redirectTarget,
+        redirectUrlComplete: afterAuthPath(redirectTarget),
       });
     } catch (err) {
       // Session already active: skip SSO and continue to the product home.
       if (isAlreadySignedInError(err)) {
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
-      setError(getClerkErrorMessage(err));
+      fail(err, GENERIC_ERROR);
+      // The redirect only happens on success, so the button is re-enabled on failure.
+      setIsGooglePending(false);
     }
   };
 
   return (
     <AuthShell
-      pageLabel="Iniciar sesion"
-      title="Accede y continua en tu flujo"
-      description="Entra con Google o con tu correo para abrir tus herramientas sin pasos extra."
+      title="Inicia sesión en 17Suit"
+      description="Entra con Google o con tu correo y sigue en la app donde estabas."
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
-        <AppButton variant="neutral" onPress={onGoogleSSO} compact>
-          Continuar con Google
-        </AppButton>
+        <button
+          type="button"
+          onClick={onGoogleSSO}
+          disabled={!isLoaded || isGooglePending || isSubmitting}
+          aria-busy={isGooglePending}
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-sm rounded-[var(--radius-control)] border border-line bg-surface px-md text-md font-bold leading-[1.3] text-text transition-[border-color,box-shadow] duration-200 hover:border-[color-mix(in_oklab,var(--color-text)_36%,transparent)] hover:shadow-panel disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-line disabled:hover:shadow-none"
+        >
+          <GoogleMark />
+          {isGooglePending ? 'Abriendo Google…' : 'Continuar con Google'}
+        </button>
 
-        <form className="grid gap-sm" onSubmit={handlePasswordSignIn}>
+        <p className="m-0 flex items-center gap-sm text-sm leading-[18px] text-muted before:h-px before:flex-1 before:bg-line before:content-[''] after:h-px after:flex-1 after:bg-line after:content-['']">
+          o con tu correo
+        </p>
+
+        <form method="post" className="grid gap-sm" onSubmit={handlePasswordSignIn}>
           <AppInput
             type="email"
             name="email"
             value={email}
             onChangeText={setEmail}
-            label="Correo electronico"
-            placeholder="tu@empresa.com"
+            label="Correo electrónico"
+            placeholder="tu@correo.com"
             autoComplete="email"
             spellCheck={false}
             required
-            error={Boolean(error)}
+            {...fieldProps('email')}
           />
           <AppInput
             type="password"
             name="password"
             value={password}
             onChangeText={setPassword}
-            label="Contrasena"
-            placeholder="Ingresa tu contrasena"
+            label="Contraseña"
+            placeholder="Tu contraseña"
             autoComplete="current-password"
             required
-            error={Boolean(error)}
+            {...fieldProps('password')}
           />
-          <AppButton type="submit" compact disabled={isSubmitting}>
-            {isSubmitting ? 'Iniciando sesion...' : 'Iniciar sesion'}
+          <AppButton type="submit" compact disabled={isSubmitting || isGooglePending}>
+            {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
           </AppButton>
           <div id="clerk-captcha" />
-          <AuthFormError message={error} />
+          <AuthFormError id={ERROR_ID} message={error} />
         </form>
 
-        <div className="flex flex-wrap gap-sm">
-          <AppLinkAction
-            onPress={() =>
-              router.push(`/sign-up?redirect_url=${encodeURIComponent(redirectTarget)}`)
-            }
+        <div className="flex flex-wrap justify-between gap-x-md">
+          <Link
+            href={withRedirect('/sign-up', redirectTarget)}
+            className="inline-flex min-h-11 items-center font-bold text-text underline underline-offset-4"
           >
             Crear cuenta
-          </AppLinkAction>
-          <AppLinkAction
-            onPress={() =>
-              router.push(`/forgot-password?redirect_url=${encodeURIComponent(redirectTarget)}`)
-            }
+          </Link>
+          <Link
+            href={withRedirect('/forgot-password', redirectTarget)}
+            className="inline-flex min-h-11 items-center font-bold text-text underline underline-offset-4"
           >
-            Olvide mi contrasena
-          </AppLinkAction>
+            Olvidé mi contraseña
+          </Link>
         </div>
       </div>
     </AuthShell>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path
+        fill="#FFC107"
+        d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"
+      />
+      <path
+        fill="#FF3D00"
+        d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"
+      />
+      <path
+        fill="#4CAF50"
+        d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"
+      />
+      <path
+        fill="#1976D2"
+        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
+      />
+    </svg>
   );
 }

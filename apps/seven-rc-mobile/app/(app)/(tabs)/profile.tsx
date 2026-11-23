@@ -1,25 +1,68 @@
 import { useClerk, useUser } from '@clerk/clerk-expo';
-import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
-import { AppButton, AppProfile, GapView, useAppTheme } from '@17suit/ui';
-import { useAnimatedValue } from '@17suit/ui-native';
-import { Animated, Pressable, Text, View } from 'react-native';
+import {
+  useCurrentUserRoleQuery,
+  useSetCurrentUserRoleMutation,
+} from '@17suit/module-seven-reservations-club/client';
+import {
+  AppBadge,
+  AppButton,
+  AppProfile,
+  GapView,
+  useAnimatedValue,
+  useAppTheme,
+} from '@17suit/ui-native';
+import { Alert, Animated, Platform, Pressable, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { AuthTabScreen } from '../../components/auth-tab-screen';
+import { Screen } from '../../../components/screen';
 import { useQueryClient } from '@tanstack/react-query';
-import * as SecureStore from 'expo-secure-store';
-
-const THEME_STORAGE_KEY = '17suit.theme.mode';
+import { humanizeError } from '../../../lib/error-messages';
+import { feedback } from '../../../lib/feedback';
 
 export default function ProfileScreen() {
   const { signOut } = useClerk();
   const { user } = useUser();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { role } = useCurrentUserRoleQuery({ userId: user?.id, enabled: Boolean(user?.id) });
+  const setRoleMutation = useSetCurrentUserRoleMutation();
   const { mode, setMode, theme } = useAppTheme();
   const [selectorWidth, setSelectorWidth] = useState(0);
 
-  const roleBadgeLabel = role === 'OWNER' ? 'Cuenta OWNER' : 'Cuenta PLAYER';
+  const roleBadgeLabel = role === 'OWNER' ? 'Administras un complejo' : 'Reservas como jugador';
+  const nextRole = role === 'OWNER' ? 'PLAYER' : 'OWNER';
+  const nextRoleLabel = nextRole === 'OWNER' ? 'Administrar un complejo' : 'Reservar como jugador';
+
+  const switchRole = async () => {
+    try {
+      await setRoleMutation.mutateAsync(nextRole);
+      feedback.success(
+        'Modo cambiado',
+        nextRole === 'OWNER' ? 'Ahora administras complejos.' : 'Ahora reservas como jugador.',
+      );
+      router.replace('/home');
+    } catch (error) {
+      feedback.error('No se pudo cambiar el modo', humanizeError(error, 'save'));
+    }
+  };
+
+  const askSwitchRole = () => {
+    const title = '¿Cambiar de modo?';
+    const message =
+      nextRole === 'OWNER'
+        ? 'Verás tus complejos y las reservas que reciben. Tus reservas como jugador se mantienen.'
+        : 'Verás los complejos disponibles y tus reservas. Tus complejos se mantienen.';
+    if (Platform.OS === 'web') {
+      const confirmFn = (globalThis as { confirm?: (text: string) => boolean }).confirm;
+      if (confirmFn?.(`${title}\n\n${message}`)) void switchRole();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: 'Volver', style: 'cancel' },
+      { text: 'Cambiar', onPress: () => void switchRole() },
+    ]);
+  };
 
   const options = [
     { key: 'system', label: 'Sistema', icon: 'smartphone' },
@@ -39,22 +82,30 @@ export default function ProfileScreen() {
     try {
       await signOut();
     } finally {
+      // Account data only; the theme is a preference of this device and stays.
       queryClient.clear();
-      await SecureStore.deleteItemAsync(THEME_STORAGE_KEY).catch(() => {});
     }
   };
 
   return (
-    <AuthTabScreen
-      appName="Perfil"
-      subtitle="Informacion del usuario logueado y acciones de sesion"
-      role={role}
-      swipeRoutes={{ right: '/home' }}
-    >
+    <Screen title="Perfil" subtitle="Tu cuenta y preferencias" back={false}>
       <GapView gap="md">
-        <AppButton variant={role === 'OWNER' ? 'success' : 'info'} disabled>
-          {roleBadgeLabel}
-        </AppButton>
+        {role ? (
+          <View style={{ gap: theme.spacing.sm }}>
+            <View style={{ flexDirection: 'row' }}>
+              <AppBadge variant={role === 'OWNER' ? 'success' : 'info'}>{roleBadgeLabel}</AppBadge>
+            </View>
+            <AppButton
+              variant="neutral"
+              onPress={askSwitchRole}
+              disabled={setRoleMutation.isPending}
+              busy={setRoleMutation.isPending}
+              accessibilityLabel={`Cambiar modo: ${nextRoleLabel}`}
+            >
+              {setRoleMutation.isPending ? 'Cambiando…' : `Cambiar modo · ${nextRoleLabel}`}
+            </AppButton>
+          </View>
+        ) : null}
         <View
           style={{
             width: '100%',
@@ -106,15 +157,19 @@ export default function ProfileScreen() {
                 }}
               />
             ) : null}
-            <View style={{ flexDirection: 'row' }}>
+            <View style={{ flexDirection: 'row' }} accessibilityRole="radiogroup">
               {options.map((item, index) => {
                 const isActive = index === activeIndex;
                 return (
                   <Pressable
                     key={item.key}
                     onPress={() => setMode(item.key)}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Tema ${item.label.toLowerCase()}`}
+                    accessibilityState={{ checked: isActive }}
                     style={{
                       flex: 1,
+                      minHeight: 44,
                       paddingVertical: theme.spacing.sm,
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -145,10 +200,9 @@ export default function ProfileScreen() {
         <AppProfile
           fullName={user?.fullName ?? null}
           email={user?.primaryEmailAddress?.emailAddress ?? null}
-          userId={user?.id ?? null}
           onSignOut={handleSignOut}
         />
       </GapView>
-    </AuthTabScreen>
+    </Screen>
   );
 }

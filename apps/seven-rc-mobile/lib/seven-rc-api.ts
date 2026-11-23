@@ -35,20 +35,31 @@ function deriveLanApiBaseUrlFromExpoHost(): string | null {
   return `http://${host}:4000/api`;
 }
 
+function isDevBuild(): boolean {
+  return typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+}
+
+// Read each variable as a literal `process.env.EXPO_PUBLIC_*` member: that is
+// the only form babel-preset-expo inlines. An aliased `env?.NAME` works in
+// development and is undefined in release builds. The casts are only for
+// TypeScript: the app has no Node types, so `process.env` is untyped.
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL as string | undefined;
+const API_BASE_URL_FALLBACKS = process.env.EXPO_PUBLIC_API_BASE_URL_FALLBACKS as string | undefined;
+const CLERK_JWT_TEMPLATE = process.env.EXPO_PUBLIC_CLERK_JWT_TEMPLATE as string | undefined;
+
 export function resolveApiBaseUrls(): string[] {
-  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
-    ?.env;
-  const extraFallbacks = (env?.EXPO_PUBLIC_API_BASE_URL_FALLBACKS ?? '')
+  const extraFallbacks = (API_BASE_URL_FALLBACKS ?? '')
     .split(',')
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
 
   const values = [
-    env?.EXPO_PUBLIC_API_BASE_URL,
+    API_BASE_URL,
     deriveLanApiBaseUrlFromExpoHost(),
     ...extraFallbacks,
-    'http://10.0.2.2:4000/api',
-    'http://localhost:4000/api',
+    // Emulator/localhost fallbacks are dev-only: a release build must never send
+    // requests (or retry reads) against hosts that only exist on a developer machine.
+    ...(isDevBuild() ? ['http://10.0.2.2:4000/api', 'http://localhost:4000/api'] : []),
   ].filter((value): value is string => Boolean(value && value.length > 0));
 
   const unique: string[] = [];
@@ -63,7 +74,5 @@ export function resolveApiBaseUrls(): string[] {
 }
 
 export function resolveClerkJwtTemplate(): string | undefined {
-  const env = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process
-    ?.env;
-  return env?.EXPO_PUBLIC_CLERK_JWT_TEMPLATE || undefined;
+  return CLERK_JWT_TEMPLATE || undefined;
 }
