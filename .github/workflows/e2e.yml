@@ -1,0 +1,104 @@
+name: E2E
+
+# Selective Playwright E2E (17Suit/17s-client#82).
+# - `select` crosses `git diff` with each app's apps/<app>/e2e/flows.json
+#   (tooling/scripts/select-e2e.mjs) and emits a matrix of apps and specs.
+# - PR into development: only affected flows, plus the smoke spec when shared
+#   code or unmapped app code changed.
+# - PR into preview (the promotion): every spec, only for apps changed since the
+#   last release. This is the safety net for a flow whose paths were not declared.
+# - Promotion to production runs nothing new: it already passed in preview.
+# - No affected specs: the e2e job is skipped and costs 0 minutes.
+# - Runs in GitHub Actions, never on Vercel, so it adds no deploys.
+# - Clerk keys below are placeholders, not credentials. Declare a flow: docs/e2e-selection.md.
+on:
+  pull_request:
+    branches: [development, preview]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  select:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      any: ${{ steps.select.outputs.any }}
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.1
+      - id: select
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            result=$(node tooling/scripts/select-e2e.mjs --all)
+          elif [ "$BASE_REF" = "preview" ]; then
+            result=$(node tooling/scripts/select-e2e.mjs --base "origin/$BASE_REF" --mode full)
+          else
+            result=$(node tooling/scripts/select-e2e.mjs --base "origin/$BASE_REF" --mode flows)
+          fi
+          echo "$result"
+          echo "any=$(echo "$result" | jq -r '.any')" >> "$GITHUB_OUTPUT"
+          echo "matrix=$(echo "$result" | jq -c '{include: .include}')" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    needs: select
+    if: needs.select.outputs.any == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
+    name: e2e (${{ matrix.app }})
+    env:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZmFrZS5jbGVyay5hY2NvdW50cy5kZXYk
+      CLERK_SECRET_KEY: sk_test_e2e_placeholder
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: pnpm --filter "$PACKAGE" exec playwright install --with-deps chromium
+      - name: Install Chromium system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        env:
+          PACKAGE: ${{ matrix.package }}
+        run: pnpm --filter "$PACKAGE" exec playwright install-deps chromium
+      - name: Run E2E
+        env:
+          PACKAGE: ${{ matrix.package }}
+          # Empty when the whole suite runs; otherwise the selected spec files.
+          SPECS: ${{ join(matrix.specs, ' ') }}
+        run: pnpm --filter "$PACKAGE" exec playwright test $SPECS
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/playwright-report/
+          retention-days: 7

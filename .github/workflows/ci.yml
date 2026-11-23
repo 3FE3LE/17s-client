@@ -55,7 +55,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Lint and typecheck affected packages
         run: pnpm exec turbo run lint typecheck --affected
+      # PRs: Vitest follows the import graph and runs only specs related to the
+      # diff (docs/e2e-selection.md). Pushes run the whole affected packages.
+      - name: Test affected packages (changed specs only)
+        if: github.event_name == 'pull_request'
+        run: pnpm exec turbo run test --affected -- --changed "$TURBO_SCM_BASE" --passWithNoTests
       - name: Test affected packages
+        if: github.event_name != 'pull_request'
         run: pnpm exec turbo run test --affected
       # API contract drift gate. Fetches the latest openapi.json artifact
       # from 17Suit/17s-server main and diffs the regenerated
