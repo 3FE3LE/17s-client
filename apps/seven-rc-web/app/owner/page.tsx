@@ -19,6 +19,7 @@ import {
   cx,
 } from '@17suit/ui';
 import { PitchPriceRules } from '@/components/pitch-price-rules';
+import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
@@ -58,6 +59,7 @@ import {
   useConfigurePitchSlotsMutation,
   useConfirmVenueReservationMutation,
   useCreateVenueMutation,
+  useIntegrationsQuery,
   useCreateVenuePitchMutation,
   useMarkNoShowMutation,
   useCancelReservationSeriesMutation,
@@ -242,6 +244,7 @@ interface SetupItem {
 
 function OwnerWorkspace() {
   const venuesQuery = useOwnerVenuesQuery();
+  const integrationsQuery = useIntegrationsQuery();
   const venues = venuesQuery.data ?? [];
   const [explicitVenueId, setExplicitVenueId] = useState<string | null>(null);
   const selectedVenue = venues.find((venue) => venue.id === explicitVenueId) ?? venues[0] ?? null;
@@ -588,6 +591,8 @@ function OwnerWorkspace() {
       ) : null}
 
       {setupIncomplete ? <SetupChecklist items={setupItems} onGo={goToSetup} /> : null}
+
+      <IntegrationNotice items={integrationsQuery.data ?? []} />
 
       {selectedVenue ? (
         <>

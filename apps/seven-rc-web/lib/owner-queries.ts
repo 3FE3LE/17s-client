@@ -42,6 +42,7 @@ import {
   useSevenRcOwnerVenuePitchesQuery,
   useSevenRcOwnerVenueReportQuery,
   useSevenRcOwnerVenueReservationsQuery,
+  useSevenRcIntegrationsQuery,
   useSevenRcOwnerVenuesQuery,
   useSevenRcRejectVenueReservationMutation,
 } from '@17suit/module-seven-reservations-club/client';
@@ -54,6 +55,11 @@ function useOwnerApi() {
     () => createSevenRcOwnerApi({ apiBaseUrls: ['/api'], getAccessToken }),
     [getAccessToken],
   );
+}
+
+export function useIntegrationsQuery() {
+  const api = useOwnerApi();
+  return useSevenRcIntegrationsQuery(api);
 }
 
 export function useOwnerVenuesQuery() {
