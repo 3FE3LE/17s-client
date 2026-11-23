@@ -5,12 +5,14 @@ import type {
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
   CreateOwnerReservationInput,
+  CreatePitchBlockInput,
   CreatePitchInput,
   CreateReservationInput,
   CreateVenueInput,
   OwnerVenue,
   Pitch,
   PitchAvailability,
+  PitchBlock,
   PitchWithPricing,
   PublicVenue,
   RecordReservationPaymentInput,
@@ -47,6 +49,7 @@ export const sevenRcQueryKeys = {
   playerVenues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
   playerVenuePitches: (venueId: string) =>
     ['seven-rc', 'player', 'venues', venueId, 'pitches'] as const,
+  pitchBlocks: (pitchId: string) => ['seven-rc', 'pitches', pitchId, 'blocks'] as const,
   pitchAvailabilityBase: (pitchId: string) =>
     ['seven-rc', 'pitches', pitchId, 'availability'] as const,
   pitchAvailability: (pitchId: string, date: string) =>
@@ -387,5 +390,52 @@ export function useSevenRcCancelReservationMutation(api: SevenRcPlayerApi) {
         queryKey: sevenRcQueryKeys.pitchAvailabilityBase(reservation.pitchId),
       });
     },
+  });
+}
+
+/** Active blocks that have not ended yet. `from` is fixed per mount so the key stays stable. */
+export function useSevenRcPitchBlocksQuery(
+  api: SevenRcOwnerApi,
+  pitchId: string | null,
+  from: string,
+) {
+  return useQuery<PitchBlock[]>({
+    queryKey: sevenRcQueryKeys.pitchBlocks(pitchId ?? 'missing'),
+    queryFn: () => {
+      if (!pitchId) {
+        throw new Error('Pitch id is required');
+      }
+      return api.listPitchBlocks(pitchId, from);
+    },
+    enabled: Boolean(pitchId),
+    staleTime: 60 * 1000,
+    refetchOnReconnect: false,
+  });
+}
+
+/** A block changes which slots are free: refresh the list and the pitch availability. */
+function useInvalidatePitchBlocks(pitchId: string) {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.pitchBlocks(pitchId) });
+    void queryClient.invalidateQueries({
+      queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
+    });
+  };
+}
+
+export function useSevenRcCreatePitchBlockMutation(api: SevenRcOwnerApi, pitchId: string) {
+  const invalidate = useInvalidatePitchBlocks(pitchId);
+  return useMutation({
+    mutationFn: (input: CreatePitchBlockInput) => api.createPitchBlock(pitchId, input),
+    onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcDeletePitchBlockMutation(api: SevenRcOwnerApi, pitchId: string) {
+  const invalidate = useInvalidatePitchBlocks(pitchId);
+  return useMutation({
+    mutationFn: (blockId: string) => api.deletePitchBlock(pitchId, blockId),
+    onSuccess: invalidate,
   });
 }

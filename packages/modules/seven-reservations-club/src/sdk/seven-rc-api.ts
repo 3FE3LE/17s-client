@@ -22,6 +22,7 @@ export type VenueReservation = ApiSchema<'VenueReservationResponseDto'>;
 export type AvailabilitySlotStatus = ApiSchema<'AvailabilitySlotStatus'>;
 export type AvailabilitySlot = ApiSchema<'AvailabilitySlotResponseDto'>;
 export type PitchAvailability = ApiSchema<'PitchAvailabilityResponseDto'>;
+export type PitchBlock = ApiSchema<'PitchBlockResponseDto'>;
 
 export type CreateVenueInput = ApiInput<ApiRequestBody<'/7rc/venues', 'post'>>;
 export type CreateReservationInput = ApiInput<ApiRequestBody<'/7rc/reservations', 'post'>>;
@@ -30,6 +31,7 @@ export type ConfigurePitchSlotsInput = ApiInput<
   ApiRequestBody<'/7rc/pitches/{pitchId}/slots', 'put'>
 >;
 type ConfigurePitchSlotsResult = ApiSchema<'ConfigurePitchSlotsResponseDto'>;
+export type CreatePitchBlockInput = ApiInput<ApiSchema<'CreatePitchBlockDto'>>;
 export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDto'>>;
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
@@ -86,6 +88,11 @@ export interface SevenRcOwnerApi {
     venueId: string,
     input: CreateOwnerReservationInput,
   ) => Promise<ReservationBase>;
+  /** Active blocks of a pitch that end after `from` (ISO instant), ordered by start. */
+  listPitchBlocks: (pitchId: string, from?: string) => Promise<PitchBlock[]>;
+  /** Rejects with `SevenRcApiError` 409 and `conflicts` when active reservations overlap. */
+  createPitchBlock: (pitchId: string, input: CreatePitchBlockInput) => Promise<PitchBlock>;
+  deletePitchBlock: (pitchId: string, blockId: string) => Promise<PitchBlock>;
 }
 
 export interface SevenRcPlayerApi {
@@ -170,11 +177,23 @@ function toError(error: unknown, fallbackMessage: string): Error {
 /** HTTP error returned by the 7RC API. `status` lets callers map errors without parsing text. */
 export class SevenRcApiError extends Error {
   readonly status: number;
+  /** Parsed JSON body of the error response, when there was one. */
+  readonly payload: unknown;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, payload: unknown = null) {
     super(message);
     this.name = 'SevenRcApiError';
     this.status = status;
+    this.payload = payload;
+  }
+
+  /** Reservations that overlap a rejected pitch block (409 from the block endpoint). */
+  get conflicts(): ReservationBase[] {
+    const value =
+      this.payload && typeof this.payload === 'object'
+        ? (this.payload as { conflicts?: unknown }).conflicts
+        : null;
+    return Array.isArray(value) ? (value as ReservationBase[]) : [];
   }
 }
 
@@ -225,6 +244,7 @@ function createRequest(options: SevenRcApiClientOptions) {
       throw new SevenRcApiError(
         extractErrorMessage(payload, `Request failed (${response.status})`),
         response.status,
+        payload,
       );
     }
 
@@ -358,6 +378,26 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
+    },
+    listPitchBlocks(pitchId, from) {
+      const query = from ? `?${new URLSearchParams({ from })}` : '';
+      return request<PitchBlock[]>(
+        `${apiPath('/7rc/pitches/{pitchId}/blocks', { pitchId })}${query}`,
+        { method: 'GET', cache: 'no-store' },
+      );
+    },
+    createPitchBlock(pitchId, input) {
+      return request<PitchBlock>(apiPath('/7rc/pitches/{pitchId}/blocks', { pitchId }), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+    },
+    deletePitchBlock(pitchId, blockId) {
+      return request<PitchBlock>(
+        apiPath('/7rc/pitches/{pitchId}/blocks/{blockId}', { pitchId, blockId }),
+        { method: 'DELETE' },
+      );
     },
   };
 }

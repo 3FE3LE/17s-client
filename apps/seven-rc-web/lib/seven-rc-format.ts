@@ -194,3 +194,36 @@ export function hourInTimeZone(instant: string, timeZone: string): number {
   }).format(new Date(instant));
   return Number(hour) % 24;
 }
+
+/**
+ * The instant at which the venue's wall clock reads `dateKey` + `HH:MM`.
+ * Resolves the zone offset at that moment, so DST is handled without a date library.
+ */
+export function zonedTimeToInstant(dateKey: string, time: string, timeZone: string): Date {
+  const [year = 1970, month = 1, day = 1] = dateKey.split('-').map(Number);
+  const [hour = 0, minute = 0] = time.split(':').map(Number);
+  const wall = Date.UTC(year, month - 1, day, hour, minute);
+  const offsetAt = (instant: number) => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).formatToParts(new Date(instant));
+    const read = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((part) => part.type === type)?.value ?? 0);
+    const asUtc = Date.UTC(
+      read('year'),
+      read('month') - 1,
+      read('day'),
+      read('hour'),
+      read('minute'),
+    );
+    return asUtc - instant;
+  };
+  const first = wall - offsetAt(wall);
+  return new Date(wall - offsetAt(first));
+}
