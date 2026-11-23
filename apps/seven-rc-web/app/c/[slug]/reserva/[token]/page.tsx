@@ -163,7 +163,15 @@ export default async function PublicReservationPage({ params }: PageProps) {
         <h2 id="guardar-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
           Guarda este enlace
         </h2>
-        {shareUrl ? <ShareReservation url={shareUrl} venueName={reservation.venue.name} /> : null}
+        {shareUrl ? (
+          <ShareReservation
+            url={shareUrl}
+            venueName={reservation.venue.name}
+            pitchName={reservation.pitch.name}
+            when={formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+            calendarUrl={`${shareUrl}/calendario`}
+          />
+        ) : null}
         <p className="m-0 text-sm leading-[18px] text-muted">
           Esta página es tu comprobante: no necesitas cuenta. Cualquiera con el enlace puede verla,
           así que no lo compartas más de lo necesario.
