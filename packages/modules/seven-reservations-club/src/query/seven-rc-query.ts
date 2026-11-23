@@ -4,7 +4,10 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import type {
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
+  CancelReservationSeriesResult,
   CreateOwnerReservationInput,
+  CreateRecurringReservationInput,
+  RecurringReservationResult,
   CreatePitchBlockInput,
   CreatePitchInput,
   CreateReservationInput,
@@ -315,6 +318,50 @@ export function useSevenRcCreateOwnerReservationMutation(api: SevenRcOwnerApi, v
   return useMutation<ReservationBase, Error, CreateOwnerReservationInput>({
     mutationFn: (input) => api.createOwnerReservation(venueId, input),
     onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcCreateRecurringReservationMutation(
+  api: SevenRcOwnerApi,
+  venueId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<RecurringReservationResult, Error, CreateRecurringReservationInput>({
+    mutationFn: (input) => api.createRecurringReservation(venueId, input),
+    onSuccess: (_result, input) => {
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.ownerVenueReservationsBase(venueId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(input.pitchId),
+      });
+    },
+  });
+}
+
+/** A series spans many dates and pitches' slots, so refresh every cached availability. */
+export function useSevenRcCancelReservationSeriesMutation(
+  api: SevenRcOwnerApi,
+  venueId?: string | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<CancelReservationSeriesResult, Error, string>({
+    mutationFn: (seriesId) => api.cancelReservationSeries(seriesId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: venueId
+          ? sevenRcQueryKeys.ownerVenueReservationsBase(venueId)
+          : ['seven-rc', 'owner', 'venues'],
+      });
+      void queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'seven-rc' &&
+          query.queryKey[1] === 'pitches' &&
+          query.queryKey[3] === 'availability',
+      });
+    },
   });
 }
 
