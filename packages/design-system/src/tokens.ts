@@ -175,8 +175,14 @@ const baseTheme = {
   },
 } as const;
 
+// Canonical source for every color token. `pnpm tokens:generate` emits the
+// CSS custom properties consumed by Tailwind (web) and Uniwind (native) from
+// these values; never edit packages/tailwind-config/*.css token blocks by hand.
 const darkColors = {
   background: '#00151c',
+  backgroundCanvas: '#00151c',
+  backgroundCanvasTop: '#092025',
+  backgroundCanvasCool: '#00171f',
   surface: '#394448',
   accent: '#35a7ff',
   text: '#f0f0f0',
@@ -187,6 +193,8 @@ const darkColors = {
   warning: '#f3863d',
   caution: '#edd83d',
   info: '#1e91d6',
+  // grayscale[3]; neutral chips/badges, identical in both themes.
+  neutral: '#cfcfcf',
   brandPrimary: '#35a7ff',
   brandSecondary: '#00916e',
   brandAccent: '#ff495c',
@@ -196,6 +204,9 @@ const darkColors = {
 
 const lightColors = {
   background: '#f7f8fa',
+  backgroundCanvas: '#f7f8fa',
+  backgroundCanvasTop: '#fbfcff',
+  backgroundCanvasCool: '#eef4f8',
   surface: '#ffffff',
   accent: '#35a7ff',
   text: '#00151c',
@@ -206,6 +217,8 @@ const lightColors = {
   warning: '#f3863d',
   caution: '#edd83d',
   info: '#1876ae',
+  // grayscale[3]; neutral chips/badges, identical in both themes.
+  neutral: '#cfcfcf',
   brandPrimary: '#35a7ff',
   brandSecondary: '#007f60',
   brandAccent: '#ff495c',

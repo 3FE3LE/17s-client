@@ -101,5 +101,10 @@ export type {
   SuitTheme,
   SuitPlatform,
 } from '@17suit/design-system';
-export { ThemeProvider, useAppTheme } from './theme/theme-context';
+export { ThemeProvider, useAppTheme, useThemeSnapshot } from './theme/theme-context';
+export { ThemeScript, THEME_BOOT_SCRIPT } from './theme/ThemeScript';
+export { setThemePreference } from './theme/theme-store';
+export type { ThemeSnapshot } from './theme/theme-store';
+export { AppThemeToggle } from './components/AppThemeToggle';
+export type { AppThemeToggleProps } from './components/AppThemeToggle';
 export type { ThemeModePreference } from './theme/theme-context';

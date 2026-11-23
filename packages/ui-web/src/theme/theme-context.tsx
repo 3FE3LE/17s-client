@@ -1,13 +1,21 @@
 'use client';
 
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useMemo, useState, useSyncExternalStore } from 'react';
+import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import { getSuitTheme } from '@17suit/design-system';
-import type { SuitTheme, ThemeMode } from '@17suit/design-system';
+import type { SuitTheme, ThemeMode, ThemePreference } from '@17suit/design-system';
 
-export type ThemeModePreference = ThemeMode | 'system';
+import {
+  getServerThemeSnapshot,
+  getThemeSnapshot,
+  setThemePreference,
+  subscribeTheme,
+} from './theme-store';
+
+export type ThemeModePreference = ThemePreference;
 
 interface ThemeContextValue {
+  /** JS theme for components not yet migrated to class recipes. */
   theme: SuitTheme;
   mode: ThemeModePreference;
   resolvedMode: ThemeMode;
@@ -16,74 +24,39 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-interface ThemeProviderProps extends PropsWithChildren {
-  initialMode?: ThemeModePreference;
-  mode?: ThemeModePreference;
-  onModeChange?: (mode: ThemeModePreference) => void;
+/** Subscribes to the global theme store (the `dark` class on <html>). */
+export function useThemeSnapshot() {
+  return useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerThemeSnapshot);
 }
 
-// The resolved scheme follows the `.dark` class on <html> (the same switch the CSS
-// tokens use), so inline JS styles never disagree with Tailwind/CSS tokens.
-// Server and first client render both report 'light' (the CSS default).
-function getSystemScheme(): ThemeMode {
-  if (typeof document === 'undefined') {
-    return 'light';
-  }
-  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-}
-
-function getServerScheme(): ThemeMode {
-  return 'light';
-}
-
-function subscribeToSystemScheme(onChange: () => void) {
-  if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
-    return () => {};
-  }
-  const observer = new MutationObserver(onChange);
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  return () => observer.disconnect();
-}
-
-export function ThemeProvider({
-  initialMode = 'system',
-  mode,
-  onModeChange,
-  children,
-}: ThemeProviderProps) {
-  const [internalMode, setInternalMode] = useState<ThemeModePreference>(initialMode);
-  const systemMode = useSyncExternalStore(
-    subscribeToSystemScheme,
-    getSystemScheme,
-    getServerScheme,
+/**
+ * Exposes the web theme store to React. There is no local state: the
+ * preference lives in the store (persisted, applied to <html> by
+ * ThemeScript before paint), so every consumer and every CSS token agree.
+ */
+export function ThemeProvider({ children }: PropsWithChildren) {
+  const { preference, resolved } = useThemeSnapshot();
+  const value = useMemo<ThemeContextValue>(
+    () => ({
+      theme: getSuitTheme(resolved),
+      mode: preference,
+      resolvedMode: resolved,
+      setMode: setThemePreference,
+    }),
+    [preference, resolved],
   );
-  const effectiveMode = mode ?? internalMode;
-  const resolvedMode: ThemeMode = effectiveMode === 'system' ? systemMode : effectiveMode;
-  const theme = useMemo(() => getSuitTheme(resolvedMode), [resolvedMode]);
 
-  const setMode = (nextMode: ThemeModePreference) => {
-    if (mode) {
-      onModeChange?.(nextMode);
-      return;
-    }
-    setInternalMode(nextMode);
-  };
-
-  return (
-    <ThemeContext.Provider value={{ theme, mode: effectiveMode, resolvedMode, setMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
-export function useAppTheme() {
+export function useAppTheme(): ThemeContextValue {
   const context = useContext(ThemeContext);
   if (!context) {
     return {
       theme: getSuitTheme('light'),
-      mode: 'system' as ThemeModePreference,
-      resolvedMode: 'light' as ThemeMode,
-      setMode: () => {},
+      mode: 'light',
+      resolvedMode: 'light',
+      setMode: setThemePreference,
     };
   }
   return context;

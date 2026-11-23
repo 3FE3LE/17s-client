@@ -41,6 +41,8 @@ export { AppProfile } from './components/AppProfile';
 export type { AppProfileProps } from './components/AppProfile';
 export { AppSelect } from './components/AppSelect';
 export type { AppSelectProps, AppSelectOption } from './components/AppSelect';
+export { AppThemeToggle } from './components/AppThemeToggle';
+export type { AppThemeToggleProps } from './components/AppThemeToggle';
 export { AppTitle } from './components/AppTitle';
 export type { AppTitleProps } from './components/AppTitle';
 export { AppProviders } from './components/AppProviders';

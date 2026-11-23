@@ -2,8 +2,12 @@ import 'react-native-gesture-handler';
 import '../global.css';
 import * as Sentry from '@sentry/react-native';
 import { ExpoAuthProvider } from '@17suit/core/auth/expo';
-import { AppProviders, useAppTheme, type ThemeModePreference } from '@17suit/ui-native';
-import { useStoredState } from '@17suit/ui-native';
+import {
+  AppProviders,
+  useAppTheme,
+  useStoredState,
+  type ThemeModePreference,
+} from '@17suit/ui-native';
 import Constants from 'expo-constants';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
