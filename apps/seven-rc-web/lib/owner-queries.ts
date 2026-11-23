@@ -17,6 +17,8 @@ import {
   type ReservationPaymentMethod,
   type SevenRcRefreshOptions,
   type UpdateVenueSettingsInput,
+  type VenueReport,
+  type PitchReport,
   type VenueReservation,
   useSevenRcCompleteReservationMutation,
   useSevenRcCreateOwnerReservationMutation,
@@ -33,6 +35,7 @@ import {
   useSevenRcPitchBlocksQuery,
   useSevenRcCreateVenuePitchMutation,
   useSevenRcOwnerVenuePitchesQuery,
+  useSevenRcOwnerVenueReportQuery,
   useSevenRcOwnerVenueReservationsQuery,
   useSevenRcOwnerVenuesQuery,
   useSevenRcRejectVenueReservationMutation,
@@ -81,6 +84,11 @@ export function useOwnerVenueReservationsQuery(
 ) {
   const api = useOwnerApi();
   return useSevenRcOwnerVenueReservationsQuery(api, venueId, dateFrom, dateTo, options);
+}
+
+export function useOwnerVenueReportQuery(venueId: string | null, dateFrom: string, dateTo: string) {
+  const api = useOwnerApi();
+  return useSevenRcOwnerVenueReportQuery(api, venueId, dateFrom, dateTo);
 }
 
 export function useConfirmVenueReservationMutation(venueId?: string | null) {
@@ -152,11 +160,13 @@ export type {
   CreateVenueInput,
   OwnerVenue,
   PitchBlock,
+  PitchReport,
   PitchWithPricing,
   RecordReservationPaymentInput,
   ReservationBase,
   ReservationPaymentKind,
   ReservationPaymentMethod,
   UpdateVenueSettingsInput,
+  VenueReport,
   VenueReservation,
 };

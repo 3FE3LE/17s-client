@@ -19,6 +19,8 @@ export type ReservationStatus = ApiSchema<'ReservationStatus'>;
 export type ReservationBase = ApiSchema<'ReservationResponseDto'>;
 export type ReservationWithVenuePitch = ApiSchema<'ReservationWithVenuePitchResponseDto'>;
 export type VenueReservation = ApiSchema<'VenueReservationResponseDto'>;
+export type VenueReport = ApiSchema<'VenueReportResponseDto'>;
+export type PitchReport = ApiSchema<'PitchReportResponseDto'>;
 export type AvailabilitySlotStatus = ApiSchema<'AvailabilitySlotStatus'>;
 export type AvailabilitySlot = ApiSchema<'AvailabilitySlotResponseDto'>;
 export type PitchAvailability = ApiSchema<'PitchAvailabilityResponseDto'>;
@@ -61,6 +63,8 @@ export interface SevenRcOwnerApi {
     dateTo: string,
     cacheBuster?: string,
   ) => Promise<VenueReservation[]>;
+  /** Revenue, occupancy and peak hours per pitch for a venue-local date range (max 366 days). */
+  getVenueReport: (venueId: string, dateFrom: string, dateTo: string) => Promise<VenueReport>;
   confirmReservation: (reservationId: string) => Promise<ReservationBase>;
   rejectReservation: (reservationId: string) => Promise<ReservationBase>;
   /** Partial update: omitted fields keep their stored value. */
@@ -308,6 +312,16 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
       }
       return request<VenueReservation[]>(
         `${apiPath('/7rc/venues/{venueId}/reservations', { venueId })}?${query}`,
+        {
+          method: 'GET',
+          cache: 'no-store',
+        },
+      );
+    },
+    getVenueReport(venueId, dateFrom, dateTo) {
+      const query = new URLSearchParams({ dateFrom, dateTo });
+      return request<VenueReport>(
+        `${apiPath('/7rc/venues/{venueId}/report', { venueId })}?${query}`,
         {
           method: 'GET',
           cache: 'no-store',

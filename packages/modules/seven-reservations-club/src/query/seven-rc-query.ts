@@ -21,6 +21,7 @@ import type {
   SevenRcOwnerApi,
   SevenRcPlayerApi,
   UpdateVenueSettingsInput,
+  VenueReport,
   VenueReservation,
   VenueSettings,
 } from '../sdk/seven-rc-api';
@@ -45,6 +46,8 @@ export const sevenRcQueryKeys = {
     ['seven-rc', 'owner', 'venues', venueId, 'reservations'] as const,
   ownerVenueReservations: (venueId: string, dateFrom: string, dateTo: string) =>
     ['seven-rc', 'owner', 'venues', venueId, 'reservations', dateFrom, dateTo] as const,
+  ownerVenueReport: (venueId: string, dateFrom: string, dateTo: string) =>
+    ['seven-rc', 'owner', 'venues', venueId, 'report', dateFrom, dateTo] as const,
   playerReservations: ['seven-rc', 'player', 'reservations'] as const,
   playerVenues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
   playerVenuePitches: (venueId: string) =>
@@ -158,6 +161,28 @@ export function useSevenRcOwnerVenueReservationsQuery(
     refetchOnMount: false,
     refetchOnReconnect: false,
     ...options,
+  });
+}
+
+export function useSevenRcOwnerVenueReportQuery(
+  api: SevenRcOwnerApi,
+  venueId: string | null,
+  dateFrom: string,
+  dateTo: string,
+) {
+  return useQuery<VenueReport>({
+    queryKey: sevenRcQueryKeys.ownerVenueReport(venueId ?? 'missing', dateFrom, dateTo),
+    queryFn: () => {
+      if (!venueId) {
+        throw new Error('Venue id is required');
+      }
+      return api.getVenueReport(venueId, dateFrom, dateTo);
+    },
+    enabled: Boolean(venueId),
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
