@@ -1,3 +1,5 @@
+'use client';
+
 import type { CSSProperties, HTMLAttributes } from 'react';
 import { useAppTheme } from '../theme/theme-context';
 
