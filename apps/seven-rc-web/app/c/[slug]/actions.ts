@@ -1,7 +1,12 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { createPublicReservation, fetchPublicVenue } from '@/lib/public-venue-api';
+import {
+  cancelPublicReservation,
+  createPublicReservation,
+  fetchPublicVenue,
+} from '@/lib/public-venue-api';
 import { E164_PATTERN, normalizePhone } from '@/lib/phone';
 
 export interface BookingFormState {
@@ -86,4 +91,33 @@ export async function reserveAction(
     return failure({}, 'Revisa los datos e intenta de nuevo. Si el horario ya pasó, elige otro.');
   }
   return failure({}, 'El servidor tuvo un problema. Intenta de nuevo en unos minutos.');
+}
+
+export interface CancelFormState {
+  error: string | null;
+}
+
+export async function cancelReservationAction(
+  slug: string,
+  token: string,
+): Promise<CancelFormState> {
+  if (!UUID.test(token)) return { error: 'Este enlace no es válido.' };
+  let result;
+  try {
+    result = await cancelPublicReservation(token);
+  } catch {
+    return { error: 'No pudimos conectar con el servidor. Intenta de nuevo.' };
+  }
+  if (result.ok) {
+    revalidatePath(`/c/${encodeURIComponent(slug)}/reserva/${token}`);
+    return { error: null };
+  }
+  if (result.status === 400) {
+    return {
+      error: 'Ya no se puede cancelar en línea. Comunícate con el complejo.',
+    };
+  }
+  if (result.status === 404) return { error: 'No encontramos esta reserva.' };
+  if (result.status === 429) return { error: 'Demasiados intentos. Espera un minuto.' };
+  return { error: 'El servidor tuvo un problema. Intenta de nuevo en unos minutos.' };
 }
