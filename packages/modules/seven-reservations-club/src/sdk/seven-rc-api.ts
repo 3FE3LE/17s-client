@@ -44,6 +44,7 @@ export type CancelReservationSeriesResult = ApiSchema<'CancelReservationSeriesRe
 export type ReservationPaymentKind = ApiSchema<'ReservationPaymentKind'>;
 export type ReservationPaymentMethod = ApiSchema<'ReservationPaymentMethod'>;
 export type VenueSettings = ApiSchema<'VenueResponseDto'>;
+export type IntegrationStatus = ApiSchema<'IntegrationStatusResponseDto'>;
 
 export interface SevenRcApiClientOptions {
   apiBaseUrls: string[];
@@ -52,6 +53,7 @@ export interface SevenRcApiClientOptions {
 }
 
 export interface SevenRcOwnerApi {
+  listIntegrations: () => Promise<IntegrationStatus[]>;
   listOwnerVenues: () => Promise<OwnerVenue[]>;
   createVenue: (input: CreateVenueInput) => Promise<OwnerVenue>;
   listOwnerVenuePitches: (venueId: string) => Promise<PitchWithPricing[]>;
@@ -273,6 +275,9 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
   const request = createRequest(options);
 
   return {
+    listIntegrations() {
+      return request<IntegrationStatus[]>('/integrations', { method: 'GET', cache: 'no-store' });
+    },
     listOwnerVenues() {
       return request<OwnerVenue[]>('/7rc/owner/venues', {
         method: 'GET',

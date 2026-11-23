@@ -61,6 +61,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/integrations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List third-party integrations and whether each is real */
+    get: operations['IntegrationsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/7rc/venues': {
     parameters: {
       query?: never;
@@ -1590,6 +1607,15 @@ export interface components {
        */
       role: components['schemas']['UserRole'];
     };
+    IntegrationStatusResponseDto: {
+      /** @example payments */
+      key: string;
+      /** @example Pagos en línea */
+      label: string;
+      /** @enum {string} */
+      mode: 'dummy' | 'manual' | 'live';
+      note: string;
+    };
     CreateVenueDto: {
       /**
        * @description Human-readable venue name
@@ -2704,6 +2730,25 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  IntegrationsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['IntegrationStatusResponseDto'][];
         };
       };
     };

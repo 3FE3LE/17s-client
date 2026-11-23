@@ -12,6 +12,7 @@ import type {
   CreatePitchInput,
   CreateReservationInput,
   CreateVenueInput,
+  IntegrationStatus,
   OwnerVenue,
   Pitch,
   PitchAvailability,
@@ -42,6 +43,7 @@ export type SevenRcRefreshOptions<TData> = Partial<
 >;
 
 export const sevenRcQueryKeys = {
+  integrations: ['seven-rc', 'integrations'] as const,
   ownerVenues: ['seven-rc', 'owner', 'venues'] as const,
   ownerVenuePitches: (venueId: string) =>
     ['seven-rc', 'owner', 'venues', venueId, 'pitches'] as const,
@@ -61,6 +63,15 @@ export const sevenRcQueryKeys = {
   pitchAvailability: (pitchId: string, date: string) =>
     ['seven-rc', 'pitches', pitchId, 'availability', date] as const,
 };
+
+export function useSevenRcIntegrationsQuery(api: SevenRcOwnerApi) {
+  return useQuery<IntegrationStatus[]>({
+    queryKey: sevenRcQueryKeys.integrations,
+    queryFn: () => api.listIntegrations(),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
 
 export function useSevenRcOwnerVenuesQuery(api: SevenRcOwnerApi) {
   return useQuery<OwnerVenue[]>({
