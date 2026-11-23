@@ -1,4 +1,5 @@
 import { WebAuthProvider } from '@17suit/core/auth/next';
+import { ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
@@ -34,7 +35,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
+    <html
+      lang="es"
+      className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
+      // ThemeScript sets the `dark` class before hydration.
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>
         <WebAuthProvider>
           <AppProviders>

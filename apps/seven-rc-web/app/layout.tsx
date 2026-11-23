@@ -1,5 +1,5 @@
 import { WebAuthProvider } from '@17suit/core/auth/next';
-import { AppProductFooter, buttonRecipe } from '@17suit/ui';
+import { AppProductFooter, buttonRecipe, ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
 import { auth } from '@clerk/nextjs/server';
 import type { Metadata } from 'next';
@@ -54,7 +54,15 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const isSignedIn = Boolean(userId);
 
   return (
-    <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
+    <html
+      lang="es"
+      className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
+      // ThemeScript sets the `dark` class before hydration.
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>
         <WebAuthProvider>
           <AppProviders>
