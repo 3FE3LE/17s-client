@@ -80,7 +80,7 @@ export function CancelReservation({ slug, token }: { slug: string; token: string
     );
   }
   return (
-    <form action={formAction} className="grid gap-sm">
+    <form action={formAction} aria-label="Confirmar cancelación" className="grid gap-sm">
       <p className="m-0 text-md text-text">¿Seguro? Tu turno se libera y no se puede deshacer.</p>
       <InlineError message={state.error} />
       <div className="flex flex-wrap gap-sm">

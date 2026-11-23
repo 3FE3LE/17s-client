@@ -21,6 +21,17 @@
         "apps/seven-rc-web/lib/phone.ts",
         "apps/seven-rc-web/lib/seven-rc-format.ts"
       ]
+    },
+    "public-cancel": {
+      "specs": ["e2e/public-cancel.spec.ts"],
+      "paths": [
+        "apps/seven-rc-web/app/c/**",
+        "apps/seven-rc-web/components/reservation-link-actions.tsx",
+        "apps/seven-rc-web/components/guest-booking-form.tsx",
+        "apps/seven-rc-web/components/seven-rc-ui.tsx",
+        "apps/seven-rc-web/lib/public-venue-api.ts",
+        "apps/seven-rc-web/lib/seven-rc-errors.ts"
+      ]
     }
   }
 }

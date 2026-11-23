@@ -1,26 +1,9 @@
-import { expect, test, type Locator } from '@playwright/test';
-
-const SLUG = 'complejo-e2e';
-const STUB = `http://127.0.0.1:${process.env.E2E_STUB_PORT ?? 4010}`;
-
-/**
- * A submit before hydration is a plain POST that drops the form state (and, in dev, can stall the
- * server). React attaches `__reactProps$*` to a node once it has hydrated, so wait for that.
- */
-async function hydrated(form: Locator): Promise<void> {
-  await form.evaluate(
-    (node) =>
-      new Promise<void>((resolve) => {
-        const ready = () => Object.keys(node).some((key) => key.startsWith('__reactProps'));
-        const tick = () => (ready() ? resolve() : setTimeout(tick, 50));
-        tick();
-      }),
-  );
-}
+import { expect, test } from '@playwright/test';
+import { SLUG, hydrated, resetStub } from './support/helpers';
 
 test.describe('Public booking flow', () => {
   test.beforeAll(async () => {
-    await fetch(`${STUB}/__e2e/reset`, { method: 'POST' });
+    await resetStub();
   });
 
   test('guest books a slot and reopens the reservation by link', async ({ page }) => {
