@@ -5,7 +5,10 @@ import {
   type ConfigurePitchPricingInput,
   type ConfigurePitchSlotsInput,
   type CreatePitchBlockInput,
+  type CancelReservationSeriesResult,
   type CreateOwnerReservationInput,
+  type CreateRecurringReservationInput,
+  type RecurringReservationResult,
   type CreatePitchInput,
   type CreateVenueInput,
   type OwnerVenue,
@@ -21,7 +24,9 @@ import {
   type PitchReport,
   type VenueReservation,
   useSevenRcCompleteReservationMutation,
+  useSevenRcCancelReservationSeriesMutation,
   useSevenRcCreateOwnerReservationMutation,
+  useSevenRcCreateRecurringReservationMutation,
   useSevenRcConfigurePitchPricingMutation,
   useSevenRcConfirmVenueReservationMutation,
   useSevenRcConfigurePitchSlotsMutation,
@@ -121,6 +126,16 @@ export function useCreateOwnerReservationMutation(venueId: string) {
   return useSevenRcCreateOwnerReservationMutation(api, venueId);
 }
 
+export function useCreateRecurringReservationMutation(venueId: string) {
+  const api = useOwnerApi();
+  return useSevenRcCreateRecurringReservationMutation(api, venueId);
+}
+
+export function useCancelReservationSeriesMutation(venueId?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcCancelReservationSeriesMutation(api, venueId);
+}
+
 export function useMarkNoShowMutation(venueId?: string | null) {
   const api = useOwnerApi();
   return useSevenRcMarkNoShowMutation(api, venueId);
@@ -152,6 +167,9 @@ export function useDeletePitchBlockMutation(pitchId: string) {
 }
 
 export type {
+  CancelReservationSeriesResult,
+  CreateRecurringReservationInput,
+  RecurringReservationResult,
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
   CreateOwnerReservationInput,
