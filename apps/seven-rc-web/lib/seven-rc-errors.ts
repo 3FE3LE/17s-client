@@ -17,6 +17,11 @@ const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchA
       message: () => 'El complejo bloqueó ese horario. Elige otro de la lista.',
     },
     {
+      match: /^Block overlaps active reservations$/i,
+      message: () =>
+        'Ese bloqueo se cruza con reservas activas. Cancélalas primero o cambia el horario.',
+    },
+    {
       match: /^Slot has already started$/i,
       message: () => 'Ese horario ya empezó. Elige uno más tarde.',
     },

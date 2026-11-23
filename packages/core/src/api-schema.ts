@@ -391,6 +391,41 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/7rc/pitches/{pitchId}/blocks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List active blocks of a pitch (OWNER) */
+    get: operations['SevenReservationsClubController_listPitchBlocks'];
+    put?: never;
+    /** Block a time window on a pitch (OWNER) */
+    post: operations['SevenReservationsClubController_createPitchBlock'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/7rc/pitches/{pitchId}/blocks/{blockId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Remove a pitch block (OWNER) */
+    delete: operations['SevenReservationsClubController_deletePitchBlock'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/7rc/public/venues/{slug}': {
     parameters: {
       query?: never;
@@ -2114,6 +2149,49 @@ export interface components {
       amountMinor: number;
       note?: string;
     };
+    CreatePitchBlockDto: {
+      /**
+       * @description Block start (ISO 8601 with offset or Z)
+       * @example 2026-10-10T01:00:00.000Z
+       */
+      startAt: string;
+      /**
+       * @description Block end (ISO 8601 with offset or Z); must be after startAt
+       * @example 2026-10-10T03:00:00.000Z
+       */
+      endAt: string;
+      /**
+       * @description Why the pitch is blocked (maintenance, event, ...)
+       * @example Mantenimiento del césped
+       */
+      reason?: string;
+    };
+    PitchBlockResponseDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      pitchId: string;
+      /** Format: date-time */
+      startAt: string;
+      /** Format: date-time */
+      endAt: string;
+      isActive: boolean;
+      reason?: string | null;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+    };
+    PitchBlockConflictResponseDto: {
+      /** @example 409 */
+      statusCode: number;
+      /** @example Block overlaps active reservations */
+      message: string;
+      /** @example Conflict */
+      error: string;
+      /** @description Active reservations that overlap the requested block */
+      conflicts: components['schemas']['ReservationResponseDto'][];
+    };
     PublicPitchResponseDto: {
       /** Format: uuid */
       id: string;
@@ -3712,6 +3790,185 @@ export interface operations {
         };
       };
       /** @description Reservation not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_listPitchBlocks: {
+    parameters: {
+      query?: {
+        /** @description Only blocks ending after this instant (ISO 8601) */
+        from?: string;
+        /** @description Only blocks starting before this instant (ISO 8601) */
+        to?: string;
+      };
+      header?: never;
+      path: {
+        /** @description Pitch id */
+        pitchId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Active blocks ordered by start */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PitchBlockResponseDto'][];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Pitch not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_createPitchBlock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Pitch id */
+        pitchId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreatePitchBlockDto'];
+      };
+    };
+    responses: {
+      /** @description Block created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PitchBlockResponseDto'];
+        };
+      };
+      /** @description Invalid window */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ValidationErrorResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Pitch not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Window overlaps active reservations */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PitchBlockConflictResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_deletePitchBlock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Pitch id */
+        pitchId: string;
+        /** @description Block id */
+        blockId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Block removed */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PitchBlockResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Pitch or block not found */
       404: {
         headers: {
           [name: string]: unknown;

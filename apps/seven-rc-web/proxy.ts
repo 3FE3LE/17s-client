@@ -2,6 +2,7 @@ import { createNextClerkMiddleware } from '@17suit/core/auth/next';
 
 const PUBLIC_AUTH_BRIDGE_ROUTES = [
   '/',
+  '/c/(.*)',
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/forgot-password(.*)',

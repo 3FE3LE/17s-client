@@ -80,3 +80,7 @@ export async function PUT(request: Request, context: ProxyContext): Promise<Next
 export async function PATCH(request: Request, context: ProxyContext): Promise<NextResponse> {
   return proxyToBackend(request, context);
 }
+
+export async function DELETE(request: Request, context: ProxyContext): Promise<NextResponse> {
+  return proxyToBackend(request, context);
+}

@@ -2,3 +2,8 @@
 @import './theme-core.css';
 @import './semantic.css';
 @import './web-patterns.css';
+
+/* Web dark mode = the `dark` class on <html> (ThemeScript / AppThemeToggle
+ * in @17suit/ui-web), never prefers-color-scheme directly: `system` is
+ * resolved into that class so `dark:` and the token vars always agree. */
+@custom-variant dark (&:where(.dark, .dark *));
