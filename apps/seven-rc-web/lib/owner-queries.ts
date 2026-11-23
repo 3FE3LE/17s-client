@@ -2,14 +2,35 @@
 
 import {
   createSevenRcOwnerApi,
+  type ConfigurePitchPricingInput,
   type ConfigurePitchSlotsInput,
+  type CreatePitchBlockInput,
+  type CreateOwnerReservationInput,
   type CreatePitchInput,
   type CreateVenueInput,
+  type OwnerVenue,
+  type PitchBlock,
+  type PitchWithPricing,
+  type RecordReservationPaymentInput,
   type ReservationBase,
+  type ReservationPaymentKind,
+  type ReservationPaymentMethod,
+  type SevenRcRefreshOptions,
+  type UpdateVenueSettingsInput,
   type VenueReservation,
+  useSevenRcCompleteReservationMutation,
+  useSevenRcCreateOwnerReservationMutation,
+  useSevenRcConfigurePitchPricingMutation,
   useSevenRcConfirmVenueReservationMutation,
   useSevenRcConfigurePitchSlotsMutation,
+  useSevenRcMarkNoShowMutation,
+  useSevenRcOwnerCancelReservationMutation,
+  useSevenRcRecordReservationPaymentMutation,
+  useSevenRcUpdateVenueSettingsMutation,
+  useSevenRcCreatePitchBlockMutation,
   useSevenRcCreateVenueMutation,
+  useSevenRcDeletePitchBlockMutation,
+  useSevenRcPitchBlocksQuery,
   useSevenRcCreateVenuePitchMutation,
   useSevenRcOwnerVenuePitchesQuery,
   useSevenRcOwnerVenueReservationsQuery,
@@ -17,15 +38,13 @@ import {
   useSevenRcRejectVenueReservationMutation,
 } from '@17suit/module-seven-reservations-club/client';
 import { useMemo } from 'react';
+import { useAccessToken } from '@/lib/use-access-token';
 
 function useOwnerApi() {
+  const getAccessToken = useAccessToken();
   return useMemo(
-    () =>
-      createSevenRcOwnerApi({
-        apiBaseUrls: ['/api'],
-        getAccessToken: () => Promise.resolve('web-bff'),
-      }),
-    [],
+    () => createSevenRcOwnerApi({ apiBaseUrls: ['/api'], getAccessToken }),
+    [getAccessToken],
   );
 }
 
@@ -58,9 +77,10 @@ export function useOwnerVenueReservationsQuery(
   venueId: string | null,
   dateFrom: string,
   dateTo: string,
+  options?: SevenRcRefreshOptions<VenueReservation[]>,
 ) {
   const api = useOwnerApi();
-  return useSevenRcOwnerVenueReservationsQuery(api, venueId, dateFrom, dateTo);
+  return useSevenRcOwnerVenueReservationsQuery(api, venueId, dateFrom, dateTo, options);
 }
 
 export function useConfirmVenueReservationMutation(venueId?: string | null) {
@@ -73,10 +93,70 @@ export function useRejectVenueReservationMutation(venueId?: string | null) {
   return useSevenRcRejectVenueReservationMutation(api, venueId);
 }
 
+export function useUpdateVenueSettingsMutation(venueId: string) {
+  const api = useOwnerApi();
+  return useSevenRcUpdateVenueSettingsMutation(api, venueId);
+}
+
+export function useConfigurePitchPricingMutation(pitchId: string, venueId?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcConfigurePitchPricingMutation(api, pitchId, venueId);
+}
+
+export function useRecordReservationPaymentMutation(venueId?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcRecordReservationPaymentMutation(api, venueId);
+}
+
+export function useCreateOwnerReservationMutation(venueId: string) {
+  const api = useOwnerApi();
+  return useSevenRcCreateOwnerReservationMutation(api, venueId);
+}
+
+export function useMarkNoShowMutation(venueId?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcMarkNoShowMutation(api, venueId);
+}
+
+export function useCompleteReservationMutation(venueId?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcCompleteReservationMutation(api, venueId);
+}
+
+export function useOwnerCancelReservationMutation(venueId?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcOwnerCancelReservationMutation(api, venueId);
+}
+
+export function usePitchBlocksQuery(pitchId: string | null, from: string) {
+  const api = useOwnerApi();
+  return useSevenRcPitchBlocksQuery(api, pitchId, from);
+}
+
+export function useCreatePitchBlockMutation(pitchId: string) {
+  const api = useOwnerApi();
+  return useSevenRcCreatePitchBlockMutation(api, pitchId);
+}
+
+export function useDeletePitchBlockMutation(pitchId: string) {
+  const api = useOwnerApi();
+  return useSevenRcDeletePitchBlockMutation(api, pitchId);
+}
+
 export type {
+  ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
+  CreateOwnerReservationInput,
+  CreatePitchBlockInput,
   CreatePitchInput,
   CreateVenueInput,
+  OwnerVenue,
+  PitchBlock,
+  PitchWithPricing,
+  RecordReservationPaymentInput,
   ReservationBase,
+  ReservationPaymentKind,
+  ReservationPaymentMethod,
+  UpdateVenueSettingsInput,
   VenueReservation,
 };

@@ -9,7 +9,6 @@
 
 :root {
   --suit-font-arvo: var(--font-arvo, 'Arvo'), serif;
-  --suit-font-amaranth: var(--font-amaranth, 'Amaranth'), sans-serif;
   --suit-font-zilla: var(--font-zilla, 'Zilla Slab'), serif;
 }
 
@@ -30,5 +29,119 @@
 
   a {
     color: inherit;
+  }
+}
+
+/* Per-product accents. Each value clears 4.5:1 against every landing surface
+ * (surface, canvas, canvas-top/cool, and the 8-14% product tints) in its mode,
+ * so the same token is safe for numerals, badges and small link text. */
+[data-product='fifteen'] {
+  --product-accent: #00775a;
+}
+[data-product='seven'] {
+  --product-accent: #1f5fcc;
+}
+[data-product='one'] {
+  --product-accent: #b93c0b;
+}
+[data-product='closet'] {
+  --product-accent: #a0256f;
+}
+[data-product='five'] {
+  --product-accent: #875800;
+}
+
+.dark [data-product='fifteen'] {
+  --product-accent: #70e6bd;
+}
+.dark [data-product='seven'] {
+  --product-accent: #b3d3ff;
+}
+.dark [data-product='one'] {
+  --product-accent: #ffc09e;
+}
+.dark [data-product='closet'] {
+  --product-accent: #f9bde1;
+}
+.dark [data-product='five'] {
+  --product-accent: #f4cf7e;
+}
+
+/* Text placed on a solid accent fill (status badge): white in light mode,
+ * the dark canvas in dark mode. */
+:root {
+  --product-on-accent: #ffffff;
+  --landing-panel: var(--color-surface);
+  --landing-line: color-mix(in oklab, var(--color-text) 14%, transparent);
+}
+.dark {
+  --product-on-accent: #00151c;
+  /* The shared primary shadow is a green glow; on dark use a neutral offset
+   * shadow (also covers AppButton from ui-web inside landing). */
+  --shadow-action-primary: 0 4px 12px rgb(0 0 0 / 0.28);
+  --shadow-action-primary-soft: 0 4px 12px rgb(0 0 0 / 0.24);
+}
+
+/* suit-tokens.css (imported after variables.css) redeclares surface/text/muted
+ * on :root, which beats the shared `.dark` block at equal specificity. Restate
+ * the dark values with higher specificity so the `.dark` class wins. */
+:root.dark {
+  --suit-color-surface: #394448;
+  --suit-color-text: #f0f0f0;
+  --suit-color-muted: #cfcfcf;
+}
+
+/* `@theme inline` only inlines `--color-product` inside generated utilities
+ * (text-product, bg-product). Arbitrary values read a custom property as-is,
+ * and `--color-product` resolves once on :root to the fallback, so every
+ * product tint came out the same. Arbitrary values use `--landing-product`,
+ * re-resolved per product scope. (Tailwind drops plain redeclarations of a
+ * theme variable, hence the separate name.) */
+:root {
+  --landing-product: var(--color-brand-secondary);
+}
+[data-product] {
+  --landing-product: var(--product-accent);
+}
+
+@theme inline {
+  --color-product: var(--product-accent, var(--color-brand-secondary));
+  --color-on-product: var(--product-on-accent);
+  --color-line: var(--landing-line);
+}
+
+@layer base {
+  ::selection {
+    background: color-mix(in oklab, var(--color-brand-primary) 30%, transparent);
+    color: var(--color-text);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-product, var(--color-info));
+    outline-offset: 3px;
+  }
+
+  a {
+    text-underline-offset: 0.2em;
+  }
+
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3,
+  dt {
+    text-wrap: balance;
+  }
+
+  /* Two families: Arvo for display and headings, Zilla Slab for body. */
+  h1,
+  h2,
+  h3 {
+    font-family: theme(fontFamily.arvo);
   }
 }

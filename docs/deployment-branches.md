@@ -1,5 +1,8 @@
 # Deployment Branches
 
+> Outdated: this describes the per-product `preview-*` model. The current flow is in
+> [releasing.md](./releasing.md).
+
 ## Goal
 
 Control pre-production deployments per product so one change does not fan out into every app.

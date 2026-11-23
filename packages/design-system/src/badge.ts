@@ -33,12 +33,15 @@ const SURFACE: Record<BadgeVariant, string> = {
   neutral: 'bg-neutral',
 };
 
+// WCAG AA (4.5:1 for caption text): the saturated light fills (#e10812, #1876ae) need
+// pure white; the dark fills (#f8333c, #1e91d6) fail with any light text, so they take
+// brand-dark. The other fills already pass with brand-dark.
 const LABEL: Record<BadgeVariant, string> = {
   primary: 'text-brand-dark',
   success: 'text-brand-dark',
-  destructive: 'text-brand-light',
+  destructive: 'text-white dark:text-brand-dark',
   warning: 'text-brand-dark',
-  info: 'text-brand-light',
+  info: 'text-white dark:text-brand-dark',
   neutral: 'text-brand-dark',
 };
 
