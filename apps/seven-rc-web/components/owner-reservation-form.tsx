@@ -11,6 +11,7 @@ import {
 } from '@/components/seven-rc-ui';
 import {
   useCreateOwnerReservationMutation,
+  useCreateRecurringReservationMutation,
   useRecordReservationPaymentMutation,
   type OwnerVenue,
   type PitchWithPricing,
@@ -22,6 +23,13 @@ import { describeError } from '@/lib/seven-rc-errors';
 import { formatMoneyMinor, formatSlotWhen, formatTime, sportLabel } from '@/lib/seven-rc-format';
 import type { ReservationPaymentMethod } from '@/lib/owner-queries';
 
+const RECURRING_DEFAULT_WEEKS = 8;
+const RECURRING_MAX_WEEKS = 52;
+const SKIP_REASON_LABEL: Record<string, string> = {
+  BLOCKED: 'cancha bloqueada',
+  RESERVED: 'ya reservado',
+  UNAVAILABLE: 'fuera de horario',
+};
 const HEADING_ID = 'nueva-reserva-title';
 const SLOT_UNAVAILABLE_LABEL: Record<string, string> = {
   RESERVED: 'ocupado',
@@ -114,6 +122,9 @@ function OwnerReservationForm({
   const [notes, setNotes] = useState('');
   const [deposit, setDeposit] = useState('');
   const [method, setMethod] = useState<ReservationPaymentMethod>('cash');
+  const [repeat, setRepeat] = useState(false);
+  const [weeks, setWeeks] = useState(String(RECURRING_DEFAULT_WEEKS));
+  const [skipped, setSkipped] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -126,7 +137,9 @@ function OwnerReservationForm({
 
   const createMutation = useCreateOwnerReservationMutation(venue.id);
   const paymentMutation = useRecordReservationPaymentMutation(venue.id);
-  const isPending = createMutation.isPending || paymentMutation.isPending;
+  const recurringMutation = useCreateRecurringReservationMutation(venue.id);
+  const isPending =
+    createMutation.isPending || paymentMutation.isPending || recurringMutation.isPending;
 
   const depositMinor = deposit.trim() ? parseAmount(deposit) : null;
 
@@ -134,6 +147,7 @@ function OwnerReservationForm({
     event.preventDefault();
     setError(null);
     setNotice(null);
+    setSkipped([]);
 
     const name = customerName.trim();
     if (name.length < 2) {
@@ -149,12 +163,51 @@ function OwnerReservationForm({
       setError('Elige un horario disponible.');
       return;
     }
-    if (deposit.trim() && (!depositMinor || depositMinor <= 0)) {
+    const weekCount = Number(weeks);
+    if (
+      repeat &&
+      (!Number.isInteger(weekCount) || weekCount < 2 || weekCount > RECURRING_MAX_WEEKS)
+    ) {
+      setError(`Usa entre 2 y ${RECURRING_MAX_WEEKS} semanas.`);
+      return;
+    }
+    if (!repeat && deposit.trim() && (!depositMinor || depositMinor <= 0)) {
       setError('Escribe un anticipo mayor que cero, p. ej. 30.000, o déjalo vacío.');
       return;
     }
     if (depositMinor && selectedSlot.priceMinor > 0 && depositMinor > selectedSlot.priceMinor) {
       setError('El anticipo supera el precio del turno.');
+      return;
+    }
+
+    if (repeat) {
+      try {
+        const series = await recurringMutation.mutateAsync({
+          pitchId: pitch.id,
+          startAt: selectedSlot.startAt,
+          occurrences: weekCount,
+          customerName: name,
+          ...(normalizedPhone ? { customerPhone: normalizedPhone } : {}),
+          ...(notes.trim() ? { notes: notes.trim() } : {}),
+        });
+        setSkipped(
+          series.skipped.map(
+            (item) =>
+              `${formatSlotWhen(item.startAt, item.startAt, timeZone)} (${SKIP_REASON_LABEL[item.reason] ?? 'no disponible'})`,
+          ),
+        );
+        setNotice(
+          `Serie de ${name} creada: ${pitch.name}, ${series.created.length} de ${weekCount} semanas reservadas.`,
+        );
+        setExplicitSlot(null);
+        setCustomerName('');
+        setPhone('');
+        setNotes('');
+        setRepeat(false);
+      } catch (caught) {
+        void availabilityQuery.refetch();
+        setError(describeError(caught, 'No se pudo crear la serie.'));
+      }
       return;
     }
 
@@ -324,6 +377,31 @@ function OwnerReservationForm({
           hint="Ej.: 300 123 4567 o +57 300 123 4567."
         />
       </div>
+      <div className="grid max-w-[var(--container-form)] gap-sm">
+        <label className="flex items-center gap-sm text-md leading-[1.5] text-text">
+          <input
+            type="checkbox"
+            name="repeatWeekly"
+            checked={repeat}
+            onChange={(event) => setRepeat(event.target.checked)}
+          />
+          Repetir cada semana (cancha fija)
+        </label>
+        {repeat ? (
+          <HintedInput
+            type="number"
+            name="repeatWeeks"
+            label="Semanas (incluye la primera)"
+            inputMode="numeric"
+            min={2}
+            max={RECURRING_MAX_WEEKS}
+            autoComplete="off"
+            value={weeks}
+            onChangeText={setWeeks}
+            hint="Mismo día y hora cada semana. Los turnos ocupados o bloqueados se omiten y te los mostramos."
+          />
+        ) : null}
+      </div>
       <div className="grid max-w-[var(--container-form)] gap-sm sm:grid-cols-2">
         <HintedInput
           name="deposit"
@@ -331,6 +409,7 @@ function OwnerReservationForm({
           inputMode="decimal"
           autoComplete="off"
           value={deposit}
+          disabled={repeat}
           onChangeText={setDeposit}
           hint={
             depositMinor
@@ -346,7 +425,7 @@ function OwnerReservationForm({
           value={method}
           onChangeValue={(value) => setMethod(value as ReservationPaymentMethod)}
           options={PAYMENT_METHOD_OPTIONS}
-          disabled={!depositMinor}
+          disabled={!depositMinor || repeat}
         />
       </div>
       <div className="max-w-[var(--container-form)]">
@@ -367,6 +446,16 @@ function OwnerReservationForm({
       </div>
       <InlineError message={error} />
       <InlineStatus message={notice} />
+      {skipped.length > 0 ? (
+        <div role="status" className="grid gap-xs text-sm leading-[18px] text-muted">
+          <p className="m-0 font-bold text-text">Semanas omitidas ({skipped.length}):</p>
+          <ul className="m-0 grid gap-0 pl-md">
+            {skipped.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </form>
   );
 }

@@ -38,6 +38,9 @@ export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDt
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
 export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
+export type CreateRecurringReservationInput = ApiInput<ApiSchema<'CreateRecurringReservationDto'>>;
+export type RecurringReservationResult = ApiSchema<'RecurringReservationResponseDto'>;
+export type CancelReservationSeriesResult = ApiSchema<'CancelReservationSeriesResponseDto'>;
 export type ReservationPaymentKind = ApiSchema<'ReservationPaymentKind'>;
 export type ReservationPaymentMethod = ApiSchema<'ReservationPaymentMethod'>;
 export type VenueSettings = ApiSchema<'VenueResponseDto'>;
@@ -92,6 +95,16 @@ export interface SevenRcOwnerApi {
     venueId: string,
     input: CreateOwnerReservationInput,
   ) => Promise<ReservationBase>;
+  /**
+   * Weekly fixed booking. Occurrences that hit a block or another booking come back in
+   * `skipped`; rejects with 409 only when none could be booked.
+   */
+  createRecurringReservation: (
+    venueId: string,
+    input: CreateRecurringReservationInput,
+  ) => Promise<RecurringReservationResult>;
+  /** Cancels the future pending/confirmed occurrences; past ones are kept. */
+  cancelReservationSeries: (seriesId: string) => Promise<CancelReservationSeriesResult>;
   /** Active blocks of a pitch that end after `from` (ISO instant), ordered by start. */
   listPitchBlocks: (pitchId: string, from?: string) => Promise<PitchBlock[]>;
   /** Rejects with `SevenRcApiError` 409 and `conflicts` when active reservations overlap. */
@@ -392,6 +405,22 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
+    },
+    createRecurringReservation(venueId, input) {
+      return request<RecurringReservationResult>(
+        apiPath('/7rc/venues/{venueId}/recurring-reservations', { venueId }),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        },
+      );
+    },
+    cancelReservationSeries(seriesId) {
+      return request<CancelReservationSeriesResult>(
+        apiPath('/7rc/reservation-series/{seriesId}', { seriesId }),
+        { method: 'DELETE' },
+      );
     },
     listPitchBlocks(pitchId, from) {
       const query = from ? `?${new URLSearchParams({ from })}` : '';
