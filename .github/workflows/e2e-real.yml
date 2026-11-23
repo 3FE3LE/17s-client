@@ -1,0 +1,125 @@
+name: E2E real (nightly)
+
+# Real end-to-end layer (17Suit/workspace#70). Boots a real 17s-server over a real Postgres,
+# seeds the 7RC demo venue, and drives apps/seven-rc-web against it with Playwright.
+# - Nightly and manual only. Never a PR gate: it depends on two repos and a network checkout.
+# - Runs in this public repo so Actions minutes are free; the private server repo is checked
+#   out with the SERVER_REPO_TOKEN secret (fine-grained PAT, Contents: read on 17Suit/17s-server).
+# - Server ref defaults to `main`; override it from "Run workflow" to test a server branch.
+# - Clerk keys are placeholders, not credentials. The public flow needs no Clerk session.
+on:
+  schedule:
+    - cron: '0 7 * * *' # 02:00 America/Bogota
+  workflow_dispatch:
+    inputs:
+      server_ref:
+        description: 'Ref of 17Suit/17s-server to test'
+        default: main
+        required: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: e2e-real
+  cancel-in-progress: false
+
+jobs:
+  e2e-real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: s17_e2e
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d s17_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/s17_e2e
+      API_BASE_URL: http://127.0.0.1:4000/api
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZmFrZS5jbGVyay5hY2NvdW50cy5kZXYk
+      CLERK_SECRET_KEY: sk_test_e2e_placeholder
+    steps:
+      - name: Require server checkout token
+        env:
+          TOKEN: ${{ secrets.SERVER_REPO_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::error::Secret SERVER_REPO_TOKEN is missing (read access to 17Suit/17s-server)."
+            exit 1
+          fi
+      - uses: actions/checkout@v5
+        with:
+          path: client
+      - uses: actions/checkout@v5
+        with:
+          repository: 17Suit/17s-server
+          ref: ${{ inputs.server_ref || 'main' }}
+          token: ${{ secrets.SERVER_REPO_TOKEN }}
+          path: server
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: client/package.json
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.13.1
+
+      - name: Install and build server
+        working-directory: server
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm prisma:generate
+          pnpm build
+          pnpm prisma:migrate
+          pnpm prisma:seed:7rc
+
+      - name: Start server
+        working-directory: server
+        env:
+          NODE_ENV: development
+          PORT: '4000'
+          LOG_LEVEL: warn
+          CLERK_ISSUER: https://clerk.example.com
+          CLERK_JWKS_URL: https://clerk.example.com/.well-known/jwks.json
+        run: |
+          nohup pnpm start:prod > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS "$API_BASE_URL/7rc/public/venues/cancha-la-70" > /dev/null 2>&1; then
+              echo "server ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::server did not become ready"; cat "$RUNNER_TEMP/server.log"; exit 1
+
+      - name: Install client
+        working-directory: client
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        working-directory: client
+        run: pnpm --filter @17suit/seven-rc-web exec playwright install --with-deps chromium
+      - name: Run real E2E
+        working-directory: client
+        run: pnpm --filter @17suit/seven-rc-web test:e2e:real
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-real
+          path: client/apps/seven-rc-web/playwright-report/
+          retention-days: 7
+      - name: Upload server log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-log
+          path: ${{ runner.temp }}/server.log
+          retention-days: 7

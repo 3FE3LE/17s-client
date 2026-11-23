@@ -1,5 +1,5 @@
 import { useRootNavigationState } from 'expo-router';
-import { AppFrame } from '@17suit/ui';
+import { AppFrame } from '@17suit/ui-native';
 import { useReplaceOnceReady } from '@17suit/ui-native';
 
 export default function OAuthNativeCallback() {
@@ -12,5 +12,5 @@ export default function OAuthNativeCallback() {
   // `router.replace` call throws.
   useReplaceOnceReady({ ready: isNavigationReady, href: '/' });
 
-  return <AppFrame appName="Seven Reservations Club" subtitle="Procesando autenticacion..." />;
+  return <AppFrame appName="Seven Reservations Club" subtitle="Procesando inicio de sesión…" />;
 }

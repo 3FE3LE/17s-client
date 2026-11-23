@@ -1,39 +1,29 @@
 import { useSignUp } from '@clerk/clerk-expo';
-import { AppButton, AppFrame, AppInput, AppLinkAction, GapView, useAppTheme } from '@17suit/ui';
+import { AppButton, AppLinkAction, AppTypography, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
-import { Alert, Text } from 'react-native';
 import { useState } from 'react';
-
-function getClerkErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
-  }
-  return 'No fue posible verificar tu correo.';
-}
+import { View } from 'react-native';
+import { FormError, FormField } from '../../components/form-field';
+import { Screen } from '../../components/screen';
+import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpVerifyScreen() {
   const router = useRouter();
   const { isLoaded, signUp, setActive } = useSignUp();
-  const { theme } = useAppTheme();
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const isFormValid = code.trim().length > 0;
+  const [formError, setFormError] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
+  const codeError =
+    submitAttempted && code.trim().length === 0 ? 'Ingresa el código de verificación.' : null;
 
   const handleVerifyEmail = async () => {
     if (!isLoaded) return;
     setSubmitAttempted(true);
-    if (!isFormValid) {
-      return;
-    }
+    setFormError(null);
+    setResent(false);
+    if (code.trim().length === 0) return;
 
     setIsSubmitting(true);
     try {
@@ -45,9 +35,9 @@ export default function SignUpVerifyScreen() {
         return;
       }
 
-      Alert.alert('Registro', 'No se pudo completar la verificacion. Intenta nuevamente.');
+      setFormError('No pudimos completar la verificación. Inténtalo de nuevo.');
     } catch (err) {
-      Alert.alert('Registro', getClerkErrorMessage(err));
+      setFormError(humanizeClerkError(err, 'No pudimos verificar tu correo.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -55,47 +45,53 @@ export default function SignUpVerifyScreen() {
 
   const handleResendCode = async () => {
     if (!isLoaded) return;
-
+    setFormError(null);
+    setResent(false);
     setIsSubmitting(true);
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      Alert.alert('Registro', 'Enviamos un nuevo codigo a tu correo.');
+      setResent(true);
     } catch (err) {
-      Alert.alert('Registro', getClerkErrorMessage(err));
+      setFormError(humanizeClerkError(err, 'No pudimos reenviar el código.'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <AppFrame
-      appName="Seven Reservations Club"
-      subtitle="Ingresa el codigo de verificacion que recibiste por correo."
+    <Screen
+      back={false}
+      title="Verifica tu correo"
+      subtitle="Escribe el código de verificación que te enviamos por correo."
     >
       <GapView gap="sm">
-        <AppInput
+        <FormField
+          label="Código de verificación"
+          kind="code"
           value={code}
           onChangeText={setCode}
-          autoCapitalize="none"
-          keyboardType="number-pad"
-          placeholder="Codigo de verificacion"
-          compact
+          error={codeError}
+          returnKeyType="go"
+          onSubmitEditing={() => {
+            void handleVerifyEmail();
+          }}
         />
-        {submitAttempted && code.trim().length === 0 ? (
-          <Text style={{ color: theme.colors.error, fontSize: 12 }}>
-            Ingresa el codigo de verificacion.
-          </Text>
+        <FormError message={formError} />
+        {resent ? (
+          <View accessibilityLiveRegion="polite">
+            <AppTypography variant="body">
+              Código enviado. Revisa tu correo, también la carpeta de spam.
+            </AppTypography>
+          </View>
         ) : null}
-        <AppButton onPress={handleVerifyEmail} disabled={!isFormValid || isSubmitting}>
-          {isSubmitting ? 'Verificando...' : 'Verificar correo'}
+        <AppButton onPress={handleVerifyEmail} disabled={isSubmitting}>
+          {isSubmitting ? 'Verificando…' : 'Verificar correo'}
         </AppButton>
-        <AppButton variant="neutral" onPress={handleResendCode}>
-          Reenviar codigo
+        <AppButton variant="neutral" onPress={handleResendCode} disabled={isSubmitting}>
+          Reenviar código
         </AppButton>
-        <AppLinkAction onPress={() => router.replace('/sign-up')}>
-          Volver a crear cuenta
-        </AppLinkAction>
+        <AppLinkAction onPress={() => router.back()}>Cambiar correo</AppLinkAction>
       </GapView>
-    </AppFrame>
+    </Screen>
   );
 }

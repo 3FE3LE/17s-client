@@ -6,12 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "jsEngine": "hermes",
-    "newArchEnabled": true,
     "icon": "./assets/icon-17suit.png",
-    "splash": {
-      "backgroundColor": "#0B1020"
-    },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
@@ -28,7 +23,18 @@
       "favicon": "./assets/icon-17suit.png",
       "bundler": "metro"
     },
-    "plugins": ["expo-router", "@react-native-community/datetimepicker"],
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B1020",
+          "image": "./assets/icon-17suit.png",
+          "imageWidth": 120
+        }
+      ]
+    ],
     "extra": {
       "sentryDsn": "SENTRY_DSN",
       "sentryEnvironment": "SENTRY_ENVIRONMENT",

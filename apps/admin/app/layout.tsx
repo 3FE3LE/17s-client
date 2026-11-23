@@ -1,6 +1,8 @@
+import { WebAuthProvider } from '@17suit/core/auth/next';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import type { ReactNode } from 'react';
+import { ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
 import './globals.css';
 
@@ -26,16 +28,30 @@ const zillaSlab = Zilla_Slab({
 });
 
 export const metadata: Metadata = {
-  title: '17Suit Admin Platform',
+  title: {
+    default: 'Consola de operación · 17Suit',
+    template: '%s · Consola 17Suit',
+  },
   description:
-    'Internal SaaS control plane for tenants, billing, feature flags, and product analytics.',
+    'Consola interna de operación de 17Suit para tenants, facturación, feature flags y analítica de producto.',
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}>
+    <html
+      lang="es"
+      className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
+      // ThemeScript sets the `dark` class before hydration.
+      suppressHydrationWarning
+    >
+      <head>
+        <ThemeScript />
+      </head>
       <body>
-        <AppProviders>{children}</AppProviders>
+        <WebAuthProvider>
+          <AppProviders>{children}</AppProviders>
+        </WebAuthProvider>
       </body>
     </html>
   );
