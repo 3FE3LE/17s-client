@@ -340,6 +340,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/7rc/venues/{venueId}/report': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Revenue, occupancy and peak-hours report per pitch for a date range (OWNER) */
+    get: operations['SevenReservationsClubController_getVenueReport'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/7rc/reservations/{id}/payments': {
     parameters: {
       query?: never;
@@ -2122,6 +2139,88 @@ export interface components {
       user?: components['schemas']['ReservationOwnerUserResponseDto'] | null;
       payments: components['schemas']['ReservationPaymentResponseDto'][];
     };
+    ReportPeakHourResponseDto: {
+      /**
+       * @description Venue-local hour, HH:00
+       * @example 20:00
+       */
+      hour: string;
+      /** @description Occupying reservations starting in that hour */
+      reservations: number;
+    };
+    ReportMetricsResponseDto: {
+      /** @description Sum of paidMinor over every reservation in range, any status */
+      collectedMinor: number;
+      /** @description Unpaid part of the price still owed (pending_confirmation, confirmed, completed) */
+      pendingMinor: number;
+      /**
+       * @description Reservation count per status, every status present
+       * @example {
+       *       "confirmed": 12,
+       *       "cancelled": 3,
+       *       "no_show": 1
+       *     }
+       */
+      reservationsByStatus: {
+        [key: string]: number;
+      };
+      /** @description Minutes of configured slots not covered by an active block */
+      openMinutes: number;
+      /** @description Minutes held by pending_confirmation, confirmed, completed and no_show reservations */
+      bookedMinutes: number;
+      /**
+       * @description bookedMinutes / openMinutes, 0..1
+       * @example 0.4375
+       */
+      occupancyRate: number;
+      /** @description Top 3 venue-local start hours by occupying reservations */
+      peakHours: components['schemas']['ReportPeakHourResponseDto'][];
+    };
+    PitchReportResponseDto: {
+      /** @description Sum of paidMinor over every reservation in range, any status */
+      collectedMinor: number;
+      /** @description Unpaid part of the price still owed (pending_confirmation, confirmed, completed) */
+      pendingMinor: number;
+      /**
+       * @description Reservation count per status, every status present
+       * @example {
+       *       "confirmed": 12,
+       *       "cancelled": 3,
+       *       "no_show": 1
+       *     }
+       */
+      reservationsByStatus: {
+        [key: string]: number;
+      };
+      /** @description Minutes of configured slots not covered by an active block */
+      openMinutes: number;
+      /** @description Minutes held by pending_confirmation, confirmed, completed and no_show reservations */
+      bookedMinutes: number;
+      /**
+       * @description bookedMinutes / openMinutes, 0..1
+       * @example 0.4375
+       */
+      occupancyRate: number;
+      /** @description Top 3 venue-local start hours by occupying reservations */
+      peakHours: components['schemas']['ReportPeakHourResponseDto'][];
+      /** Format: uuid */
+      pitchId: string;
+      name: string;
+    };
+    VenueReportResponseDto: {
+      /** Format: uuid */
+      venueId: string;
+      /** @description ISO 4217; every money amount uses it */
+      currency: string;
+      /** @description IANA zone the range and hours use */
+      timezone: string;
+      /** @example 2026-03-01 */
+      dateFrom: string;
+      /** @example 2026-03-31 */
+      dateTo: string;
+      totals: components['schemas']['ReportMetricsResponseDto'];
+      pitches: components['schemas']['PitchReportResponseDto'][];
+    };
     CreateOwnerReservationDto: {
       /** Format: uuid */
       pitchId: string;
@@ -3610,6 +3709,70 @@ export interface operations {
       };
       /** @description Slot taken or blocked */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_getVenueReport: {
+    parameters: {
+      query: {
+        /** @description Range start, venue-local date (inclusive) */
+        dateFrom: string;
+        /** @description Range end, venue-local date (inclusive); at most 366 days */
+        dateTo: string;
+      };
+      header?: never;
+      path: {
+        /** @description Venue id */
+        venueId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Report for the owner venue; dates are venue-local */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['VenueReportResponseDto'];
+        };
+      };
+      /** @description Invalid date range or range longer than 366 days */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ValidationErrorResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Venue not found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
@@ -552,6 +553,14 @@ function OwnerWorkspace() {
             options={venues.map((venue) => ({ value: venue.id, label: venue.name }))}
           />
         </div>
+      ) : null}
+
+      {selectedVenue ? (
+        <p className="m-0">
+          <Link href="/owner/reports" className="text-text underline">
+            Ver reportes de ingresos y ocupación
+          </Link>
+        </p>
       ) : null}
 
       {setupIncomplete ? <SetupChecklist items={setupItems} onGo={goToSetup} /> : null}
