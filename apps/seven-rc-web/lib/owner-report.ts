@@ -4,6 +4,15 @@ import { dateKeyInTimeZone, minutesBetween } from '@/lib/seven-rc-format';
 /** Statuses whose unpaid balance still counts as owed. Mirrors the server report. */
 const PENDING_STATUSES = new Set(['pending_confirmation', 'confirmed', 'completed']);
 
+/** Unpaid part of the price still owed. Zero for statuses that no longer owe money. */
+export function outstandingMinor(
+  reservation: Pick<VenueReservation, 'status' | 'priceMinor' | 'paidMinor'>,
+): number {
+  return PENDING_STATUSES.has(reservation.status)
+    ? Math.max(reservation.priceMinor - reservation.paidMinor, 0)
+    : 0;
+}
+
 export interface ReservationTotals {
   reservations: number;
   collectedMinor: number;
@@ -27,9 +36,7 @@ export function summarizeReservations(
   for (const reservation of reservations) {
     totals.reservations += 1;
     totals.collectedMinor += reservation.paidMinor;
-    if (PENDING_STATUSES.has(reservation.status)) {
-      totals.pendingMinor += Math.max(reservation.priceMinor - reservation.paidMinor, 0);
-    }
+    totals.pendingMinor += outstandingMinor(reservation);
     totals.byStatus[reservation.status] = (totals.byStatus[reservation.status] ?? 0) + 1;
   }
   return totals;
