@@ -1,6 +1,7 @@
 import { Redirect, useRootNavigationState } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
-import { AppFrame, GapView, AppButton } from '@17suit/ui';
+import { AppFrame, AppSpinner } from '@17suit/ui-native';
+import { View } from 'react-native';
 
 export default function NotFound() {
   const rootNavigationState = useRootNavigationState();
@@ -13,11 +14,9 @@ export default function NotFound() {
 
   return (
     <AppFrame appName="Seven Reservations Club" subtitle="Ruta no encontrada.">
-      <GapView gap="md">
-        <AppButton variant="neutral" disabled>
-          Preparando navegacion...
-        </AppButton>
-      </GapView>
+      <View accessible accessibilityRole="progressbar" accessibilityLabel="Preparando navegación">
+        <AppSpinner size="large" />
+      </View>
     </AppFrame>
   );
 }

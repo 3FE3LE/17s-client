@@ -9,7 +9,9 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf .next",
-    "dev:product": "pnpm run dev"
+    "dev:product": "pnpm run dev",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
@@ -27,11 +29,16 @@
     "@17suit/typescript-config": "workspace:*",
     "@sentry/nextjs": "10.62.0",
     "@tailwindcss/postcss": "^4.1.12",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.13",
     "@types/node": "^24.12.2",
     "@types/react": "~19.3.0",
     "@types/react-dom": "~19.3.0",
+    "@vitest/coverage-v8": "^4.1.9",
+    "jsdom": "^31.0.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.12",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.9"
   }
 }

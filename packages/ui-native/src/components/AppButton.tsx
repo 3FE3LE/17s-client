@@ -8,6 +8,10 @@ export interface AppButtonProps extends PropsWithChildren {
   onPress?: (() => void) | undefined;
   variant?: AppButtonVariant;
   disabled?: boolean;
+  /** Announces the button as busy (e.g. while its action runs). */
+  busy?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export function AppButton({
@@ -15,6 +19,9 @@ export function AppButton({
   onPress,
   variant = 'primary',
   disabled = false,
+  busy = false,
+  accessibilityLabel,
+  accessibilityHint,
 }: AppButtonProps) {
   const variantClasses: Record<AppButtonVariant, { container: string; label: string }> = {
     primary: {
@@ -48,6 +55,10 @@ export function AppButton({
     <Pressable
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, busy }}
+      {...(accessibilityLabel ? { accessibilityLabel } : {})}
+      {...(accessibilityHint ? { accessibilityHint } : {})}
       className={buttonRecipe({
         intent: colors.container as ButtonIntent,
         shape: 'md',

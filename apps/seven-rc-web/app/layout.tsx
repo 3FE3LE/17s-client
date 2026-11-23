@@ -1,18 +1,14 @@
 import { WebAuthProvider } from '@17suit/core/auth/next';
-import {
-  AppProductFooter,
-  appProductFooterButtonStyle,
-  appProductFooterTextLinkStyle,
-  ThemeScript,
-} from '@17suit/ui';
+import { AppProductFooter, buttonRecipe, ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { SignOutButton } from '@clerk/nextjs';
 import { auth } from '@clerk/nextjs/server';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { RoleSwitch } from '@/components/role-switch';
 import { SevenRcClientProviders } from '@/components/seven-rc-client-providers';
+import { SignOutControl } from '@/components/sign-out-control';
 import './globals.css';
 
 const amaranth = Amaranth({
@@ -38,7 +34,8 @@ const zillaSlab = Zilla_Slab({
 
 export const metadata: Metadata = {
   title: 'Seven Reservations Club | 17Suit',
-  description: 'Seven Reservations Club product workspace on 7rc.17suit.com.',
+  description:
+    'Reserva canchas eligiendo un horario libre y recibe la confirmación del complejo, sin cadenas de WhatsApp.',
   icons: {
     icon: [
       { url: '/icon-17suit.ico', type: 'image/x-icon' },
@@ -49,14 +46,12 @@ export const metadata: Metadata = {
   },
 };
 
+const footerButton = (intent: 'primary' | 'secondary') =>
+  buttonRecipe({ intent, size: 'sm', platform: 'web', fullWidth: false });
+
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const { userId } = await auth();
   const isSignedIn = Boolean(userId);
-  const productLinks = [
-    { label: 'Vista owner', href: '/owner' },
-    { label: 'Vista player', href: '/play' },
-    { label: 'Onboarding de rol', href: '/onboarding/role' },
-  ];
 
   return (
     <html
@@ -72,61 +67,39 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <WebAuthProvider>
           <AppProviders>
             <SevenRcClientProviders>
+              {isSignedIn ? (
+                <header className="bg-background px-lg pt-sm">
+                  <div className="mx-auto flex w-full max-w-[var(--container-content)] flex-wrap justify-end gap-sm">
+                    <RoleSwitch />
+                    <SignOutControl className={footerButton('secondary')} />
+                  </div>
+                </header>
+              ) : null}
               {children}
               <AppProductFooter
                 productName="Seven Reservations Club"
                 productSlug="seven-reservations-club"
-                productTagline="Reservas y operacion para complejos deportivos."
+                productTagline="Reservas de canchas y agenda para complejos deportivos."
                 suiteName="17Suit"
                 actionControls={
-                  <>
-                    <Link
-                      href="/"
-                      style={{
-                        ...appProductFooterButtonStyle,
-                        color: 'var(--color-brand-dark, #00171f)',
-                      }}
-                    >
-                      Ir al inicio
-                    </Link>
-                    {isSignedIn ? (
-                      <SignOutButton redirectUrl="/sign-in?redirect_url=/">
-                        <button type="button" style={appProductFooterButtonStyle}>
-                          Cerrar sesion
-                        </button>
-                      </SignOutButton>
-                    ) : (
-                      <>
-                        <Link
-                          href="/sign-in?redirect_url=/"
-                          style={{
-                            ...appProductFooterButtonStyle,
-                            color: 'var(--color-brand-dark, #00171f)',
-                          }}
-                        >
-                          Iniciar sesion
-                        </Link>
-                        <Link
-                          href="/sign-up?redirect_url=/"
-                          style={{
-                            ...appProductFooterButtonStyle,
-                            color: '#ffffff',
-                            border: '1px solid #01695b',
-                            background: 'linear-gradient(95deg, #00916e, #007666)',
-                            boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
-                          }}
-                        >
-                          Crear cuenta
-                        </Link>
-                      </>
-                    )}
-                  </>
+                  isSignedIn ? (
+                    <>
+                      <Link href="/" className={footerButton('secondary')}>
+                        Ir a mi panel
+                      </Link>
+                      <SignOutControl className={footerButton('secondary')} />
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/sign-in?redirect_url=/" className={footerButton('secondary')}>
+                        Iniciar sesión
+                      </Link>
+                      <Link href="/sign-up?redirect_url=/" className={footerButton('primary')}>
+                        Crear cuenta
+                      </Link>
+                    </>
+                  )
                 }
-                productLinkControls={productLinks.map((link) => (
-                  <Link key={link.href} href={link.href} style={appProductFooterTextLinkStyle}>
-                    {link.label}
-                  </Link>
-                ))}
               />
             </SevenRcClientProviders>
           </AppProviders>

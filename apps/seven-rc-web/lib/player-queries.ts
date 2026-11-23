@@ -2,27 +2,29 @@
 
 import {
   createSevenRcPlayerApi,
+  type AvailabilitySlot,
   type CreateReservationInput,
   type Pitch,
+  type PitchAvailability,
   type PublicVenue,
   type ReservationWithVenuePitch,
   type ReservationBase,
+  type SevenRcRefreshOptions,
   useSevenRcCancelReservationMutation,
   useSevenRcCreateReservationMutation,
   useSevenRcMyReservationsQuery,
+  useSevenRcPitchAvailabilityQuery,
   useSevenRcPlayerVenuePitchesQuery,
   useSevenRcPlayerVenuesQuery,
 } from '@17suit/module-seven-reservations-club/client';
 import { useMemo } from 'react';
+import { useAccessToken } from '@/lib/use-access-token';
 
 function usePlayerApi() {
+  const getAccessToken = useAccessToken();
   return useMemo(
-    () =>
-      createSevenRcPlayerApi({
-        apiBaseUrls: ['/api'],
-        getAccessToken: () => Promise.resolve('web-bff'),
-      }),
-    [],
+    () => createSevenRcPlayerApi({ apiBaseUrls: ['/api'], getAccessToken }),
+    [getAccessToken],
   );
 }
 
@@ -36,14 +38,21 @@ export function usePlayerVenuePitchesQuery(venueId: string | null) {
   return useSevenRcPlayerVenuePitchesQuery(api, venueId);
 }
 
+export function usePitchAvailabilityQuery(pitchId: string | null, date: string | null) {
+  const api = usePlayerApi();
+  return useSevenRcPitchAvailabilityQuery(api, pitchId, date);
+}
+
 export function useCreateReservationMutation() {
   const api = usePlayerApi();
   return useSevenRcCreateReservationMutation(api);
 }
 
-export function useMyReservationsQuery() {
+export function useMyReservationsQuery(
+  options?: SevenRcRefreshOptions<ReservationWithVenuePitch[]>,
+) {
   const api = usePlayerApi();
-  return useSevenRcMyReservationsQuery(api);
+  return useSevenRcMyReservationsQuery(api, options);
 }
 
 export function useCancelReservationMutation() {
@@ -52,8 +61,10 @@ export function useCancelReservationMutation() {
 }
 
 export type {
+  AvailabilitySlot,
   CreateReservationInput,
   Pitch,
+  PitchAvailability,
   PublicVenue,
   ReservationBase,
   ReservationWithVenuePitch,
