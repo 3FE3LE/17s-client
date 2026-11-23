@@ -66,6 +66,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm verify:api-schema
+      # Design-token drift gate. CSS token files in packages/tailwind-config
+      # are generated from packages/design-system/src/tokens.ts; fails when a
+      # committed CSS file no longer matches the canonical TS theme.
+      - name: Verify design tokens
+        run: pnpm tokens:check
       # App registry drift gate. Asserts every apps/<slug>/ and
       # packages/modules/<slug>/ referenced in apps-registry.json exists on
       # disk and vice versa. Passes cleanly when the registry is not
