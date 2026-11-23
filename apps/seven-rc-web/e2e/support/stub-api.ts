@@ -1,8 +1,24 @@
 // Minimal in-memory stand-in for the 17s-server public venue API (`/api/7rc/public/*`).
 // The Next server fetches this API server-side, so the browser cannot intercept it:
-// E2E points `API_BASE_URL` here instead. Shapes follow `PublicVenueResponseDto` & co.
-import { createServer } from 'node:http';
+// E2E points `API_BASE_URL` here instead. Response bodies are typed with the generated
+// OpenAPI contract (`api-schema.ts`), so a DTO change that breaks the stub fails `typecheck`.
+// Runs directly on Node (type stripping): keep to erasable TypeScript syntax.
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { randomUUID } from 'node:crypto';
+import type { ApiSchema } from '@17suit/core/api-types';
+
+type Venue = ApiSchema<'PublicVenueResponseDto'>;
+type Availability = ApiSchema<'PublicVenueAvailabilityResponseDto'>;
+type ReservationDto = ApiSchema<'PublicReservationResponseDto'>;
+type CreateInput = ApiSchema<'CreatePublicReservationDto'>;
+
+interface Stored {
+  token: string;
+  status: ReservationDto['status'];
+  startAt: string;
+  customerName: string | null;
+}
+type FailRoute = 'reserve' | 'cancel';
 
 export const STUB_PORT = Number(process.env.E2E_STUB_PORT ?? 4010);
 export const VENUE_SLUG = 'complejo-e2e';
@@ -19,21 +35,21 @@ const PITCH = {
 };
 const SLOT_HOURS = [16, 17, 18, 19, 20, 21];
 
-/** @type {Map<string, any>} */
-const reservations = new Map();
-/** @type {Set<string>} */
-const taken = new Set();
+const reservations = new Map<string, Stored>();
+const taken = new Set<string>();
+/** Forced error statuses, consumed one per request: `POST /__e2e/fail-next`. */
+const failNext: { [route in FailRoute]: number[] } = { reserve: [], cancel: [] };
 
 function venueToday() {
   const local = new Date(Date.now() - UTC_OFFSET_HOURS * 3_600_000);
   return local.toISOString().slice(0, 10);
 }
 
-function slotStart(date, hour) {
+function slotStart(date: string, hour: number) {
   return new Date(Date.parse(`${date}T00:00:00.000Z`) + (hour + UTC_OFFSET_HOURS) * 3_600_000);
 }
 
-function venueDto() {
+function venueDto(): Venue {
   return {
     id: '22222222-2222-4222-8222-222222222222',
     slug: VENUE_SLUG,
@@ -52,7 +68,7 @@ function venueDto() {
   };
 }
 
-function availabilityDto(date) {
+function availabilityDto(date: string): Availability {
   return {
     venueId: '22222222-2222-4222-8222-222222222222',
     date,
@@ -83,7 +99,7 @@ function availabilityDto(date) {
   };
 }
 
-function reservationDto(record) {
+function reservationDto(record: Stored): ReservationDto {
   return {
     token: record.token,
     status: record.status,
@@ -109,13 +125,13 @@ function reservationDto(record) {
   };
 }
 
-function send(res, status, body) {
+function send(res: ServerResponse, status: number, body?: unknown) {
   res.writeHead(status, { 'Content-Type': 'application/json' });
   res.end(body === undefined ? '' : JSON.stringify(body));
 }
 
-async function readJson(req) {
-  const chunks = [];
+async function readJson(req: IncomingMessage): Promise<Partial<CreateInput> | null> {
+  const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(chunk);
   try {
     return JSON.parse(Buffer.concat(chunks).toString('utf8'));
@@ -134,6 +150,16 @@ export const server = createServer(async (req, res) => {
   if (url.pathname === '/__e2e/reset' && method === 'POST') {
     reservations.clear();
     taken.clear();
+    failNext.reserve = [];
+    failNext.cancel = [];
+    return send(res, 204);
+  }
+  if (url.pathname === '/__e2e/fail-next' && method === 'POST') {
+    const body = (await readJson(req)) as { route?: FailRoute; status?: number } | null;
+    if (!body?.route || !(body.route in failNext) || typeof body.status !== 'number') {
+      return send(res, 400, { message: 'Expected { route: "reserve" | "cancel", status }' });
+    }
+    failNext[body.route].push(body.status);
     return send(res, 204);
   }
   if (!url.pathname.startsWith(PREFIX)) return send(res, 404, { message: 'Not found' });
@@ -147,6 +173,8 @@ export const server = createServer(async (req, res) => {
       return send(res, 200, availabilityDto(date));
     }
     if (method === 'POST' && parts[2] === 'reservations') {
+      const forced = failNext.reserve.shift();
+      if (forced) return send(res, forced, { message: `Forced ${forced}` });
       const body = await readJson(req);
       if (!body || typeof body.startAt !== 'string' || body.pitchId !== PITCH.id) {
         return send(res, 400, { message: 'Invalid reservation' });
@@ -154,14 +182,14 @@ export const server = createServer(async (req, res) => {
       const startAt = new Date(body.startAt).toISOString();
       if (taken.has(startAt)) return send(res, 409, { message: 'Slot taken' });
       taken.add(startAt);
-      const record = {
+      const created: Stored = {
         token: randomUUID(),
         status: 'pending_confirmation',
         startAt,
         customerName: body.customerName ?? null,
       };
-      reservations.set(record.token, record);
-      return send(res, 201, reservationDto(record));
+      reservations.set(created.token, created);
+      return send(res, 201, reservationDto(created));
     }
   }
 
@@ -170,6 +198,8 @@ export const server = createServer(async (req, res) => {
     if (!record) return send(res, 404, { message: 'Not found' });
     if (method === 'GET' && parts.length === 2) return send(res, 200, reservationDto(record));
     if (method === 'POST' && parts[2] === 'cancel') {
+      const forced = failNext.cancel.shift();
+      if (forced) return send(res, forced, { message: `Forced ${forced}` });
       record.status = 'cancelled';
       taken.delete(record.startAt);
       return send(res, 200, reservationDto(record));

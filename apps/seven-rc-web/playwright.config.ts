@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * E2E for the public booking flow (`/c/[slug]`).
  *
  * The Next server fetches the venue API server-side, so the browser cannot mock it.
- * `e2e/support/stub-api.mjs` stands in for 17s-server and `API_BASE_URL` points at it.
+ * `e2e/support/stub-api.ts` stands in for 17s-server and `API_BASE_URL` points at it.
  * No Docker, Postgres or Clerk session is needed: the owner "publish" step is covered by
  * component tests; here the venue is already published.
  *
@@ -51,7 +51,7 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], browserName: 'chromium' } }],
   webServer: [
     {
-      command: 'node e2e/support/stub-api.mjs',
+      command: 'node e2e/support/stub-api.ts',
       url: `http://127.0.0.1:${STUB_PORT}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 15_000,

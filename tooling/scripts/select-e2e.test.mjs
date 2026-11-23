@@ -59,7 +59,7 @@ test('editing a spec runs that spec', () => {
 test('flows.json, support files and playwright config run everything', () => {
   for (const file of [
     'apps/seven-rc-web/e2e/flows.json',
-    'apps/seven-rc-web/e2e/support/stub-api.mjs',
+    'apps/seven-rc-web/e2e/support/stub-api.ts',
     'apps/seven-rc-web/playwright.config.ts',
   ]) {
     assert.equal(pick([file]).full, true, file);
