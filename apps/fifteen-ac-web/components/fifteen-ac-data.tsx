@@ -245,7 +245,7 @@ function estimateImpact(
   switch (type) {
     case 'INCOME':
     case 'REFUND':
-      return { label: `Ingreso +${money}`, tone: 'text-[#00916e]' };
+      return { label: `Ingreso +${money}`, tone: 'text-brand-secondary' };
     case 'CARD_PAYMENT':
       return { label: `Pago de tarjeta −${money} · reduce deuda`, tone: 'text-muted' };
     case 'TRANSFER':

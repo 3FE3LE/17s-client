@@ -1,103 +1,63 @@
-'use client';
-
-import Image from 'next/image';
-import Link from 'next/link';
 import type { PropsWithChildren } from 'react';
+import { SiteLogo } from './site-logo';
 
 interface AuthShellProps extends PropsWithChildren {
-  pageLabel: string;
   title: string;
   description: string;
+  /** Product the visitor came from, e.g. sign-up with a product `redirect_url`. */
+  context?: { accentKey: string; text: string } | undefined;
 }
 
-export function AuthShell({ pageLabel, title, description, children }: AuthShellProps) {
+const reasons = [
+  'Una cuenta para todas las apps de 17Suit.',
+  'Después de entrar, vuelves a la app desde la que llegaste.',
+  'Si olvidas tu contraseña, la recuperas con un código en tu correo.',
+];
+
+export function AuthShell({ title, description, context, children }: AuthShellProps) {
   return (
-    <main className="relative min-h-screen overflow-clip bg-background font-zilla text-text">
-      <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute -right-[22vw] -top-[20vw] h-[min(56vw,660px)] w-[min(56vw,660px)] rounded-xl"
-          style={{
-            transform: 'rotate(-16deg)',
-            background:
-              'conic-gradient(from 180deg, rgba(0, 145, 110, 0.2), rgba(53, 167, 255, 0.14))',
-          }}
-        />
-        <div
-          className="absolute bottom-[-50px] left-[8vw] h-[120px] w-[min(56vw,700px)]"
-          style={{
-            transform: 'skewX(-24deg)',
-            background: 'linear-gradient(90deg, rgba(53, 167, 255, 0.2), rgba(0, 145, 110, 0))',
-          }}
-        />
-      </div>
-
-      <div className="relative z-10 mx-auto max-w-wide px-lg pb-x3l pt-lg max-[760px]:px-md max-[760px]:pb-xl max-[760px]:pt-md">
-        <header className="mb-xl flex items-center justify-between gap-lg max-[760px]:mb-lg max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-md">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-md text-inherit no-underline max-[760px]:flex-col max-[760px]:items-start max-[760px]:gap-sm"
-          >
-            <Image
-              src="/logo-17suit@4x.svg"
-              alt="17Suit"
-              width={196}
-              height={62}
-              className="h-11 w-auto"
-              priority
-            />
-            <span className="border-l border-black/10 pl-md text-md leading-[1.5] text-muted max-[760px]:border-l-0 max-[760px]:pl-0">
-              Centro de autenticacion 17Suit
-            </span>
-          </Link>
-
-          <nav className="flex gap-sm max-[760px]:w-full">
-            <Link
-              href="/sign-in"
-              className="rounded-full border border-black/10 bg-white/90 px-md py-2 text-md font-bold leading-[1.4] tracking-plus1_25 text-brand-dark no-underline transition-transform duration-150 hover:-translate-y-px max-[760px]:flex-1 max-[760px]:text-center"
-            >
-              Iniciar sesion
-            </Link>
-            <Link
-              href="/sign-up"
-              className="rounded-full border border-[#01695b] bg-gradient-to-r from-brand-secondary to-[#007666] px-md py-2 text-md font-bold leading-[1.4] tracking-plus1_25 text-white no-underline shadow-[0_10px_22px_rgba(0,145,110,0.24)] transition-transform duration-150 hover:-translate-y-px max-[760px]:flex-1 max-[760px]:text-center"
-            >
-              Registrarse
-            </Link>
-          </nav>
+    <main className="min-h-screen bg-suit-canvas font-zilla text-text">
+      <div className="mx-auto max-w-[1000px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pt-[var(--spacing-lg)] lg:flex lg:min-h-screen lg:flex-col">
+        <header className="mb-[var(--spacing-xl)] flex items-center md:mb-[var(--spacing-x3l)] lg:mb-[var(--spacing-xl)]">
+          <SiteLogo />
         </header>
 
-        <section className="grid grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] items-start gap-md max-[960px]:grid-cols-1">
-          <aside className="grid gap-md rounded-xl border border-black/10 bg-white/80 p-[clamp(24px,3.4vw,40px)] backdrop-blur">
-            <p className="m-0 text-xs font-light uppercase tracking-plus1_5 text-muted">
-              {pageLabel}
-            </p>
-            <h1 className="m-0 max-w-[14ch] font-arvo text-[clamp(38px,7vw,72px)] leading-[1.08] tracking-[-0.015em] text-text">
+        {/* Desktop: narrower container, columns centred vertically so the form and its
+            context read as one block instead of floating in empty canvas. */}
+        <section className="grid grid-cols-1 items-start gap-[var(--spacing-xl)] lg:my-auto lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:items-center lg:gap-[var(--spacing-x2l)] lg:pb-[var(--spacing-x3l)]">
+          <div className="grid gap-[var(--spacing-md)]">
+            <h1 className="m-0 max-w-[14ch] text-balance font-arvo text-[clamp(34px,5.6vw,64px)] font-bold leading-[1.06] tracking-[-0.025em] text-text">
               {title}
             </h1>
-            <p className="m-0 max-w-[50ch] text-md leading-[1.5] text-muted">{description}</p>
-            <ul className="m-0 grid list-none gap-sm p-0 text-md leading-[1.5] text-muted">
-              <li className="flex items-start gap-sm">
-                <span className="mt-[7px] h-[9px] w-[9px] shrink-0 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary" />
-                <span>Una cuenta para todos los productos de la suite.</span>
-              </li>
-              <li className="flex items-start gap-sm">
-                <span className="mt-[7px] h-[9px] w-[9px] shrink-0 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary" />
-                <span>Flujo automatizado y redireccion por rol despues de ingresar.</span>
-              </li>
-              <li className="flex items-start gap-sm">
-                <span className="mt-[7px] h-[9px] w-[9px] shrink-0 rounded-full bg-gradient-to-br from-brand-primary to-brand-secondary" />
-                <span>Acceso seguro con Clerk y opciones de recuperacion rapida.</span>
-              </li>
+            <p className="m-0 max-w-[48ch] text-[clamp(16px,1.4vw,18px)] leading-[1.5] text-muted">
+              {description}
+            </p>
+            {context ? (
+              <p
+                data-product={context.accentKey}
+                className="m-0 w-fit max-w-full rounded-[var(--radius-lg)] border border-product bg-[color-mix(in_oklab,var(--landing-product)_13%,var(--color-surface))] px-[var(--spacing-md)] py-[var(--spacing-xs)] text-md font-bold leading-[1.4] text-text"
+              >
+                {context.text}
+              </p>
+            ) : null}
+            {/* Compact on mobile (smaller type, tighter rows), full size from md up. */}
+            <ul className="m-0 grid list-none gap-[var(--spacing-xs)] p-0 text-sm leading-[1.35] text-muted md:mt-[var(--spacing-sm)] md:gap-[var(--spacing-sm)] md:text-md md:leading-[1.5]">
+              {reasons.map((reason) => (
+                <li key={reason} className="flex items-start gap-[var(--spacing-sm)]">
+                  <span
+                    aria-hidden="true"
+                    className="mt-[6px] size-1.5 shrink-0 rounded-full bg-brand-secondary md:mt-[8px] md:size-2.5"
+                  />
+                  <span>{reason}</span>
+                </li>
+              ))}
             </ul>
-            <Link
-              href="/"
-              className="w-fit rounded-full border border-black/10 bg-white/90 px-md py-2 text-md font-bold leading-[1.4] tracking-plus1_25 text-brand-dark no-underline transition-transform duration-150 hover:-translate-y-px"
-            >
-              Volver al landing
-            </Link>
-          </aside>
+          </div>
 
-          <section className="self-start rounded-lg border border-black/10 bg-white/80 p-[clamp(16px,2vw,20px)] backdrop-blur">
+          <section
+            aria-label={title}
+            className="rounded-[var(--radius-xl)] border border-line bg-surface p-[clamp(20px,3vw,32px)] shadow-panel"
+          >
             {children}
           </section>
         </section>

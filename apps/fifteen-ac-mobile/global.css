@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@import 'uniwind';
+@import '@17suit/tailwind-config/native-theme.css';
+
+@source '../../packages/ui-native/src';
+@source '../../packages/design-system/src';

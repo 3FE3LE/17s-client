@@ -1,27 +1,17 @@
 'use client';
 
 import { useSignIn } from '@clerk/nextjs';
-import { AppButton, AppInput, AppLinkAction } from '@17suit/ui';
+import { AppButton, AppInput } from '@17suit/ui';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState, type FormEvent } from 'react';
 import { AuthFormError } from '../components/AuthFormError';
 import { AuthShell } from '../components/AuthShell';
 import { resolveRedirectTarget } from '../lib/auth-redirect';
+import { afterAuthPath } from '../lib/session-handoff';
+import { getClerkErrorMessage } from '../lib/clerk-errors';
 
-function getClerkErrorMessage(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'errors' in error) {
-    const errors = (
-      error as { errors?: Array<{ code?: string; message?: string; longMessage?: string }> }
-    ).errors;
-    if (errors && errors.length > 0) {
-      const first = errors[0];
-      if (first?.longMessage) return first.longMessage;
-      if (first?.message) return first.message;
-      if (first?.code) return first.code;
-    }
-  }
-  return 'No fue posible restablecer la contrasena.';
-}
+const GENERIC_ERROR = 'No pudimos restablecer tu contraseña. Inténtalo de nuevo en unos minutos.';
 
 function ForgotPasswordPageContent() {
   const router = useRouter();
@@ -51,7 +41,7 @@ function ForgotPasswordPageContent() {
       });
       setStep('reset');
     } catch (err) {
-      setError(getClerkErrorMessage(err));
+      setError(getClerkErrorMessage(err, GENERIC_ERROR));
     } finally {
       setIsSubmitting(false);
     }
@@ -61,7 +51,7 @@ function ForgotPasswordPageContent() {
     event.preventDefault();
     if (!isLoaded) return;
     if (newPassword !== confirmNewPassword) {
-      setError('Las contrasenas no coinciden.');
+      setError('Las contraseñas no coinciden.');
       return;
     }
 
@@ -76,13 +66,13 @@ function ForgotPasswordPageContent() {
 
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        router.replace(redirectTarget);
+        router.replace(afterAuthPath(redirectTarget));
         return;
       }
 
-      setError('No se pudo completar el restablecimiento.');
+      setError('No pudimos restablecer tu contraseña. Solicita un código nuevo.');
     } catch (err) {
-      setError(getClerkErrorMessage(err));
+      setError(getClerkErrorMessage(err, GENERIC_ERROR));
     } finally {
       setIsSubmitting(false);
     }
@@ -90,9 +80,8 @@ function ForgotPasswordPageContent() {
 
   return (
     <AuthShell
-      pageLabel="Restablecer contrasena"
       title="Recupera el acceso"
-      description="Restablece tu contrasena y vuelve a entrar con el mismo flujo de autenticacion."
+      description="Te enviamos un código a tu correo para que elijas una contraseña nueva."
     >
       <div className="mx-auto grid w-full max-w-form gap-sm">
         {step === 'request' ? (
@@ -102,15 +91,15 @@ function ForgotPasswordPageContent() {
               name="email"
               value={email}
               onChangeText={setEmail}
-              label="Correo electronico"
-              placeholder="tu@empresa.com"
+              label="Correo electrónico"
+              placeholder="tu@correo.com"
               autoComplete="email"
               spellCheck={false}
               required
               error={Boolean(error)}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
-              {isSubmitting ? 'Enviando...' : 'Enviar codigo'}
+              {isSubmitting ? 'Enviando…' : 'Enviar código'}
             </AppButton>
             <div id="clerk-captcha" />
             <AuthFormError message={error} />
@@ -122,8 +111,8 @@ function ForgotPasswordPageContent() {
               name="code"
               value={code}
               onChangeText={setCode}
-              label="Codigo de verificacion"
-              placeholder="Codigo de verificacion"
+              label="Código de verificación"
+              placeholder="123456"
               autoComplete="one-time-code"
               spellCheck={false}
               required
@@ -134,8 +123,8 @@ function ForgotPasswordPageContent() {
               name="newPassword"
               value={newPassword}
               onChangeText={setNewPassword}
-              label="Nueva contrasena"
-              placeholder="Nueva contrasena"
+              label="Nueva contraseña"
+              placeholder="Nueva contraseña"
               autoComplete="new-password"
               required
               error={Boolean(error)}
@@ -145,24 +134,25 @@ function ForgotPasswordPageContent() {
               name="confirmNewPassword"
               value={confirmNewPassword}
               onChangeText={setConfirmNewPassword}
-              label="Confirmar nueva contrasena"
-              placeholder="Confirmar nueva contrasena"
+              label="Confirmar nueva contraseña"
+              placeholder="Repite la contraseña"
               autoComplete="new-password"
               required
               error={Boolean(error)}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
-              {isSubmitting ? 'Actualizando...' : 'Actualizar contrasena'}
+              {isSubmitting ? 'Actualizando…' : 'Actualizar contraseña'}
             </AppButton>
             <AuthFormError message={error} />
           </form>
         )}
 
-        <AppLinkAction
-          onPress={() => router.push(`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`)}
+        <Link
+          href={`/sign-in?redirect_url=${encodeURIComponent(redirectTarget)}`}
+          className="inline-flex min-h-11 w-fit items-center font-bold text-text underline underline-offset-4"
         >
-          Volver a iniciar sesion
-        </AppLinkAction>
+          Volver a iniciar sesión
+        </Link>
       </div>
     </AuthShell>
   );

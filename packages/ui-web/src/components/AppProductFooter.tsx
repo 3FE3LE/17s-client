@@ -1,5 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
+import { AppThemeToggle } from './AppThemeToggle';
+
 export interface AppProductFooterLink {
   label: string;
   href: string;
@@ -21,12 +23,15 @@ export interface AppProductFooterProps {
   productLinkControls?: ReactNode;
   legalLinks?: AppProductFooterLink[];
   legalLinkControls?: ReactNode;
+  /** Theme control rendered in the footer; defaults to AppThemeToggle, `false` hides it. */
+  themeControl?: ReactNode | false;
 }
 
 const containerStyle: CSSProperties = {
   width: '100%',
-  background: 'rgba(255, 255, 255, 0.88)',
-  borderTop: '1px solid rgba(0, 23, 31, 0.12)',
+  // Theme-reactive: follows the `dark` class on <html> via token vars.
+  background: 'color-mix(in srgb, var(--suit-color-surface) 88%, transparent)',
+  borderTop: '1px solid var(--color-border-default, rgba(0, 23, 31, 0.12))',
 };
 
 const contentStyle: CSSProperties = {
@@ -57,7 +62,8 @@ const baseButtonStyle: CSSProperties = {
   justifyContent: 'center',
   textDecoration: 'none',
   borderRadius: 'var(--radius-md, 8px)',
-  border: '1px solid rgba(0, 23, 31, 0.12)',
+  border: '1px solid var(--color-border-default, rgba(0, 23, 31, 0.12))',
+  minHeight: 44,
   padding: '10px 16px',
   fontFamily: '"Zilla Slab", serif',
   fontSize: 16,
@@ -69,6 +75,9 @@ const baseButtonStyle: CSSProperties = {
 export const appProductFooterButtonStyle = baseButtonStyle;
 
 const textLinkStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  minHeight: 44,
   color: 'var(--color-muted, #394448)',
   textDecoration: 'none',
   fontFamily: '"Zilla Slab", serif',
@@ -107,6 +116,7 @@ export function AppProductFooter({
   productLinkControls,
   legalLinks = [],
   legalLinkControls,
+  themeControl,
 }: AppProductFooterProps) {
   const year = new Date().getFullYear();
 
@@ -118,7 +128,7 @@ export function AppProductFooter({
             <p
               style={{
                 margin: 0,
-                color: 'var(--color-brand-dark, #00171f)',
+                color: 'var(--color-text, #00151c)',
                 fontFamily: '"Arvo", serif',
                 fontSize: 24,
                 lineHeight: 1.25,
@@ -158,7 +168,7 @@ export function AppProductFooter({
                       href={signInHref}
                       style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
                     >
-                      Iniciar sesion
+                      Iniciar sesión
                     </a>
                     <a
                       href={signUpHref}
@@ -166,7 +176,8 @@ export function AppProductFooter({
                         ...baseButtonStyle,
                         color: '#ffffff',
                         border: '1px solid #01695b',
-                        background: 'linear-gradient(95deg, #00916e, #007666)',
+                        background:
+                          'linear-gradient(95deg, var(--color-action-primary, #007f60), var(--color-action-primary-hover, #007666))',
                         boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
                       }}
                     >
@@ -195,17 +206,28 @@ export function AppProductFooter({
           </div>
         ) : null}
 
-        <p
+        <div
           style={{
-            margin: 0,
-            color: 'var(--color-muted, #394448)',
-            fontFamily: '"Zilla Slab", serif',
-            fontSize: 14,
-            lineHeight: 1.5,
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
           }}
         >
-          {year} {suiteName}. Todos los derechos reservados.
-        </p>
+          <p
+            style={{
+              margin: 0,
+              color: 'var(--color-muted, #394448)',
+              fontFamily: '"Zilla Slab", serif',
+              fontSize: 14,
+              lineHeight: 1.5,
+            }}
+          >
+            © {year} {suiteName}. Todos los derechos reservados.
+          </p>
+          {themeControl === false ? null : (themeControl ?? <AppThemeToggle />)}
+        </div>
       </div>
     </footer>
   );

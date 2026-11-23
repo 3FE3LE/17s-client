@@ -3,6 +3,8 @@ import { Modal, View, type ModalProps } from 'react-native';
 
 export interface AppModalProps extends Pick<ModalProps, 'transparent' | 'animationType'> {
   visible: boolean;
+  /** Android hardware Back / iOS dismiss gesture. Pass the same handler as your close button. */
+  onRequestClose?: () => void;
   children: ReactNode;
 }
 
@@ -18,10 +20,16 @@ export function AppModal({
   visible,
   transparent = true,
   animationType = 'none',
+  onRequestClose,
   children,
 }: AppModalProps) {
   return (
-    <Modal visible={visible} transparent={transparent} animationType={animationType}>
+    <Modal
+      visible={visible}
+      transparent={transparent}
+      animationType={animationType}
+      onRequestClose={onRequestClose}
+    >
       <View style={{ flex: 1 }}>{children}</View>
     </Modal>
   );

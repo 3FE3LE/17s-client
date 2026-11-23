@@ -9,6 +9,7 @@
   --color-warning: var(--suit-color-warning);
   --color-caution: var(--suit-color-caution);
   --color-info: var(--suit-color-info);
+  --color-neutral: var(--suit-color-neutral);
 
   --color-brand-primary: var(--suit-color-brand-primary);
   --color-brand-secondary: var(--suit-color-brand-secondary);
@@ -19,6 +20,13 @@
   --font-arvo: var(--suit-font-arvo);
   --font-amaranth: var(--suit-font-amaranth);
   --font-zilla: var(--suit-font-zilla);
+  /* Weighted families: native loads one font file per weight (Arvo_700Bold),
+   * so weight is a family there. On web they alias the base family and the
+   * weight comes from font-bold/font-light. */
+  --font-arvo-bold: var(--suit-font-arvo-bold);
+  --font-amaranth-bold: var(--suit-font-amaranth-bold);
+  --font-zilla-light: var(--suit-font-zilla-light);
+  --font-zilla-bold: var(--suit-font-zilla-bold);
 
   --spacing-xs: var(--suit-spacing-xs);
   --spacing-sm: var(--suit-spacing-sm);

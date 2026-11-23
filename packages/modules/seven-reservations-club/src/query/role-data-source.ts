@@ -53,11 +53,20 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
   return fallback;
 }
 
-export function createWebBffRoleDataSource(): SevenReservationsClubRoleDataSource {
+export function createWebBffRoleDataSource(options?: {
+  /** Session token. Without it the BFF relies on cookies, which can be stale on `fetch`. */
+  getAccessToken?: () => Promise<string | null>;
+}): SevenReservationsClubRoleDataSource {
+  async function authHeaders(): Promise<Record<string, string>> {
+    const token = await options?.getAccessToken?.();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   return {
     async getCurrentUserRole() {
       const response = await fetch('/api/me', {
         method: 'GET',
+        headers: await authHeaders(),
         cache: 'no-store',
       });
 
@@ -75,6 +84,7 @@ export function createWebBffRoleDataSource(): SevenReservationsClubRoleDataSourc
       const response = await fetch('/api/onboarding/role', {
         method: 'POST',
         headers: {
+          ...(await authHeaders()),
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ role }),

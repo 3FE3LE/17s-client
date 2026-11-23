@@ -6,12 +6,16 @@ import {
   createSevenRcQueryClient,
   createWebBffRoleDataSource,
 } from '@17suit/module-seven-reservations-club/client';
-import { useState, type PropsWithChildren } from 'react';
-
-const roleDataSource = createWebBffRoleDataSource();
+import { useMemo, useState, type PropsWithChildren } from 'react';
+import { useAccessToken } from '@/lib/use-access-token';
 
 export function SevenRcClientProviders({ children }: PropsWithChildren) {
   const [queryClient] = useState(() => createSevenRcQueryClient());
+  const getAccessToken = useAccessToken();
+  const roleDataSource = useMemo(
+    () => createWebBffRoleDataSource({ getAccessToken }),
+    [getAccessToken],
+  );
 
   return (
     <QueryClientProvider client={queryClient}>

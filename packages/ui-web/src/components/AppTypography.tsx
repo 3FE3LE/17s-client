@@ -1,41 +1,34 @@
-import type { SuitTheme } from '@17suit/design-system';
+import {
+  typographyRecipe,
+  type TypographyAlign,
+  type TypographyVariant,
+} from '@17suit/design-system';
 import type { CSSProperties, ElementType, PropsWithChildren } from 'react';
-import { useAppTheme } from '../theme/theme-context';
-
-type TypographyVariant = keyof SuitTheme['typography']['styles'];
 
 export interface AppTypographyProps extends PropsWithChildren {
   as?: ElementType;
   variant?: TypographyVariant;
+  /** Overrides the theme text color (any CSS color or var()). */
   color?: string;
-  align?: 'left' | 'center' | 'right';
+  align?: TypographyAlign;
+  className?: string;
   style?: CSSProperties;
 }
 
+/** Web renderer of the shared typography contract (@17suit/design-system). */
 export function AppTypography({
   as: Component = 'p',
   variant = 'body',
   color,
   align = 'left',
+  className,
   style,
   children,
 }: AppTypographyProps) {
-  const { theme } = useAppTheme();
-  const typeStyle = theme.typography.styles[variant];
-
   return (
     <Component
-      style={{
-        margin: 0,
-        color: color ?? theme.colors.text,
-        textAlign: align,
-        fontFamily: typeStyle.webFamily,
-        fontWeight: typeStyle.fontWeight,
-        fontSize: typeStyle.fontSize,
-        lineHeight: typeStyle.lineHeightRecommended,
-        letterSpacing: typeStyle.letterSpacingEm,
-        ...style,
-      }}
+      className={typographyRecipe({ variant, align, platform: 'web', className })}
+      style={color ? { color, ...style } : style}
     >
       {children}
     </Component>
