@@ -31,3 +31,7 @@ export {
   createThemeBootScript,
 } from './theme-preference';
 export type { ThemePreference } from './theme-preference';
+export { TYPOGRAPHY_CLASSES, titleRecipe, typographyRecipe } from './typography';
+export type { TypographyAlign, TypographyContractProps, TypographyVariant } from './typography';
+export { BADGE_VARIANTS, badgeLabelRecipe, badgeRecipe } from './badge';
+export type { BadgeContractProps, BadgeSize, BadgeVariant } from './badge';
