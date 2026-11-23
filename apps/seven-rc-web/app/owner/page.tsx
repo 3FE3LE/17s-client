@@ -17,6 +17,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { PublishVenueForm } from '@/components/publish-venue-form';
 import {
@@ -33,7 +34,6 @@ import {
 import { describeError } from '@/lib/seven-rc-errors';
 import {
   DEFAULT_TIMEZONE,
-  DISPLAY_LOCALE,
   SPORT_OPTIONS,
   VENUE_TIMEZONE_OPTIONS,
   WEEKDAYS,
@@ -70,6 +70,13 @@ import {
   type ReservationPaymentMethod,
   type VenueReservation,
 } from '@/lib/owner-queries';
+import {
+  PAYMENT_KIND_OPTIONS,
+  PAYMENT_METHOD_OPTIONS,
+  formatAmountInput,
+  parseAmount,
+} from '@/lib/owner-payment';
+import { normalizePhone } from '@/lib/phone';
 import { useNow } from '@/lib/use-now';
 
 const DEFAULT_RANGE_DAYS = 7;
@@ -78,8 +85,6 @@ const PENDING_POLL_MS = 30_000;
 const SETTLED_ROW_MS = 2_500;
 const PENDING_HEADING_ID = 'pendientes-title';
 const TODAY_HEADING_ID = 'hoy-title';
-/** The server stores amounts as 32-bit integers of minor units. */
-const MAX_AMOUNT_MINOR = 2_147_483_647;
 const PAYABLE_STATUSES = new Set(['pending_confirmation', 'confirmed', 'completed']);
 const VENUE_NAME_INPUT_ID = 'nuevo-complejo-nombre';
 const INACTIVE_STATUSES = new Set(['cancelled', 'rejected', 'expired']);
@@ -154,19 +159,6 @@ const ACTION_COPY: Record<
   },
 };
 
-const PAYMENT_KIND_OPTIONS: ReadonlyArray<{ value: ReservationPaymentKind; label: string }> = [
-  { value: 'deposit', label: 'Anticipo' },
-  { value: 'balance', label: 'Saldo' },
-  { value: 'refund', label: 'Devolución' },
-];
-
-const PAYMENT_METHOD_OPTIONS: ReadonlyArray<{ value: ReservationPaymentMethod; label: string }> = [
-  { value: 'transfer', label: 'Transferencia' },
-  { value: 'cash', label: 'Efectivo' },
-  { value: 'card', label: 'Tarjeta' },
-  { value: 'other', label: 'Otro' },
-];
-
 function pendingRowId(reservationId: string) {
   return `pendiente-${reservationId}`;
 }
@@ -179,25 +171,6 @@ function focusById(id: string) {
   element.focus();
 }
 
-/**
- * es-CO amount typed by the owner ("120.000", "120000", "12,50") to minor units. Anything
- * ambiguous ("120,000", "-5") is refused rather than guessed: this is money.
- */
-function parseAmount(value: string): number | null {
-  const match = /^(\d+|\d{1,3}(?:[. ]\d{3})+)(?:,(\d{1,2}))?$/.exec(value.trim());
-  if (!match?.[1]) return null;
-  const minor =
-    Number(match[1].replace(/[. ]/g, '')) * 100 + Number((match[2] ?? '').padEnd(2, '0'));
-  return minor <= MAX_AMOUNT_MINOR ? minor : null;
-}
-
-/** Inverse of parseAmount, for prefilling a field. */
-function formatAmountInput(amountMinor: number): string {
-  return new Intl.NumberFormat(DISPLAY_LOCALE, { maximumFractionDigits: 2 }).format(
-    amountMinor / 100,
-  );
-}
-
 function holdExpired(reservation: VenueReservation, now: number): boolean {
   return Boolean(reservation.holdExpiresAt && new Date(reservation.holdExpiresAt).getTime() <= now);
 }
@@ -205,16 +178,6 @@ function holdExpired(reservation: VenueReservation, now: number): boolean {
 /** Focus target for content that replaces what the owner was using. */
 function focusOnMount(node: HTMLElement | null) {
   node?.focus();
-}
-
-/** Accepts "+57 300 123 4567" or a local Colombian mobile ("300 123 4567"). */
-function normalizePhone(value: string, countryCode: string): string | null {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const compact = trimmed.replace(/[\s().-]/g, '');
-  if (compact.startsWith('+')) return compact;
-  if (countryCode === 'CO' && /^3\d{9}$/.test(compact)) return `+57${compact}`;
-  return compact;
 }
 
 function parseIntInRange(value: string, min: number, max: number): number | null {
@@ -824,6 +787,16 @@ function OwnerWorkspace() {
           <CheckCircle2 size={18} aria-hidden className="text-success" />
           Tu complejo quedó configurado. Puedes cambiarlo cuando quieras en “Configuración”.
         </p>
+      ) : null}
+
+      {selectedVenue && pitchesReady ? (
+        <OwnerReservationSection
+          key={`reserva-${selectedVenue.id}`}
+          venue={selectedVenue}
+          pitches={pitches}
+          timeZone={timeZone}
+          todayKey={todayKey}
+        />
       ) : null}
 
       {selectedVenue && pitchesReady ? (
