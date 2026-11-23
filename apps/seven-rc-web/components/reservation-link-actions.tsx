@@ -9,13 +9,25 @@ export interface ShareReservationProps {
   /** Absolute URL of this page, built on the server from the request host. */
   url: string;
   venueName: string;
+  pitchName: string;
+  /** Venue-local, human readable slot, e.g. "vie 9 oct, 8:00 p. m. – 9:00 p. m.". */
+  when: string;
+  /** Absolute URL of the `.ics` download. */
+  calendarUrl: string;
 }
 
-export function ShareReservation({ url, venueName }: ShareReservationProps) {
+export function ShareReservation({
+  url,
+  venueName,
+  pitchName,
+  when,
+  calendarUrl,
+}: ShareReservationProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const text = `Mi reserva en ${venueName}`;
-  const whatsapp = `https://wa.me/?text=${encodeURIComponent(`${text}: ${url}`)}`;
+  const details = `${text}: ${pitchName}, ${when}.`;
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(`${details} ${url}`)}`;
 
   async function copy() {
     try {
@@ -31,7 +43,7 @@ export function ShareReservation({ url, venueName }: ShareReservationProps) {
   async function share() {
     if (typeof navigator.share !== 'function') return copy();
     try {
-      await navigator.share({ title: text, url });
+      await navigator.share({ title: text, text: details, url });
     } catch (cause) {
       // The user closing the share sheet is not an error.
       if (cause instanceof DOMException && cause.name === 'AbortError') return;
@@ -55,6 +67,13 @@ export function ShareReservation({ url, venueName }: ShareReservationProps) {
           className="inline-flex items-center text-md text-text underline"
         >
           Enviar por WhatsApp
+        </a>
+        <a
+          href={calendarUrl}
+          download="reserva.ics"
+          className="inline-flex items-center text-md text-text underline"
+        >
+          Añadir al calendario
         </a>
       </div>
       <InlineStatus message={message} />

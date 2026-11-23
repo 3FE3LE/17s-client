@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createWebBffRoleDataSource } from './role-data-source';
+import {
+  createExternalPlatformRoleDataSource,
+  createWebBffRoleDataSource,
+} from './role-data-source';
 
 function mockFetch() {
   const fetchMock = vi.fn<typeof fetch>(() =>
@@ -38,5 +41,24 @@ describe('createWebBffRoleDataSource', () => {
     }).getCurrentUserRole();
 
     expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('authorization')).toBeNull();
+  });
+});
+
+describe('createExternalPlatformRoleDataSource', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('reads the profile from /api/me in a single request', async () => {
+    const fetchMock = mockFetch();
+
+    const result = await createExternalPlatformRoleDataSource({
+      apiBaseUrl: 'http://api.test',
+      getAccessToken: () => Promise.resolve('tok'),
+    }).getCurrentUserRole();
+
+    expect(result.role).toBe('OWNER');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('http://api.test/api/me');
   });
 });
