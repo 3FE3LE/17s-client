@@ -8,34 +8,15 @@ function normalizeApiBaseUrl(baseUrl: string): string {
 
 export async function fetchPlatformMe(accessToken: string): Promise<unknown> {
   const apiBaseUrl = normalizeApiBaseUrl(loadEnv().API_BASE_URL);
-  const headers = {
-    Authorization: `Bearer ${accessToken}`,
-    Accept: 'application/json',
-  };
-  const primaryResponse = await fetch(`${apiBaseUrl}/api/platform/me`, {
+  // The server exposes the profile only at `/api/me`. Probing other paths first
+  // produced a guaranteed 404 (and an extra request) on every role lookup.
+  const response = await fetch(`${apiBaseUrl}/api/me`, {
     headers: {
-      ...headers,
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
     },
     cache: 'no-store',
   });
-
-  let response = primaryResponse;
-  if (response.status === 404) {
-    response = await fetch(`${apiBaseUrl}/api/me`, {
-      headers: {
-        ...headers,
-      },
-      cache: 'no-store',
-    });
-  }
-  if (response.status === 404) {
-    response = await fetch(`${apiBaseUrl}/me`, {
-      headers: {
-        ...headers,
-      },
-      cache: 'no-store',
-    });
-  }
 
   if (!response.ok) {
     throw new Error(`Failed to fetch profile (${response.status})`);

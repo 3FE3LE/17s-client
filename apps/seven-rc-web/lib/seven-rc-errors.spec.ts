@@ -25,6 +25,12 @@ describe('describeError', () => {
     expect(describeError(error, FALLBACK)).toMatch(/Otra persona acaba de reservar/);
   });
 
+  it('missing browser session is not reported as an expired session', () => {
+    expect(describeError(new Error('No active session'), FALLBACK)).toMatch(
+      /No hay una sesión activa/,
+    );
+  });
+
   it.each([
     [401, /sesión expiró/],
     [403, /no tiene permiso/],

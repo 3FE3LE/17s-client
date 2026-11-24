@@ -86,6 +86,11 @@ const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchA
       message: () => 'Esta acción solo la puede hacer el dueño del complejo.',
     },
     {
+      match: /^No active session$/i,
+      message: () =>
+        'No hay una sesión activa en este navegador. Cierra sesión, vuelve a entrar e intenta de nuevo.',
+    },
+    {
       match: /^Unauthorized$|\(401\)$/i,
       message: () => 'Tu sesión expiró. Vuelve a iniciar sesión.',
     },
