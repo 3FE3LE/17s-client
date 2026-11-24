@@ -2048,6 +2048,15 @@ export interface components {
     ReservationSource: 'online' | 'owner' | 'recurring';
     /** @enum {string} */
     ReservationPaymentStatus: 'unpaid' | 'deposit_paid' | 'paid' | 'refunded';
+    PolicySnapshotResponseDto: {
+      /** @description Venue policyVersion when the reservation was created */
+      version: number;
+      depositPercent: number;
+      holdMinutes: number;
+      /** @description Cancellation window that applies to this reservation */
+      cancellationWindowHours: number;
+      paymentInstructions?: string | null;
+    };
     ReservationResponseDto: {
       /** Format: uuid */
       id: string;
@@ -2085,6 +2094,8 @@ export interface components {
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
       /** Format: date-time */
       holdExpiresAt?: string | null;
+      /** @description Conditions frozen at creation; cancel and refunds read only this */
+      policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2133,6 +2144,8 @@ export interface components {
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
       /** Format: date-time */
       holdExpiresAt?: string | null;
+      /** @description Conditions frozen at creation; cancel and refunds read only this */
+      policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2208,6 +2221,8 @@ export interface components {
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
       /** Format: date-time */
       holdExpiresAt?: string | null;
+      /** @description Conditions frozen at creation; cancel and refunds read only this */
+      policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
