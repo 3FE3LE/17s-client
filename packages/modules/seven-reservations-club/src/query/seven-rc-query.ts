@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import type {
+  ConfigurePitchPolicyInput,
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
   CancelReservationSeriesResult,
@@ -232,6 +233,27 @@ export function useSevenRcUpdateVenueSettingsMutation(api: SevenRcOwnerApi, venu
     mutationFn: (input) => api.updateVenueSettings(venueId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues });
+    },
+  });
+}
+
+export function useSevenRcConfigurePitchPolicyMutation(
+  api: SevenRcOwnerApi,
+  pitchId: string,
+  venueId?: string | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<Pitch, Error, ConfigurePitchPolicyInput>({
+    mutationFn: (input) => api.configurePitchPolicy(pitchId, input),
+    onSuccess: () => {
+      if (venueId) {
+        // Changing a pitch moves the venue policyVersion, which owner venue data exposes.
+        void queryClient.invalidateQueries({
+          queryKey: sevenRcQueryKeys.ownerVenuePitches(venueId),
+        });
+        void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues });
+      }
     },
   });
 }

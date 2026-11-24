@@ -32,6 +32,10 @@ const PITCH = {
   capacity: 14,
   slotDurationMinutes: 60,
   basePriceMinor: 12000000,
+  depositPercent: 30,
+  holdMinutes: 60,
+  cancellationWindowHours: 24,
+  paymentInstructions: null,
 };
 const SLOT_HOURS = [16, 17, 18, 19, 20, 21];
 
