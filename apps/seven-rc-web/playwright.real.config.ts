@@ -57,6 +57,9 @@ export default defineConfig({
       API_BASE_URL,
       NEXT_PUBLIC_API_BASE_URL: API_BASE_URL,
       SENTRY_DSN: '',
+      // Auth seam for owner/player journeys; the server runs the same flag (e2e-real.yml).
+      E2E_FAKE_AUTH: '1',
+      NEXT_PUBLIC_E2E_FAKE_AUTH: '1',
     },
   },
 });
