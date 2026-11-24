@@ -60,6 +60,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -115,6 +118,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/module-fifteen-all-check':
         specifier: workspace:*
         version: link:../../packages/modules/fifteen-all-check
@@ -236,6 +242,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/module-fifteen-all-check':
         specifier: workspace:*
         version: link:../../packages/modules/fifteen-all-check
@@ -379,6 +388,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/module-nine-care-companion':
         specifier: workspace:*
         version: link:../../packages/modules/nine-care-companion
@@ -500,6 +512,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/module-nine-care-companion':
         specifier: workspace:*
         version: link:../../packages/modules/nine-care-companion
@@ -564,6 +579,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/module-seven-reservations-club':
         specifier: workspace:*
         version: link:../../packages/modules/seven-reservations-club
@@ -709,6 +727,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
       '@17suit/module-seven-reservations-club':
         specifier: workspace:*
         version: link:../../packages/modules/seven-reservations-club
@@ -866,7 +887,7 @@ importers:
         version: 25.10.10(typescript@6.0.3)
       react-i18next:
         specifier: ^16.0.0
-        version: 16.6.6(i18next@25.10.10(typescript@6.0.3))(react-native@0.88.1(@babel/core@7.29.0)(@react-native/metro-config@0.88.1(@babel/core@7.29.0)(bufferutil@4.2.0)(utf-8-validate@5.0.10))(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.0)(utf-8-validate@5.0.10))(react@19.3.0)(typescript@6.0.3)
+        version: 16.6.6(i18next@25.10.10(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.0)(@react-native/metro-config@0.88.1(@babel/core@7.29.0)(bufferutil@4.2.0)(utf-8-validate@5.0.10))(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.0)(utf-8-validate@5.0.10))(react@19.3.0)(typescript@6.0.3)
     devDependencies:
       '@17suit/eslint-config':
         specifier: workspace:*
@@ -877,9 +898,15 @@ importers:
       '@types/react':
         specifier: 19.3.0
         version: 19.3.0
+      '@types/react-dom':
+        specifier: 19.3.0
+        version: 19.3.0(@types/react@19.3.0)
       '@vitest/coverage-v8':
         specifier: ^4.1.9
         version: 4.1.9(vitest@4.1.9)
+      next:
+        specifier: ^16.0.0
+        version: 16.1.6(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -1064,6 +1091,9 @@ importers:
       '@17suit/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../i18n
     devDependencies:
       '@17suit/eslint-config':
         specifier: workspace:*
@@ -1116,6 +1146,9 @@ importers:
       expo-router:
         specifier: ~58.0.32
         version: 58.0.32(76806f3d79c6c5ac2caeb112c8676388)
+      expo-secure-store:
+        specifier: ~58.0.3
+        version: 58.0.3(expo@58.0.26)
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -20452,7 +20485,7 @@ snapshots:
     dependencies:
       react: 19.3.0
 
-  react-i18next@16.6.6(i18next@25.10.10(typescript@6.0.3))(react-native@0.88.1(@babel/core@7.29.0)(@react-native/metro-config@0.88.1(@babel/core@7.29.0)(bufferutil@4.2.0)(utf-8-validate@5.0.10))(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.0)(utf-8-validate@5.0.10))(react@19.3.0)(typescript@6.0.3):
+  react-i18next@16.6.6(i18next@25.10.10(typescript@6.0.3))(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.0)(@react-native/metro-config@0.88.1(@babel/core@7.29.0)(bufferutil@4.2.0)(utf-8-validate@5.0.10))(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.0)(utf-8-validate@5.0.10))(react@19.3.0)(typescript@6.0.3):
     dependencies:
       '@babel/runtime': 7.29.15
       html-parse-stringify: 3.1.0
@@ -20460,6 +20493,7 @@ snapshots:
       react: 19.3.0
       use-sync-external-store: 1.6.0(react@19.3.0)
     optionalDependencies:
+      react-dom: 19.3.0(react@19.3.0)
       react-native: 0.88.1(@babel/core@7.29.0)(@react-native/metro-config@0.88.1(@babel/core@7.29.0)(bufferutil@4.2.0)(utf-8-validate@5.0.10))(@types/react@19.3.0)(bufferutil@4.2.0)(react@19.3.0)(utf-8-validate@5.0.10)
       typescript: 6.0.3
 

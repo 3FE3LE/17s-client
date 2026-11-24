@@ -1,9 +1,9 @@
 'use client';
 
+import { useTranslation } from '@17suit/i18n/react';
 import { useId } from 'react';
 import {
   THEME_PREFERENCES,
-  THEME_PREFERENCE_LABELS,
   cx,
   themeToggleLabelRecipe,
   themeToggleOptionRecipe,
@@ -21,10 +21,10 @@ const THEME_ICONS: Record<ThemePreference, LucideIcon> = {
 };
 
 export interface AppThemeToggleProps {
-  /** Visible group label; defaults to a visually hidden "Tema". */
+  /** Group label; defaults to the translated `common:theme.label` (visually hidden). */
   label?: string;
   showLabel?: boolean;
-  /** Option labels (translated by the caller); defaults to the design-system labels. */
+  /** Option labels; default to the translated `common:theme.*` strings. */
   labels?: Partial<Record<ThemePreference, string>>;
   className?: string;
 }
@@ -34,18 +34,19 @@ export interface AppThemeToggleProps {
  * fieldset: keyboard (arrows), screen readers and forms work without ARIA.
  */
 export function AppThemeToggle({
-  label = 'Tema',
+  label,
   showLabel = false,
   labels,
   className,
 }: AppThemeToggleProps) {
   const { mode, setMode } = useAppTheme();
+  const { t } = useTranslation('common');
   const name = useId();
 
   return (
     <fieldset className={cx('m-0 min-w-0 border-0 p-0', className)}>
       <legend className={showLabel ? 'mb-xs font-zilla text-xs text-muted' : 'sr-only'}>
-        {label}
+        {label ?? t('theme.label')}
       </legend>
       <div className={themeToggleRecipe({ platform: 'web' })}>
         {THEME_PREFERENCES.map((preference: ThemePreference) => {
@@ -71,7 +72,7 @@ export function AppThemeToggle({
                 )}
               >
                 <Icon aria-hidden size={14} />
-                {labels?.[preference] ?? THEME_PREFERENCE_LABELS[preference]}
+                {labels?.[preference] ?? t(`theme.${preference}`)}
               </span>
             </label>
           );

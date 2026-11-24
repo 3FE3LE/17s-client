@@ -1,6 +1,7 @@
 import { ArrowLeft } from '../icons';
 import type { PropsWithChildren } from 'react';
 import { AppTitle } from './AppTitle';
+import { ProductLanguageSelect } from './ProductLanguageSelect';
 
 export interface AppFrameProps extends PropsWithChildren {
   appName: string;
@@ -11,9 +12,18 @@ export interface AppFrameProps extends PropsWithChildren {
    * frame is nested inside another `<main>` (e.g. AppWorkspaceShell).
    */
   landmark?: boolean;
+  /** Show the language picker below the content (home and sign-in screens). */
+  showLanguageSelect?: boolean;
 }
 
-export function AppFrame({ appName, subtitle, onBack, landmark = true, children }: AppFrameProps) {
+export function AppFrame({
+  appName,
+  subtitle,
+  onBack,
+  landmark = true,
+  showLanguageSelect = false,
+  children,
+}: AppFrameProps) {
   const Root = landmark ? 'main' : 'div';
   return (
     <Root className="flex flex-1 flex-col bg-background p-lg">
@@ -35,6 +45,11 @@ export function AppFrame({ appName, subtitle, onBack, landmark = true, children 
           </p>
         ) : null}
         <div className="mt-lg flex flex-col gap-md">{children}</div>
+        {showLanguageSelect ? (
+          <div className="mt-lg">
+            <ProductLanguageSelect />
+          </div>
+        ) : null}
       </div>
     </Root>
   );

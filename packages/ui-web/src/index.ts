@@ -114,5 +114,7 @@ export type { ThemeSnapshot } from './theme/theme-store';
 export { AppThemeToggle } from './components/AppThemeToggle';
 export type { AppThemeToggleProps } from './components/AppThemeToggle';
 export type { ThemeModePreference } from './theme/theme-context';
+export { ProductLanguageSelect } from './components/ProductLanguageSelect';
+export type { ProductLanguageSelectProps } from './components/ProductLanguageSelect';
 export { LanguageSelect } from './components/LanguageSelect';
 export type { LanguageSelectProps } from './components/LanguageSelect';

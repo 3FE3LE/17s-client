@@ -6,7 +6,11 @@ export default function IndexScreen() {
   const { user } = useUser();
 
   return (
-    <AppFrame appName="Nine Care Companion" subtitle="UI compartida desde @17suit/ui">
+    <AppFrame
+      showLanguageSelect
+      appName="Nine Care Companion"
+      subtitle="UI compartida desde @17suit/ui"
+    >
       <AppProfile
         fullName={user?.fullName ?? null}
         email={user?.primaryEmailAddress?.emailAddress ?? null}

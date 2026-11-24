@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
+    "@17suit/i18n": "workspace:*",
     "@17suit/module-fifteen-all-check": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@17suit/ui-native": "workspace:*",

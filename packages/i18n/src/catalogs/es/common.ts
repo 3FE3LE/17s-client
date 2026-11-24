@@ -11,6 +11,13 @@ export const common: CatalogShape<typeof en> = {
     light: 'Claro',
     dark: 'Oscuro',
   },
+  footer: {
+    home: 'Ir al inicio',
+    signIn: 'Iniciar sesión',
+    signUp: 'Crear cuenta',
+    rights: 'Todos los derechos reservados.',
+    tagline: 'Un producto de {{suite}}',
+  },
   actions: {
     save: 'Guardar',
     cancel: 'Cancelar',

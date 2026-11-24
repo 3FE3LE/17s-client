@@ -25,6 +25,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL: WEB_URL,
+    // Specs assert Spanish copy: pin the locale so they never depend on the runner.
+    locale: 'es-ES',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // Same Clerk dev-browser cookie trick as the stub suite: no real Clerk host in CI.

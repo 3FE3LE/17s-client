@@ -8,6 +8,13 @@ export const common = {
     light: 'Light',
     dark: 'Dark',
   },
+  footer: {
+    home: 'Go to home',
+    signIn: 'Sign in',
+    signUp: 'Create account',
+    rights: 'All rights reserved.',
+    tagline: 'A {{suite}} product',
+  },
   actions: {
     save: 'Save',
     cancel: 'Cancel',
