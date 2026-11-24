@@ -19,6 +19,7 @@ import type {
   PitchBlock,
   PitchWithPricing,
   PublicVenue,
+  CancelReservationByOwnerInput,
   RecordReservationPaymentInput,
   ReservationBase,
   ReservationWithVenuePitch,
@@ -317,8 +318,12 @@ export function useSevenRcOwnerCancelReservationMutation(
 ) {
   const invalidate = useInvalidateOwnerReservation(venueId);
 
-  return useMutation<ReservationBase, Error, string>({
-    mutationFn: (reservationId) => api.ownerCancelReservation(reservationId),
+  return useMutation<
+    ReservationBase,
+    Error,
+    { reservationId: string; input?: CancelReservationByOwnerInput | undefined }
+  >({
+    mutationFn: ({ reservationId, input }) => api.ownerCancelReservation(reservationId, input),
     onSuccess: invalidate,
   });
 }

@@ -34,6 +34,7 @@ interface PageProps {
     fecha?: string | string[];
     turno?: string | string[];
     conflicto?: string | string[];
+    condiciones?: string | string[];
   }>;
 }
 
@@ -61,7 +62,7 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
   const venue = await fetchPublicVenue(slug);
   if (!venue) notFound();
 
-  const { fecha, turno, conflicto } = await searchParams;
+  const { fecha, turno, conflicto, condiciones } = await searchParams;
   const date = resolveDate(fecha, venue.today, venue.bookingHorizonDays);
   const maxDate = addDaysToDateKey(venue.today, venue.bookingHorizonDays);
   const availability = await fetchPublicVenueAvailability(slug, date);
@@ -77,6 +78,7 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
     (slot) => slot.startAt === turnoStartAt && slot.status === 'AVAILABLE',
   );
   const hadConflict = (Array.isArray(conflicto) ? conflicto[0] : conflicto) === '1';
+  const conditionsChanged = (Array.isArray(condiciones) ? condiciones[0] : condiciones) === '1';
 
   return (
     <main className="mx-auto grid w-full max-w-[var(--container-content)] gap-xl px-lg py-xl">
@@ -92,6 +94,15 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           </p>
         ) : null}
       </header>
+
+      {conditionsChanged ? (
+        <p
+          role="alert"
+          className="m-0 rounded-[var(--radius-md)] border border-destructive/50 bg-feedback-error-soft px-3 py-2 text-sm leading-[18px] text-text"
+        >
+          El complejo cambió sus condiciones mientras reservabas. Revísalas y confirma de nuevo.
+        </p>
+      ) : null}
 
       {hadConflict ? (
         <p
@@ -239,6 +250,7 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
               availability.currency,
             )}
             holdMinutes={venue.holdMinutes}
+            policyVersion={venue.policyVersion}
           />
         </div>
       ) : null}

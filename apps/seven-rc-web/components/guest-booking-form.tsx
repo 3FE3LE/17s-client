@@ -18,6 +18,8 @@ export interface GuestBookingFormProps {
   depositPercent: number;
   depositLabel: string;
   holdMinutes: number;
+  /** Venue conditions version the visitor saw; the server rejects the booking if it moved. */
+  policyVersion: number;
 }
 
 const INITIAL: BookingFormState = { fieldErrors: {}, formError: null };
@@ -54,6 +56,7 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
       <input type="hidden" name="pitchId" value={props.pitchId} />
       <input type="hidden" name="startAt" value={props.startAt} />
       <input type="hidden" name="fecha" value={props.date} />
+      <input type="hidden" name="policyVersion" value={props.policyVersion} />
 
       <dl className="m-0 grid gap-xs text-md text-text">
         <div className="grid gap-[2px]">

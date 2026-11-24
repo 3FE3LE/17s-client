@@ -37,6 +37,7 @@ export type CreatePitchBlockInput = ApiInput<ApiSchema<'CreatePitchBlockDto'>>;
 export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDto'>>;
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
+export type CancelReservationByOwnerInput = ApiInput<ApiSchema<'CancelReservationByOwnerDto'>>;
 export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
 export type CreateRecurringReservationInput = ApiInput<ApiSchema<'CreateRecurringReservationDto'>>;
 export type RecurringReservationResult = ApiSchema<'RecurringReservationResponseDto'>;
@@ -90,8 +91,14 @@ export interface SevenRcOwnerApi {
   ) => Promise<ReservationBase>;
   markNoShow: (reservationId: string) => Promise<ReservationBase>;
   completeReservation: (reservationId: string) => Promise<ReservationBase>;
-  /** Venue-side cancel; no cancellation window applies. */
-  ownerCancelReservation: (reservationId: string) => Promise<ReservationBase>;
+  /**
+   * Venue-side cancel; no cancellation window applies. With paid money the
+   * server requires `refundDecision` (400 REFUND_DECISION_REQUIRED otherwise).
+   */
+  ownerCancelReservation: (
+    reservationId: string,
+    input?: CancelReservationByOwnerInput,
+  ) => Promise<ReservationBase>;
   /** Walk-in / phone booking entered from the agenda; created confirmed. */
   createOwnerReservation: (
     venueId: string,
@@ -398,10 +405,15 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         { method: 'POST' },
       );
     },
-    ownerCancelReservation(reservationId) {
+    ownerCancelReservation(reservationId, input) {
       return request<ReservationBase>(
         apiPath('/7rc/reservations/{id}/owner-cancel', { id: reservationId }),
-        { method: 'POST' },
+        {
+          method: 'POST',
+          ...(input
+            ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }
+            : {}),
+        },
       );
     },
     createOwnerReservation(venueId, input) {

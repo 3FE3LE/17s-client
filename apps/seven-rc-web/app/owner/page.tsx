@@ -304,6 +304,10 @@ function OwnerWorkspace() {
     area: NoticeArea;
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Paid reservations: the server requires a refund decision before cancelling.
+  const [refundDecision, setRefundDecision] = useState<'' | 'refund' | 'none_due'>('');
+  const [refundMethod, setRefundMethod] = useState<ReservationPaymentMethod>('cash');
+  const [refundNote, setRefundNote] = useState('');
 
   const paymentDialogRef = useRef<HTMLDialogElement | null>(null);
   const [paymentTarget, setPaymentTarget] = useState<{
@@ -482,6 +486,8 @@ function OwnerWorkspace() {
     flushSync(() => {
       setAction({ kind, reservation, area });
       setActionError(null);
+      setRefundDecision('');
+      setRefundNote('');
       setNotice(null);
     });
     actionDialogRef.current?.showModal();
@@ -495,6 +501,24 @@ function OwnerWorkspace() {
       if (kind === 'cancel_series') {
         if (!reservation.seriesId) throw new Error('La reserva no pertenece a una serie.');
         await mutations.cancel_series.mutateAsync(reservation.seriesId);
+      } else if (kind === 'cancel') {
+        const paid = reservation.paidMinor > 0;
+        if (paid && !refundDecision) {
+          setActionError('Indica si devuelves el dinero o si no corresponde devolución.');
+          return;
+        }
+        if (paid && refundDecision === 'none_due' && !refundNote.trim()) {
+          setActionError('Anota por qué no corresponde devolución.');
+          return;
+        }
+        await mutations.cancel.mutateAsync({
+          reservationId: reservation.id,
+          input: paid
+            ? refundDecision === 'refund'
+              ? { refundDecision, method: refundMethod }
+              : { refundDecision: 'none_due', note: refundNote.trim() }
+            : undefined,
+        });
       } else {
         await mutations[kind].mutateAsync(reservation.id);
       }
@@ -924,15 +948,54 @@ function OwnerWorkspace() {
               {formatSlotWhen(action.reservation.startAt, action.reservation.endAt, timeZone)}
             </p>
             <p className="m-0">{currentAction.body}</p>
-            {(action.kind === 'cancel' || action.kind === 'reject') &&
-            action.reservation.paidMinor > 0 ? (
+            {action.kind === 'reject' && action.reservation.paidMinor > 0 ? (
               <p className="m-0 text-text">
                 Registraste pagos por{' '}
                 {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}. Si
-                los vas a devolver, anota la devolución con “
-                {action.kind === 'reject' ? 'Registrar anticipo' : 'Registrar pago'}” antes de
-                continuar: después la reserva sale de la agenda.
+                los vas a devolver, anota la devolución con “Registrar anticipo” antes de continuar:
+                después la reserva sale de la agenda.
               </p>
+            ) : null}
+            {action.kind === 'cancel' && action.reservation.paidMinor > 0 ? (
+              <div className="grid gap-sm">
+                <p className="m-0 text-text">
+                  Esta reserva tiene{' '}
+                  {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}{' '}
+                  pagados. Antes de cancelar, indica qué pasa con ese dinero.
+                </p>
+                <SelectField
+                  label="Dinero pagado"
+                  name="refundDecision"
+                  value={refundDecision}
+                  onChangeValue={(value) => setRefundDecision(value as '' | 'refund' | 'none_due')}
+                  options={[
+                    { value: '', label: 'Elige una opción' },
+                    { value: 'refund', label: 'Lo devuelvo todo' },
+                    { value: 'none_due', label: 'No corresponde devolución' },
+                  ]}
+                />
+                {refundDecision === 'refund' ? (
+                  <SelectField
+                    label="Medio de la devolución"
+                    name="refundMethod"
+                    value={refundMethod}
+                    onChangeValue={(value) => setRefundMethod(value as ReservationPaymentMethod)}
+                    options={PAYMENT_METHOD_OPTIONS}
+                  />
+                ) : null}
+                {refundDecision === 'none_due' ? (
+                  <HintedInput
+                    name="refundNote"
+                    label="Motivo"
+                    autoComplete="off"
+                    required
+                    maxLength={300}
+                    value={refundNote}
+                    onChangeText={setRefundNote}
+                    hint="Queda anotado en la reserva."
+                  />
+                ) : null}
+              </div>
             ) : null}
             {action.kind === 'confirm' &&
             owesDeposit(action.reservation) &&
@@ -1513,7 +1576,7 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
       return;
     }
     try {
-      await mutation.mutateAsync({
+      const saved = await mutation.mutateAsync({
         ...(normalizedPhone ? { contactPhone: normalizedPhone } : {}),
         paymentInstructions: instructions.trim(),
         depositPercent: parsedDeposit,
@@ -1522,7 +1585,14 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
         bookingHorizonDays: parsedHorizon,
       });
       if (normalizedPhone) setPhone(normalizedPhone);
-      setNotice('Guardaste los ajustes. Las próximas reservas ya usan estas reglas.');
+      const keeping = saved.reservationsKeepingPolicy ?? 0;
+      setNotice(
+        keeping > 0
+          ? `Guardaste los ajustes. Las próximas reservas usan las reglas nuevas; ${keeping} ${
+              keeping === 1 ? 'reserva activa conserva' : 'reservas activas conservan'
+            } las condiciones con que se hicieron.`
+          : 'Guardaste los ajustes. Las próximas reservas ya usan estas reglas.',
+      );
     } catch (caught) {
       setFormError(describeError(caught, 'No se pudieron guardar los ajustes.'));
     }

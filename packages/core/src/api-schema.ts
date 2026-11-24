@@ -1664,6 +1664,10 @@ export interface components {
       holdMinutes: number;
       cancellationWindowHours: number;
       bookingHorizonDays: number;
+      /** @description Moves up when deposit, hold, cancellation window or payment instructions change */
+      policyVersion: number;
+      /** @description Only on settings update: active upcoming reservations that keep the previous conditions (0 when no condition changed) */
+      reservationsKeepingPolicy?: number;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1694,6 +1698,10 @@ export interface components {
       holdMinutes: number;
       cancellationWindowHours: number;
       bookingHorizonDays: number;
+      /** @description Moves up when deposit, hold, cancellation window or payment instructions change */
+      policyVersion: number;
+      /** @description Only on settings update: active upcoming reservations that keep the previous conditions (0 when no condition changed) */
+      reservationsKeepingPolicy?: number;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2040,6 +2048,15 @@ export interface components {
     ReservationSource: 'online' | 'owner' | 'recurring';
     /** @enum {string} */
     ReservationPaymentStatus: 'unpaid' | 'deposit_paid' | 'paid' | 'refunded';
+    PolicySnapshotResponseDto: {
+      /** @description Venue policyVersion when the reservation was created */
+      version: number;
+      depositPercent: number;
+      holdMinutes: number;
+      /** @description Cancellation window that applies to this reservation */
+      cancellationWindowHours: number;
+      paymentInstructions?: string | null;
+    };
     ReservationResponseDto: {
       /** Format: uuid */
       id: string;
@@ -2077,6 +2094,8 @@ export interface components {
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
       /** Format: date-time */
       holdExpiresAt?: string | null;
+      /** @description Conditions frozen at creation; cancel and refunds read only this */
+      policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2125,6 +2144,8 @@ export interface components {
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
       /** Format: date-time */
       holdExpiresAt?: string | null;
+      /** @description Conditions frozen at creation; cancel and refunds read only this */
+      policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2200,6 +2221,8 @@ export interface components {
       paymentStatus: components['schemas']['ReservationPaymentStatus'];
       /** Format: date-time */
       holdExpiresAt?: string | null;
+      /** @description Conditions frozen at creation; cancel and refunds read only this */
+      policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2374,6 +2397,19 @@ export interface components {
       amountMinor: number;
       note?: string;
     };
+    CancelReservationByOwnerDto: {
+      /**
+       * @description Required when the reservation has paid money. `refund` records a refund payment; `none_due` confirms nothing is owed.
+       * @enum {string}
+       */
+      refundDecision?: 'refund' | 'none_due';
+      /** @description Required with `refund` */
+      method?: components['schemas']['ReservationPaymentMethod'];
+      /** @description Minor units to refund; defaults to everything paid. Only with `refund` */
+      amountMinor?: number;
+      /** @description Required with `none_due` */
+      note?: string;
+    };
     CreatePitchBlockDto: {
       /**
        * @description Block start (ISO 8601 with offset or Z)
@@ -2439,6 +2475,9 @@ export interface components {
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
+      paymentInstructions?: string | null;
+      /** @description Send back on booking to detect changed conditions */
+      policyVersion: number;
       bookingHorizonDays: number;
       /**
        * @description Venue-local today
@@ -2488,6 +2527,8 @@ export interface components {
        */
       customerPhone: string;
       notes?: string;
+      /** @description Venue policyVersion the client displayed. If the venue changed its conditions since, the call fails with 409 POLICY_CHANGED. */
+      policyVersion?: number;
     };
     PublicReservationVenueResponseDto: {
       name: string;
@@ -4209,7 +4250,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CancelReservationByOwnerDto'];
+      };
+    };
     responses: {
       /** @description Reservation cancelled */
       201: {

@@ -62,6 +62,7 @@ function venueDto(): Venue {
     depositPercent: 30,
     holdMinutes: 60,
     cancellationWindowHours: 24,
+    policyVersion: 1,
     bookingHorizonDays: 14,
     today: venueToday(),
     pitches: [PITCH],
