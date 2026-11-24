@@ -2397,6 +2397,19 @@ export interface components {
       amountMinor: number;
       note?: string;
     };
+    CancelReservationByOwnerDto: {
+      /**
+       * @description Required when the reservation has paid money. `refund` records a refund payment; `none_due` confirms nothing is owed.
+       * @enum {string}
+       */
+      refundDecision?: 'refund' | 'none_due';
+      /** @description Required with `refund` */
+      method?: components['schemas']['ReservationPaymentMethod'];
+      /** @description Minor units to refund; defaults to everything paid. Only with `refund` */
+      amountMinor?: number;
+      /** @description Required with `none_due` */
+      note?: string;
+    };
     CreatePitchBlockDto: {
       /**
        * @description Block start (ISO 8601 with offset or Z)
@@ -4237,7 +4250,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CancelReservationByOwnerDto'];
+      };
+    };
     responses: {
       /** @description Reservation cancelled */
       201: {
