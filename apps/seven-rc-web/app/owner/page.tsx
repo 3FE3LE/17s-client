@@ -1513,7 +1513,7 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
       return;
     }
     try {
-      await mutation.mutateAsync({
+      const saved = await mutation.mutateAsync({
         ...(normalizedPhone ? { contactPhone: normalizedPhone } : {}),
         paymentInstructions: instructions.trim(),
         depositPercent: parsedDeposit,
@@ -1522,7 +1522,14 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
         bookingHorizonDays: parsedHorizon,
       });
       if (normalizedPhone) setPhone(normalizedPhone);
-      setNotice('Guardaste los ajustes. Las próximas reservas ya usan estas reglas.');
+      const keeping = saved.reservationsKeepingPolicy ?? 0;
+      setNotice(
+        keeping > 0
+          ? `Guardaste los ajustes. Las próximas reservas usan las reglas nuevas; ${keeping} ${
+              keeping === 1 ? 'reserva activa conserva' : 'reservas activas conservan'
+            } las condiciones con que se hicieron.`
+          : 'Guardaste los ajustes. Las próximas reservas ya usan estas reglas.',
+      );
     } catch (caught) {
       setFormError(describeError(caught, 'No se pudieron guardar los ajustes.'));
     }

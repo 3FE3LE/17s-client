@@ -19,6 +19,7 @@ const PROPS: GuestBookingFormProps = {
   depositPercent: 0,
   depositLabel: '$0',
   holdMinutes: 30,
+  policyVersion: 2,
 };
 
 beforeEach(() => {
@@ -55,6 +56,9 @@ describe('GuestBookingForm', () => {
     );
     expect((container.querySelector('input[name="fecha"]') as HTMLInputElement).value).toBe(
       PROPS.date,
+    );
+    expect((container.querySelector('input[name="policyVersion"]') as HTMLInputElement).value).toBe(
+      String(PROPS.policyVersion),
     );
   });
 

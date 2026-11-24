@@ -1664,6 +1664,10 @@ export interface components {
       holdMinutes: number;
       cancellationWindowHours: number;
       bookingHorizonDays: number;
+      /** @description Moves up when deposit, hold, cancellation window or payment instructions change */
+      policyVersion: number;
+      /** @description Only on settings update: active upcoming reservations that keep the previous conditions (0 when no condition changed) */
+      reservationsKeepingPolicy?: number;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1694,6 +1698,10 @@ export interface components {
       holdMinutes: number;
       cancellationWindowHours: number;
       bookingHorizonDays: number;
+      /** @description Moves up when deposit, hold, cancellation window or payment instructions change */
+      policyVersion: number;
+      /** @description Only on settings update: active upcoming reservations that keep the previous conditions (0 when no condition changed) */
+      reservationsKeepingPolicy?: number;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2439,6 +2447,9 @@ export interface components {
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
+      paymentInstructions?: string | null;
+      /** @description Send back on booking to detect changed conditions */
+      policyVersion: number;
       bookingHorizonDays: number;
       /**
        * @description Venue-local today
@@ -2488,6 +2499,8 @@ export interface components {
        */
       customerPhone: string;
       notes?: string;
+      /** @description Venue policyVersion the client displayed. If the venue changed its conditions since, the call fails with 409 POLICY_CHANGED. */
+      policyVersion?: number;
     };
     PublicReservationVenueResponseDto: {
       name: string;
