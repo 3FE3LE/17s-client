@@ -1,8 +1,8 @@
 'use client';
 
 import { buttonRecipe, cardRecipe, cx, pageContainerRecipe } from '@17suit/design-system';
-import { LogOut } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { LogOut } from '../icons';
+import type { LucideIcon } from '../icons';
 import {
   Fragment,
   useSyncExternalStore,

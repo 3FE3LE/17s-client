@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from '../icons';
 import type { PropsWithChildren } from 'react';
 import { AppTitle } from './AppTitle';
 

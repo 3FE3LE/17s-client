@@ -6,7 +6,8 @@
   "exports": {
     "./base": "./base.cjs",
     "./next": "./next.cjs",
-    "./react-native": "./react-native.cjs"
+    "./react-native": "./react-native.cjs",
+    "./i18n": "./i18n.cjs"
   },
   "dependencies": {
     "@eslint/js": "^9.17.0",

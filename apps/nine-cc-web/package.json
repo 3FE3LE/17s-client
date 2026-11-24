@@ -7,6 +7,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "lint:i18n": "eslint -c eslint.i18n.config.cjs .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf .next",
     "dev:product": "pnpm run dev"
