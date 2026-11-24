@@ -17,6 +17,9 @@
 
 ## Verificación
 
+- [ ] `pnpm ready` en verde para el último commit (el hook `pre-push` lo exige)
+- [ ] Un solo PR para esta funcionalidad (no hay otro abierto sobre el mismo alcance; si lo hay, extiende esa rama)
+
 - [ ] `pnpm lint && pnpm typecheck`
 - [ ] Tests relevantes pasan; la cobertura de dominio y servicios no baja de su umbral
 
