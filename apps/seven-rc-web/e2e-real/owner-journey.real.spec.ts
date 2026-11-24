@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { hydrated } from './support/hydrated';
 import { signInAs } from './support/session';
 
 test('new owner picks the role, lands on /owner and creates a venue', async ({ context, page }) => {
@@ -10,10 +11,11 @@ test('new owner picks the role, lands on /owner and creates a venue', async ({ c
   await expect(page).toHaveURL(/\/owner/);
 
   const venueName = `Complejo E2E ${Date.now()}`;
-  const form = page.getByRole('form', { name: /Crear complejo|crear/i });
+  const form = page.getByRole('form', { name: 'Nuevo complejo' });
   await expect(form).toBeVisible();
+  await hydrated(form);
   await form.getByLabel('Nombre del complejo').fill(venueName);
-  await form.getByRole('button', { name: /Crear/i }).click();
+  await form.getByRole('button', { name: 'Crear complejo' }).click();
 
   await expect(page.getByText(venueName).first()).toBeVisible();
 
