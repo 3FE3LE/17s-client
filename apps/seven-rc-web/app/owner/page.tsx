@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
@@ -17,6 +18,9 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { PitchPriceRules } from '@/components/pitch-price-rules';
+import { IntegrationNotice } from '@/components/integration-notice';
+import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { PublishVenueForm } from '@/components/publish-venue-form';
@@ -55,8 +59,10 @@ import {
   useConfigurePitchSlotsMutation,
   useConfirmVenueReservationMutation,
   useCreateVenueMutation,
+  useIntegrationsQuery,
   useCreateVenuePitchMutation,
   useMarkNoShowMutation,
+  useCancelReservationSeriesMutation,
   useOwnerCancelReservationMutation,
   useOwnerVenuePitchesQuery,
   useOwnerVenueReservationsQuery,
@@ -91,7 +97,7 @@ const INACTIVE_STATUSES = new Set(['cancelled', 'rejected', 'expired']);
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 
 type SettledOutcome = 'confirmed' | 'rejected';
-type OwnerActionKind = 'confirm' | 'reject' | 'complete' | 'no_show' | 'cancel';
+type OwnerActionKind = 'confirm' | 'reject' | 'complete' | 'no_show' | 'cancel' | 'cancel_series';
 type NoticeArea = 'pending' | 'agenda';
 
 const ACTION_COPY: Record<
@@ -156,6 +162,16 @@ const ACTION_COPY: Record<
     body: 'El horario quedará libre y el jugador verá la reserva cancelada. No se puede deshacer.',
     done: (name) => `Cancelaste la reserva de ${name}.`,
     fallback: 'No se pudo cancelar la reserva.',
+  },
+  cancel_series: {
+    title: '¿Cancelar toda la serie semanal?',
+    confirmLabel: 'Sí, cancelar serie',
+    pendingLabel: 'Cancelando…',
+    dismissLabel: 'Conservar serie',
+    tone: 'destructive',
+    body: 'Se cancelan las reservas futuras de esta cancha fija. Las ya jugadas quedan en el historial. No se puede deshacer.',
+    done: (name) => `Cancelaste las reservas futuras de la serie de ${name}.`,
+    fallback: 'No se pudo cancelar la serie.',
   },
 };
 
@@ -228,6 +244,7 @@ interface SetupItem {
 
 function OwnerWorkspace() {
   const venuesQuery = useOwnerVenuesQuery();
+  const integrationsQuery = useIntegrationsQuery();
   const venues = venuesQuery.data ?? [];
   const [explicitVenueId, setExplicitVenueId] = useState<string | null>(null);
   const selectedVenue = venues.find((venue) => venue.id === explicitVenueId) ?? venues[0] ?? null;
@@ -272,6 +289,7 @@ function OwnerWorkspace() {
     complete: useCompleteReservationMutation(venueId),
     no_show: useMarkNoShowMutation(venueId),
     cancel: useOwnerCancelReservationMutation(venueId),
+    cancel_series: useCancelReservationSeriesMutation(venueId),
   } as const;
   const [notice, setNotice] = useState<{ area: NoticeArea; message: string } | null>(null);
   // Rows just confirmed/rejected stay visible briefly with their outcome, so the
@@ -475,14 +493,20 @@ function OwnerWorkspace() {
     const { kind, reservation, area } = action;
     setActionError(null);
     try {
-      await mutations[kind].mutateAsync(reservation.id);
+      if (kind === 'cancel_series') {
+        if (!reservation.seriesId) throw new Error('La reserva no pertenece a una serie.');
+        await mutations.cancel_series.mutateAsync(reservation.seriesId);
+      } else {
+        await mutations[kind].mutateAsync(reservation.id);
+      }
       setNotice({ area, message: ACTION_COPY[kind].done(customerLabel(reservation)) });
       // Close first: the dialog returns focus to its opener, which settleRow then moves.
       actionDialogRef.current?.close();
       if (kind === 'confirm') settleRow(reservation, 'confirmed');
       if (kind === 'reject') settleRow(reservation, 'rejected');
       // These remove the row or its menu, so focus moves to where the result is announced.
-      if (kind === 'cancel' || kind === 'no_show') focusById(TODAY_HEADING_ID);
+      if (kind === 'cancel' || kind === 'cancel_series' || kind === 'no_show')
+        focusById(TODAY_HEADING_ID);
     } catch (error) {
       setActionError(describeError(error, ACTION_COPY[kind].fallback));
       refreshAll();
@@ -554,7 +578,21 @@ function OwnerWorkspace() {
         </div>
       ) : null}
 
+      {selectedVenue ? (
+        <p className="m-0">
+          <Link href="/owner/reports" className="text-text underline">
+            Ver reportes de ingresos y ocupación
+          </Link>
+          {' · '}
+          <Link href="/owner/customers" className="text-text underline">
+            Ver clientes
+          </Link>
+        </p>
+      ) : null}
+
       {setupIncomplete ? <SetupChecklist items={setupItems} onGo={goToSetup} /> : null}
+
+      <IntegrationNotice items={integrationsQuery.data ?? []} />
 
       {selectedVenue ? (
         <>
@@ -775,6 +813,14 @@ function OwnerWorkspace() {
               </div>
             )}
           </section>
+
+          <OwnerBalances
+            key={selectedVenue.id}
+            venueId={selectedVenue.id}
+            timeZone={timeZone}
+            todayKey={todayKey}
+            onRecordPayment={(reservation) => openPayment(reservation, 'agenda')}
+          />
         </>
       ) : null}
 
@@ -1152,6 +1198,14 @@ function RowActions({
       run: () => onAction('cancel'),
       destructive: true,
     });
+    if (reservation.seriesId) {
+      items.push({
+        key: 'cancel_series',
+        label: 'Cancelar toda la serie',
+        run: () => onAction('cancel_series'),
+        destructive: true,
+      });
+    }
   }
   if (items.length === 0) return null;
 
@@ -1644,6 +1698,12 @@ function PitchConfig({
       )}
       <PitchPriceForm
         key={`precio-${pitch.id}`}
+        venueId={venueId}
+        currency={currency}
+        pitch={pitch}
+      />
+      <PitchPriceRules
+        key={`tarifas-${pitch.id}-${JSON.stringify(pitch.priceRules)}-${pitch.basePriceMinor}`}
         venueId={venueId}
         currency={currency}
         pitch={pitch}

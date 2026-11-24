@@ -4,11 +4,15 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import type {
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
+  CancelReservationSeriesResult,
   CreateOwnerReservationInput,
+  CreateRecurringReservationInput,
+  RecurringReservationResult,
   CreatePitchBlockInput,
   CreatePitchInput,
   CreateReservationInput,
   CreateVenueInput,
+  IntegrationStatus,
   OwnerVenue,
   Pitch,
   PitchAvailability,
@@ -21,6 +25,7 @@ import type {
   SevenRcOwnerApi,
   SevenRcPlayerApi,
   UpdateVenueSettingsInput,
+  VenueReport,
   VenueReservation,
   VenueSettings,
 } from '../sdk/seven-rc-api';
@@ -38,6 +43,7 @@ export type SevenRcRefreshOptions<TData> = Partial<
 >;
 
 export const sevenRcQueryKeys = {
+  integrations: ['seven-rc', 'integrations'] as const,
   ownerVenues: ['seven-rc', 'owner', 'venues'] as const,
   ownerVenuePitches: (venueId: string) =>
     ['seven-rc', 'owner', 'venues', venueId, 'pitches'] as const,
@@ -45,6 +51,8 @@ export const sevenRcQueryKeys = {
     ['seven-rc', 'owner', 'venues', venueId, 'reservations'] as const,
   ownerVenueReservations: (venueId: string, dateFrom: string, dateTo: string) =>
     ['seven-rc', 'owner', 'venues', venueId, 'reservations', dateFrom, dateTo] as const,
+  ownerVenueReport: (venueId: string, dateFrom: string, dateTo: string) =>
+    ['seven-rc', 'owner', 'venues', venueId, 'report', dateFrom, dateTo] as const,
   playerReservations: ['seven-rc', 'player', 'reservations'] as const,
   playerVenues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
   playerVenuePitches: (venueId: string) =>
@@ -55,6 +63,15 @@ export const sevenRcQueryKeys = {
   pitchAvailability: (pitchId: string, date: string) =>
     ['seven-rc', 'pitches', pitchId, 'availability', date] as const,
 };
+
+export function useSevenRcIntegrationsQuery(api: SevenRcOwnerApi) {
+  return useQuery<IntegrationStatus[]>({
+    queryKey: sevenRcQueryKeys.integrations,
+    queryFn: () => api.listIntegrations(),
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+}
 
 export function useSevenRcOwnerVenuesQuery(api: SevenRcOwnerApi) {
   return useQuery<OwnerVenue[]>({
@@ -158,6 +175,28 @@ export function useSevenRcOwnerVenueReservationsQuery(
     refetchOnMount: false,
     refetchOnReconnect: false,
     ...options,
+  });
+}
+
+export function useSevenRcOwnerVenueReportQuery(
+  api: SevenRcOwnerApi,
+  venueId: string | null,
+  dateFrom: string,
+  dateTo: string,
+) {
+  return useQuery<VenueReport>({
+    queryKey: sevenRcQueryKeys.ownerVenueReport(venueId ?? 'missing', dateFrom, dateTo),
+    queryFn: () => {
+      if (!venueId) {
+        throw new Error('Venue id is required');
+      }
+      return api.getVenueReport(venueId, dateFrom, dateTo);
+    },
+    enabled: Boolean(venueId),
+    staleTime: 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 }
 
@@ -290,6 +329,50 @@ export function useSevenRcCreateOwnerReservationMutation(api: SevenRcOwnerApi, v
   return useMutation<ReservationBase, Error, CreateOwnerReservationInput>({
     mutationFn: (input) => api.createOwnerReservation(venueId, input),
     onSuccess: invalidate,
+  });
+}
+
+export function useSevenRcCreateRecurringReservationMutation(
+  api: SevenRcOwnerApi,
+  venueId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<RecurringReservationResult, Error, CreateRecurringReservationInput>({
+    mutationFn: (input) => api.createRecurringReservation(venueId, input),
+    onSuccess: (_result, input) => {
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.ownerVenueReservationsBase(venueId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: sevenRcQueryKeys.pitchAvailabilityBase(input.pitchId),
+      });
+    },
+  });
+}
+
+/** A series spans many dates and pitches' slots, so refresh every cached availability. */
+export function useSevenRcCancelReservationSeriesMutation(
+  api: SevenRcOwnerApi,
+  venueId?: string | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<CancelReservationSeriesResult, Error, string>({
+    mutationFn: (seriesId) => api.cancelReservationSeries(seriesId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: venueId
+          ? sevenRcQueryKeys.ownerVenueReservationsBase(venueId)
+          : ['seven-rc', 'owner', 'venues'],
+      });
+      void queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === 'seven-rc' &&
+          query.queryKey[1] === 'pitches' &&
+          query.queryKey[3] === 'availability',
+      });
+    },
   });
 }
 

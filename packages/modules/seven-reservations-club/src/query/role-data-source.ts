@@ -119,27 +119,13 @@ export function createExternalPlatformRoleDataSource(options: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json',
       };
-      const primaryResponse = await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/api/platform/me'), {
+      // The server exposes the profile only at `/api/me`; probing other paths
+      // first cost a guaranteed 404 and an extra request per lookup.
+      const response = await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/api/me'), {
         method: 'GET',
         headers,
         cache: 'no-store',
       });
-
-      let response = primaryResponse;
-      if (response.status === 404) {
-        response = await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/api/me'), {
-          method: 'GET',
-          headers,
-          cache: 'no-store',
-        });
-      }
-      if (response.status === 404) {
-        response = await fetchWithTimeout(buildApiUrl(apiBaseUrl, '/me'), {
-          method: 'GET',
-          headers,
-          cache: 'no-store',
-        });
-      }
 
       if (!response.ok) {
         const payload = await parseJsonSafe(response);

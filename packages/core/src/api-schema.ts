@@ -61,6 +61,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/integrations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** List third-party integrations and whether each is real */
+    get: operations['IntegrationsController_list'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/7rc/venues': {
     parameters: {
       query?: never;
@@ -335,6 +352,57 @@ export interface paths {
     /** Register a walk-in / phone booking from the agenda (OWNER) */
     post: operations['SevenReservationsClubController_createOwnerReservation'];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/7rc/venues/{venueId}/report': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Revenue, occupancy and peak-hours report per pitch for a date range (OWNER) */
+    get: operations['SevenReservationsClubController_getVenueReport'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/7rc/venues/{venueId}/recurring-reservations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Create a weekly fixed booking; occurrences that hit a block or another booking are skipped and reported (OWNER) */
+    post: operations['SevenReservationsClubController_createRecurringReservation'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/7rc/reservation-series/{seriesId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Cancel the future occurrences of a weekly series; past ones are kept (OWNER) */
+    delete: operations['SevenReservationsClubController_cancelReservationSeries'];
     options?: never;
     head?: never;
     patch?: never;
@@ -1539,6 +1607,15 @@ export interface components {
        */
       role: components['schemas']['UserRole'];
     };
+    IntegrationStatusResponseDto: {
+      /** @example payments */
+      key: string;
+      /** @example Pagos en línea */
+      label: string;
+      /** @enum {string} */
+      mode: 'dummy' | 'manual' | 'live';
+      note: string;
+    };
     CreateVenueDto: {
       /**
        * @description Human-readable venue name
@@ -1972,6 +2049,11 @@ export interface components {
       pitchId: string;
       /**
        * Format: uuid
+       * @description Set when the reservation is an occurrence of a weekly series
+       */
+      seriesId?: string | null;
+      /**
+       * Format: uuid
        * @description Null for guest and walk-in bookings
        */
       userId?: string | null;
@@ -2013,6 +2095,11 @@ export interface components {
       venueId: string;
       /** Format: uuid */
       pitchId: string;
+      /**
+       * Format: uuid
+       * @description Set when the reservation is an occurrence of a weekly series
+       */
+      seriesId?: string | null;
       /**
        * Format: uuid
        * @description Null for guest and walk-in bookings
@@ -2085,6 +2172,11 @@ export interface components {
       pitchId: string;
       /**
        * Format: uuid
+       * @description Set when the reservation is an occurrence of a weekly series
+       */
+      seriesId?: string | null;
+      /**
+       * Format: uuid
        * @description Null for guest and walk-in bookings
        */
       userId?: string | null;
@@ -2122,6 +2214,88 @@ export interface components {
       user?: components['schemas']['ReservationOwnerUserResponseDto'] | null;
       payments: components['schemas']['ReservationPaymentResponseDto'][];
     };
+    ReportPeakHourResponseDto: {
+      /**
+       * @description Venue-local hour, HH:00
+       * @example 20:00
+       */
+      hour: string;
+      /** @description Occupying reservations starting in that hour */
+      reservations: number;
+    };
+    ReportMetricsResponseDto: {
+      /** @description Sum of paidMinor over every reservation in range, any status */
+      collectedMinor: number;
+      /** @description Unpaid part of the price still owed (pending_confirmation, confirmed, completed) */
+      pendingMinor: number;
+      /**
+       * @description Reservation count per status, every status present
+       * @example {
+       *       "confirmed": 12,
+       *       "cancelled": 3,
+       *       "no_show": 1
+       *     }
+       */
+      reservationsByStatus: {
+        [key: string]: number;
+      };
+      /** @description Minutes of configured slots not covered by an active block */
+      openMinutes: number;
+      /** @description Minutes held by pending_confirmation, confirmed, completed and no_show reservations */
+      bookedMinutes: number;
+      /**
+       * @description bookedMinutes / openMinutes, 0..1
+       * @example 0.4375
+       */
+      occupancyRate: number;
+      /** @description Top 3 venue-local start hours by occupying reservations */
+      peakHours: components['schemas']['ReportPeakHourResponseDto'][];
+    };
+    PitchReportResponseDto: {
+      /** @description Sum of paidMinor over every reservation in range, any status */
+      collectedMinor: number;
+      /** @description Unpaid part of the price still owed (pending_confirmation, confirmed, completed) */
+      pendingMinor: number;
+      /**
+       * @description Reservation count per status, every status present
+       * @example {
+       *       "confirmed": 12,
+       *       "cancelled": 3,
+       *       "no_show": 1
+       *     }
+       */
+      reservationsByStatus: {
+        [key: string]: number;
+      };
+      /** @description Minutes of configured slots not covered by an active block */
+      openMinutes: number;
+      /** @description Minutes held by pending_confirmation, confirmed, completed and no_show reservations */
+      bookedMinutes: number;
+      /**
+       * @description bookedMinutes / openMinutes, 0..1
+       * @example 0.4375
+       */
+      occupancyRate: number;
+      /** @description Top 3 venue-local start hours by occupying reservations */
+      peakHours: components['schemas']['ReportPeakHourResponseDto'][];
+      /** Format: uuid */
+      pitchId: string;
+      name: string;
+    };
+    VenueReportResponseDto: {
+      /** Format: uuid */
+      venueId: string;
+      /** @description ISO 4217; every money amount uses it */
+      currency: string;
+      /** @description IANA zone the range and hours use */
+      timezone: string;
+      /** @example 2026-03-01 */
+      dateFrom: string;
+      /** @example 2026-03-31 */
+      dateTo: string;
+      totals: components['schemas']['ReportMetricsResponseDto'];
+      pitches: components['schemas']['PitchReportResponseDto'][];
+    };
     CreateOwnerReservationDto: {
       /** Format: uuid */
       pitchId: string;
@@ -2141,6 +2315,57 @@ export interface components {
       /** @description Override the slot price (minor units), e.g. a negotiated rate */
       priceMinor?: number;
       notes?: string;
+    };
+    CreateRecurringReservationDto: {
+      /** Format: uuid */
+      pitchId: string;
+      /**
+       * Format: date-time
+       * @description First occurrence start (ISO 8601), aligned to a slot
+       * @example 2026-10-10T01:00:00.000Z
+       */
+      startAt: string;
+      /** @description Total number of weekly occurrences, first included (1-52) */
+      occurrences?: number;
+      /**
+       * @description Last venue-local day an occurrence may start on (YYYY-MM-DD)
+       * @example 2026-12-18
+       */
+      untilDate?: string;
+      /** @example Equipo Los Pibes */
+      customerName: string;
+      /**
+       * @description E.164
+       * @example +573001234567
+       */
+      customerPhone?: string;
+      /** @description Negotiated per-occurrence price (minor units) */
+      priceMinor?: number;
+      notes?: string;
+    };
+    SkippedOccurrenceResponseDto: {
+      /**
+       * Format: date-time
+       * @description Start of the occurrence that was not booked
+       */
+      startAt: string;
+      /**
+       * @description BLOCKED: pitch block; RESERVED: another booking; UNAVAILABLE: outside opening hours or already past
+       * @enum {string}
+       */
+      reason: 'BLOCKED' | 'RESERVED' | 'UNAVAILABLE';
+    };
+    RecurringReservationResponseDto: {
+      /** Format: uuid */
+      seriesId: string;
+      created: components['schemas']['ReservationResponseDto'][];
+      skipped: components['schemas']['SkippedOccurrenceResponseDto'][];
+    };
+    CancelReservationSeriesResponseDto: {
+      /** Format: uuid */
+      seriesId: string;
+      /** @description Future occurrences cancelled by this call */
+      cancelledCount: number;
     };
     RecordReservationPaymentDto: {
       kind: components['schemas']['ReservationPaymentKind'];
@@ -2505,6 +2730,25 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  IntegrationsController_list: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['IntegrationStatusResponseDto'][];
         };
       };
     };
@@ -3610,6 +3854,192 @@ export interface operations {
       };
       /** @description Slot taken or blocked */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_getVenueReport: {
+    parameters: {
+      query: {
+        /** @description Range start, venue-local date (inclusive) */
+        dateFrom: string;
+        /** @description Range end, venue-local date (inclusive); at most 366 days */
+        dateTo: string;
+      };
+      header?: never;
+      path: {
+        /** @description Venue id */
+        venueId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Report for the owner venue; dates are venue-local */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['VenueReportResponseDto'];
+        };
+      };
+      /** @description Invalid date range or range longer than 366 days */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ValidationErrorResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Venue not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_createRecurringReservation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Venue id */
+        venueId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateRecurringReservationDto'];
+      };
+    };
+    responses: {
+      /** @description Series created with the booked and skipped occurrences */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['RecurringReservationResponseDto'];
+        };
+      };
+      /** @description Invalid range or misaligned first slot */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ValidationErrorResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Venue or pitch not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description No occurrence of the series could be booked */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_cancelReservationSeries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Series id */
+        seriesId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Future occurrences cancelled */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CancelReservationSeriesResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Series not found */
+      404: {
         headers: {
           [name: string]: unknown;
         };

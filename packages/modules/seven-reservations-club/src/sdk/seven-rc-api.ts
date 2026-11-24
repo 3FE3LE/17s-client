@@ -19,6 +19,8 @@ export type ReservationStatus = ApiSchema<'ReservationStatus'>;
 export type ReservationBase = ApiSchema<'ReservationResponseDto'>;
 export type ReservationWithVenuePitch = ApiSchema<'ReservationWithVenuePitchResponseDto'>;
 export type VenueReservation = ApiSchema<'VenueReservationResponseDto'>;
+export type VenueReport = ApiSchema<'VenueReportResponseDto'>;
+export type PitchReport = ApiSchema<'PitchReportResponseDto'>;
 export type AvailabilitySlotStatus = ApiSchema<'AvailabilitySlotStatus'>;
 export type AvailabilitySlot = ApiSchema<'AvailabilitySlotResponseDto'>;
 export type PitchAvailability = ApiSchema<'PitchAvailabilityResponseDto'>;
@@ -36,9 +38,13 @@ export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDt
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
 export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
+export type CreateRecurringReservationInput = ApiInput<ApiSchema<'CreateRecurringReservationDto'>>;
+export type RecurringReservationResult = ApiSchema<'RecurringReservationResponseDto'>;
+export type CancelReservationSeriesResult = ApiSchema<'CancelReservationSeriesResponseDto'>;
 export type ReservationPaymentKind = ApiSchema<'ReservationPaymentKind'>;
 export type ReservationPaymentMethod = ApiSchema<'ReservationPaymentMethod'>;
 export type VenueSettings = ApiSchema<'VenueResponseDto'>;
+export type IntegrationStatus = ApiSchema<'IntegrationStatusResponseDto'>;
 
 export interface SevenRcApiClientOptions {
   apiBaseUrls: string[];
@@ -47,6 +53,7 @@ export interface SevenRcApiClientOptions {
 }
 
 export interface SevenRcOwnerApi {
+  listIntegrations: () => Promise<IntegrationStatus[]>;
   listOwnerVenues: () => Promise<OwnerVenue[]>;
   createVenue: (input: CreateVenueInput) => Promise<OwnerVenue>;
   listOwnerVenuePitches: (venueId: string) => Promise<PitchWithPricing[]>;
@@ -61,6 +68,8 @@ export interface SevenRcOwnerApi {
     dateTo: string,
     cacheBuster?: string,
   ) => Promise<VenueReservation[]>;
+  /** Revenue, occupancy and peak hours per pitch for a venue-local date range (max 366 days). */
+  getVenueReport: (venueId: string, dateFrom: string, dateTo: string) => Promise<VenueReport>;
   confirmReservation: (reservationId: string) => Promise<ReservationBase>;
   rejectReservation: (reservationId: string) => Promise<ReservationBase>;
   /** Partial update: omitted fields keep their stored value. */
@@ -88,6 +97,16 @@ export interface SevenRcOwnerApi {
     venueId: string,
     input: CreateOwnerReservationInput,
   ) => Promise<ReservationBase>;
+  /**
+   * Weekly fixed booking. Occurrences that hit a block or another booking come back in
+   * `skipped`; rejects with 409 only when none could be booked.
+   */
+  createRecurringReservation: (
+    venueId: string,
+    input: CreateRecurringReservationInput,
+  ) => Promise<RecurringReservationResult>;
+  /** Cancels the future pending/confirmed occurrences; past ones are kept. */
+  cancelReservationSeries: (seriesId: string) => Promise<CancelReservationSeriesResult>;
   /** Active blocks of a pitch that end after `from` (ISO instant), ordered by start. */
   listPitchBlocks: (pitchId: string, from?: string) => Promise<PitchBlock[]>;
   /** Rejects with `SevenRcApiError` 409 and `conflicts` when active reservations overlap. */
@@ -256,6 +275,9 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
   const request = createRequest(options);
 
   return {
+    listIntegrations() {
+      return request<IntegrationStatus[]>('/integrations', { method: 'GET', cache: 'no-store' });
+    },
     listOwnerVenues() {
       return request<OwnerVenue[]>('/7rc/owner/venues', {
         method: 'GET',
@@ -308,6 +330,16 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
       }
       return request<VenueReservation[]>(
         `${apiPath('/7rc/venues/{venueId}/reservations', { venueId })}?${query}`,
+        {
+          method: 'GET',
+          cache: 'no-store',
+        },
+      );
+    },
+    getVenueReport(venueId, dateFrom, dateTo) {
+      const query = new URLSearchParams({ dateFrom, dateTo });
+      return request<VenueReport>(
+        `${apiPath('/7rc/venues/{venueId}/report', { venueId })}?${query}`,
         {
           method: 'GET',
           cache: 'no-store',
@@ -378,6 +410,22 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
+    },
+    createRecurringReservation(venueId, input) {
+      return request<RecurringReservationResult>(
+        apiPath('/7rc/venues/{venueId}/recurring-reservations', { venueId }),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        },
+      );
+    },
+    cancelReservationSeries(seriesId) {
+      return request<CancelReservationSeriesResult>(
+        apiPath('/7rc/reservation-series/{seriesId}', { seriesId }),
+        { method: 'DELETE' },
+      );
     },
     listPitchBlocks(pitchId, from) {
       const query = from ? `?${new URLSearchParams({ from })}` : '';
