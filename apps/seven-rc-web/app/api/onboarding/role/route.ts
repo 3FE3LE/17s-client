@@ -1,15 +1,17 @@
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/nextjs/server';
 import type { SevenReservationsClubSetRolePayload } from '@17suit/module-seven-reservations-club';
 import { NextResponse } from 'next/server';
 import { isAppRole } from '@/lib/role';
+import { isFakeAuthEnabled } from '@/lib/fake-auth';
 import { persistOnboardingRole } from '@/lib/platform-api';
+import { getServerAuth } from '@/lib/server-auth';
 
 interface SetRoleBody {
   role?: unknown;
 }
 
 export async function POST(request: Request) {
-  const { userId, getToken } = await auth();
+  const { userId, getToken } = await getServerAuth();
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -32,12 +34,14 @@ export async function POST(request: Request) {
   try {
     await persistOnboardingRole(token, role);
 
-    const client = await clerkClient();
-    await client.users.updateUserMetadata(userId, {
-      publicMetadata: {
-        role,
-      },
-    });
+    if (!isFakeAuthEnabled()) {
+      const client = await clerkClient();
+      await client.users.updateUserMetadata(userId, {
+        publicMetadata: {
+          role,
+        },
+      });
+    }
 
     return NextResponse.json({ ok: true, role });
   } catch (error) {

@@ -1,7 +1,9 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { currentUser } from '@clerk/nextjs/server';
 import { extractSevenReservationsClubRoleFromMePayload } from '@17suit/module-seven-reservations-club';
 import { isAppRole, type AppRole } from './role';
+import { isFakeAuthEnabled } from './fake-auth';
 import { fetchPlatformMe } from './platform-api';
+import { getServerAuth } from './server-auth';
 
 export interface CurrentUserRoleResult {
   role: AppRole | null;
@@ -9,7 +11,7 @@ export interface CurrentUserRoleResult {
 }
 
 export async function getCurrentUserRole(): Promise<CurrentUserRoleResult> {
-  const { userId, getToken } = await auth();
+  const { userId, getToken } = await getServerAuth();
 
   if (!userId) {
     return { role: null, source: 'none' };
@@ -27,6 +29,10 @@ export async function getCurrentUserRole(): Promise<CurrentUserRoleResult> {
     } catch {
       // Fall back to Clerk metadata when backend is unavailable.
     }
+  }
+
+  if (isFakeAuthEnabled()) {
+    return { role: null, source: 'none' };
   }
 
   const user = await currentUser();
