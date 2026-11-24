@@ -32,6 +32,7 @@ import {
   useSevenRcConfigurePitchPricingMutation,
   useSevenRcConfirmVenueReservationMutation,
   useSevenRcConfigurePitchSlotsMutation,
+  useSevenRcCustomerHistoryQuery,
   useSevenRcMarkNoShowMutation,
   useSevenRcOwnerCancelReservationMutation,
   useSevenRcRecordReservationPaymentMutation,
@@ -152,6 +153,11 @@ export function useCancelReservationSeriesMutation(venueId?: string | null) {
 export function useMarkNoShowMutation(venueId?: string | null) {
   const api = useOwnerApi();
   return useSevenRcMarkNoShowMutation(api, venueId);
+}
+
+export function useCustomerHistoryQuery(venueId?: string | null, phone?: string | null) {
+  const api = useOwnerApi();
+  return useSevenRcCustomerHistoryQuery(api, venueId, phone);
 }
 
 export function useCompleteReservationMutation(venueId?: string | null) {

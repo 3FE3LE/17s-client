@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import type {
   ConfigurePitchPolicyInput,
+  CustomerHistory,
+  MarkNoShowInput,
   ConfigurePitchPricingInput,
   ConfigurePitchSlotsInput,
   CancelReservationSeriesResult,
@@ -59,6 +61,8 @@ export const sevenRcQueryKeys = {
   playerVenues: (query?: string) => ['seven-rc', 'player', 'venues', query ?? 'all'] as const,
   playerVenuePitches: (venueId: string) =>
     ['seven-rc', 'player', 'venues', venueId, 'pitches'] as const,
+  customerHistory: (venueId: string, phone: string) =>
+    ['seven-rc', 'owner', 'venues', venueId, 'customer-history', phone] as const,
   pitchBlocks: (pitchId: string) => ['seven-rc', 'pitches', pitchId, 'blocks'] as const,
   pitchAvailabilityBase: (pitchId: string) =>
     ['seven-rc', 'pitches', pitchId, 'availability'] as const,
@@ -316,9 +320,23 @@ export function useSevenRcRecordReservationPaymentMutation(
 export function useSevenRcMarkNoShowMutation(api: SevenRcOwnerApi, venueId?: string | null) {
   const invalidate = useInvalidateOwnerReservation(venueId);
 
-  return useMutation<ReservationBase, Error, string>({
-    mutationFn: (reservationId) => api.markNoShow(reservationId),
+  return useMutation<ReservationBase, Error, { reservationId: string; input?: MarkNoShowInput }>({
+    mutationFn: ({ reservationId, input }) => api.markNoShow(reservationId, input),
     onSuccess: invalidate,
+  });
+}
+
+/** Per-customer record at one venue. Disabled until both ids are known. */
+export function useSevenRcCustomerHistoryQuery(
+  api: SevenRcOwnerApi,
+  venueId?: string | null,
+  phone?: string | null,
+) {
+  return useQuery<CustomerHistory>({
+    queryKey: sevenRcQueryKeys.customerHistory(venueId ?? 'missing', phone ?? 'missing'),
+    queryFn: () => api.getCustomerHistory(venueId as string, phone as string),
+    enabled: Boolean(venueId && phone),
+    staleTime: 60_000,
   });
 }
 

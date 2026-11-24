@@ -2,7 +2,19 @@
 
 import { AppButton } from '@17suit/ui';
 import { useState, type FormEvent } from 'react';
-import { HintedInput, InlineError, InlineStatus } from '@/components/seven-rc-ui';
+import {
+  HintedInput,
+  InlineError,
+  InlineStatus,
+  SelectField,
+  TextAreaField,
+} from '@/components/seven-rc-ui';
+import {
+  asDepositPolicy,
+  DEPOSIT_POLICY_LABEL,
+  DEPOSIT_POLICY_OPTIONS,
+  type DepositPolicy,
+} from '@/lib/deposit-policy';
 import {
   useConfigurePitchPolicyMutation,
   type OwnerVenue,
@@ -61,7 +73,13 @@ export function PitchPolicyForm({
   venueId: string;
   venue: Pick<
     OwnerVenue,
-    'depositPercent' | 'holdMinutes' | 'cancellationWindowHours' | 'paymentInstructions'
+    | 'depositPercent'
+    | 'holdMinutes'
+    | 'cancellationWindowHours'
+    | 'paymentInstructions'
+    | 'lateCancelDeposit'
+    | 'noShowDeposit'
+    | 'conditionsText'
   >;
   pitch: PitchWithPricing;
 }) {
@@ -73,6 +91,10 @@ export function PitchPolicyForm({
       pitch.cancellationWindowHours === null ? '' : String(pitch.cancellationWindowHours),
   });
   const [instructions, setInstructions] = useState(pitch.paymentInstructions ?? '');
+  // '' = inherit the venue.
+  const [lateCancel, setLateCancel] = useState<DepositPolicy | ''>(pitch.lateCancelDeposit ?? '');
+  const [noShow, setNoShow] = useState<DepositPolicy | ''>(pitch.noShowDeposit ?? '');
+  const [conditionsText, setConditionsText] = useState(pitch.conditionsText ?? '');
   const [errors, setErrors] = useState<Partial<Record<NumericKey, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -97,6 +119,9 @@ export function PitchPolicyForm({
       await mutation.mutateAsync({
         ...parsed,
         paymentInstructions: instructions.trim() === '' ? null : instructions.trim(),
+        lateCancelDeposit: lateCancel === '' ? null : lateCancel,
+        noShowDeposit: noShow === '' ? null : noShow,
+        conditionsText: conditionsText.trim() === '' ? null : conditionsText.trim(),
       });
       setNotice(
         `Guardaste las condiciones de ${pitch.name}. Los campos vacíos usan las del complejo.`,
@@ -162,6 +187,43 @@ export function PitchPolicyForm({
           setNotice(null);
         }}
         hint={instructions.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+      />
+      <div className="grid gap-sm md:grid-cols-2">
+        <SelectField
+          label="Cancelación tardía: anticipo"
+          name="lateCancelDeposit"
+          value={lateCancel}
+          onChangeValue={(value) => setLateCancel(value === '' ? '' : asDepositPolicy(value))}
+          options={[
+            {
+              value: '',
+              label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.lateCancelDeposit]})`,
+            },
+            ...DEPOSIT_POLICY_OPTIONS,
+          ]}
+        />
+        <SelectField
+          label="No asistencia: anticipo"
+          name="noShowDeposit"
+          value={noShow}
+          onChangeValue={(value) => setNoShow(value === '' ? '' : asDepositPolicy(value))}
+          options={[
+            {
+              value: '',
+              label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.noShowDeposit]})`,
+            },
+            ...DEPOSIT_POLICY_OPTIONS,
+          ]}
+        />
+      </div>
+      <TextAreaField
+        label="Condiciones adicionales"
+        name="conditionsText"
+        value={conditionsText}
+        onChangeValue={setConditionsText}
+        maxLength={1000}
+        placeholder={venue.conditionsText ?? ''}
+        hint={conditionsText.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
       />
       <div>
         <AppButton type="submit" fullWidth={false} disabled={mutation.isPending}>

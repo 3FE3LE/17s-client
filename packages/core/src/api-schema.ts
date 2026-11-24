@@ -216,6 +216,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/7rc/venues/{venueId}/customer-history': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** No-shows, late cancels and completed bookings of a customer by phone (OWNER) */
+    get: operations['SevenReservationsClubController_getCustomerHistory'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/7rc/pitches/{pitchId}/policy': {
     parameters: {
       query?: never;
@@ -1660,6 +1677,8 @@ export interface components {
        */
       currency?: string;
     };
+    /** @enum {string} */
+    DepositPolicy: 'refund' | 'retain' | 'owner_decides';
     VenueResponseDto: {
       /** Format: uuid */
       id: string;
@@ -1680,6 +1699,9 @@ export interface components {
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
+      lateCancelDeposit: components['schemas']['DepositPolicy'];
+      noShowDeposit: components['schemas']['DepositPolicy'];
+      conditionsText?: string | null;
       bookingHorizonDays: number;
       /** @description Moves up when deposit, hold, cancellation window or payment instructions change */
       policyVersion: number;
@@ -1714,6 +1736,9 @@ export interface components {
       depositPercent: number;
       holdMinutes: number;
       cancellationWindowHours: number;
+      lateCancelDeposit: components['schemas']['DepositPolicy'];
+      noShowDeposit: components['schemas']['DepositPolicy'];
+      conditionsText?: string | null;
       bookingHorizonDays: number;
       /** @description Moves up when deposit, hold, cancellation window or payment instructions change */
       policyVersion: number;
@@ -1770,6 +1795,18 @@ export interface components {
       cancellationWindowHours?: number;
       /** @description How many days ahead players can book */
       bookingHorizonDays?: number;
+      /**
+       * @description Deposit on a late cancellation. Recorded and shown; the owner handles the money
+       * @enum {string}
+       */
+      lateCancelDeposit?: 'refund' | 'retain' | 'owner_decides';
+      /**
+       * @description Deposit when the player does not show up
+       * @enum {string}
+       */
+      noShowDeposit?: 'refund' | 'retain' | 'owner_decides';
+      /** @description Free-text conditions shown before booking */
+      conditionsText?: string;
     };
     ValidationErrorResponseDto: {
       /** @example 400 */
@@ -1825,6 +1862,12 @@ export interface components {
       cancellationWindowHours: number | null;
       /** @description Null inherits the venue */
       paymentInstructions: string | null;
+      /** @description Null inherits the venue */
+      lateCancelDeposit: components['schemas']['DepositPolicy'] | null;
+      /** @description Null inherits the venue */
+      noShowDeposit: components['schemas']['DepositPolicy'] | null;
+      /** @description Null inherits the venue */
+      conditionsText: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1931,6 +1974,12 @@ export interface components {
       cancellationWindowHours: number | null;
       /** @description Null inherits the venue */
       paymentInstructions: string | null;
+      /** @description Null inherits the venue */
+      lateCancelDeposit: components['schemas']['DepositPolicy'] | null;
+      /** @description Null inherits the venue */
+      noShowDeposit: components['schemas']['DepositPolicy'] | null;
+      /** @description Null inherits the venue */
+      conditionsText: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2010,6 +2059,18 @@ export interface components {
       /** @description Peak/off-peak overrides; first match wins */
       rules: components['schemas']['PitchPriceRuleDto'][];
     };
+    CustomerHistoryResponseDto: {
+      /** @example +573001234567 */
+      phone: string;
+      /** @description Reservations found for this phone (latest 500) */
+      total: number;
+      completed: number;
+      noShows: number;
+      /** @description Cancelled after the window of the policy they booked under */
+      lateCancels: number;
+      /** Format: date-time */
+      lastNoShowAt?: string | null;
+    };
     ConfigurePitchPolicyDto: {
       /** @description Deposit % for this pitch. Null inherits the venue */
       depositPercent?: number | null;
@@ -2019,6 +2080,18 @@ export interface components {
       cancellationWindowHours?: number | null;
       /** @description Payment instructions for this pitch. Null inherits */
       paymentInstructions?: string | null;
+      /**
+       * @description Deposit on a late cancellation. Null inherits
+       * @enum {string|null}
+       */
+      lateCancelDeposit?: 'refund' | 'retain' | 'owner_decides' | null;
+      /**
+       * @description Deposit on a no-show. Null inherits
+       * @enum {string|null}
+       */
+      noShowDeposit?: 'refund' | 'retain' | 'owner_decides' | null;
+      /** @description Free-text conditions for this pitch. Null inherits */
+      conditionsText?: string | null;
     };
     /** @enum {string} */
     AvailabilitySlotStatus: 'AVAILABLE' | 'RESERVED' | 'BLOCKED' | 'PAST';
@@ -2099,7 +2172,15 @@ export interface components {
       /** @description Cancellation window that applies to this reservation */
       cancellationWindowHours: number;
       paymentInstructions?: string | null;
+      lateCancelDeposit: components['schemas']['DepositPolicy'];
+      noShowDeposit: components['schemas']['DepositPolicy'];
+      conditionsText?: string | null;
     };
+    /**
+     * @description What the owner did with the deposit after a cancel or no-show
+     * @enum {string}
+     */
+    DepositOutcome: 'none' | 'refunded' | 'retained';
     ReservationResponseDto: {
       /** Format: uuid */
       id: string;
@@ -2139,6 +2220,11 @@ export interface components {
       holdExpiresAt?: string | null;
       /** @description Conditions frozen at creation; cancel and refunds read only this */
       policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
+      /** @description What the owner did with the deposit after a cancel or no-show */
+      depositOutcome: components['schemas']['DepositOutcome'];
+      /** Format: date-time */
+      depositOutcomeAt?: string | null;
+      depositOutcomeNote?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2189,6 +2275,11 @@ export interface components {
       holdExpiresAt?: string | null;
       /** @description Conditions frozen at creation; cancel and refunds read only this */
       policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
+      /** @description What the owner did with the deposit after a cancel or no-show */
+      depositOutcome: components['schemas']['DepositOutcome'];
+      /** Format: date-time */
+      depositOutcomeAt?: string | null;
+      depositOutcomeNote?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2266,6 +2357,11 @@ export interface components {
       holdExpiresAt?: string | null;
       /** @description Conditions frozen at creation; cancel and refunds read only this */
       policySnapshot: components['schemas']['PolicySnapshotResponseDto'];
+      /** @description What the owner did with the deposit after a cancel or no-show */
+      depositOutcome: components['schemas']['DepositOutcome'];
+      /** Format: date-time */
+      depositOutcomeAt?: string | null;
+      depositOutcomeNote?: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -2440,6 +2536,14 @@ export interface components {
       amountMinor: number;
       note?: string;
     };
+    MarkNoShowDto: {
+      /**
+       * @description Defaults to the booked policy when it says refund or retain
+       * @enum {string}
+       */
+      depositOutcome?: 'refunded' | 'retained';
+      note?: string;
+    };
     CancelReservationByOwnerDto: {
       /**
        * @description Required when the reservation has paid money. `refund` records a refund payment; `none_due` confirms nothing is owed.
@@ -2512,6 +2616,12 @@ export interface components {
       cancellationWindowHours: number;
       /** @description Resolved */
       paymentInstructions?: string | null;
+      /** @description Resolved */
+      lateCancelDeposit: components['schemas']['DepositPolicy'];
+      /** @description Resolved */
+      noShowDeposit: components['schemas']['DepositPolicy'];
+      /** @description Resolved */
+      conditionsText?: string | null;
     };
     PublicVenueResponseDto: {
       /** Format: uuid */
@@ -2527,6 +2637,9 @@ export interface components {
       holdMinutes: number;
       cancellationWindowHours: number;
       paymentInstructions?: string | null;
+      lateCancelDeposit: components['schemas']['DepositPolicy'];
+      noShowDeposit: components['schemas']['DepositPolicy'];
+      conditionsText?: string | null;
       /** @description Send back on booking to detect changed conditions */
       policyVersion: number;
       bookingHorizonDays: number;
@@ -2611,6 +2724,9 @@ export interface components {
       holdExpiresAt?: string | null;
       /** Format: date-time */
       cancellableUntil: string;
+      /** @description Conditions the player accepted when booking */
+      policy: components['schemas']['PolicySnapshotResponseDto'];
+      depositOutcome: components['schemas']['DepositOutcome'];
       venue: components['schemas']['PublicReservationVenueResponseDto'];
       pitch: components['schemas']['PublicReservationPitchResponseDto'];
     };
@@ -3389,6 +3505,58 @@ export interface operations {
         };
       };
       /** @description Pitch not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_getCustomerHistory: {
+    parameters: {
+      query: {
+        /** @description Customer phone in E.164 */
+        phone: string;
+      };
+      header?: never;
+      path: {
+        /** @description Venue id */
+        venueId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CustomerHistoryResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Venue not found */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4305,7 +4473,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        'application/json': components['schemas']['MarkNoShowDto'];
+      };
+    };
     responses: {
       /** @description Reservation marked no-show */
       201: {
