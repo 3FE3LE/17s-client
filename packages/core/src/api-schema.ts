@@ -2643,6 +2643,34 @@ export interface components {
       /** @description Free-text instructions read aloud. Filled from block metadata + circle instructions when available; falls back to the block's medication name + dosage. */
       instructions: string;
     };
+    ApiErrorResponse: {
+      /** @example 404 */
+      statusCode: number;
+      /**
+       * @description Stable machine code.
+       * @example NOT_FOUND
+       */
+      code: string;
+      /**
+       * @description Key in the client `errors` i18n catalog.
+       * @example notFound
+       */
+      errorKey: string;
+      /** @description Interpolation values for the translated message. */
+      params: {
+        [key: string]: string | number;
+      };
+      /** @description Field-level problems: property name to technical messages. */
+      fields: {
+        [key: string]: string[];
+      };
+      /**
+       * @description Technical English. Not for end users.
+       * @example Venue not found
+       */
+      message: string;
+      traceId: string | null;
+    };
   };
   responses: never;
   parameters: never;
