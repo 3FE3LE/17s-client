@@ -6,7 +6,11 @@ export default function IndexScreen() {
   const { user } = useUser();
 
   return (
-    <AppFrame appName="Fifteen All Check" subtitle="UI compartida desde @17suit/ui">
+    <AppFrame
+      showLanguageSelect
+      appName="Fifteen All Check"
+      subtitle="UI compartida desde @17suit/ui"
+    >
       <AppProfile
         fullName={user?.fullName ?? null}
         email={user?.primaryEmailAddress?.emailAddress ?? null}

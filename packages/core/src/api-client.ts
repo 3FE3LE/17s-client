@@ -21,6 +21,12 @@ export interface ApiErrorOptions {
   path?: string;
   payload?: unknown;
   cause?: unknown;
+  /** Key of the `errors` i18n catalog, from the server error contract. */
+  errorKey?: string;
+  params?: Record<string, string | number>;
+  fields?: Record<string, string[]>;
+  /** Server-side trace id, for support and log correlation. */
+  traceId?: string;
 }
 
 export class ApiError extends Error {
@@ -28,6 +34,10 @@ export class ApiError extends Error {
   readonly status?: number;
   readonly path?: string;
   readonly payload?: unknown;
+  readonly errorKey?: string;
+  readonly params?: Record<string, string | number>;
+  readonly fields?: Record<string, string[]>;
+  readonly traceId?: string;
 
   constructor(options: ApiErrorOptions) {
     super(options.message);
@@ -45,6 +55,18 @@ export class ApiError extends Error {
     }
     if (options.cause !== undefined) {
       this.cause = options.cause;
+    }
+    if (options.errorKey !== undefined) {
+      this.errorKey = options.errorKey;
+    }
+    if (options.params !== undefined) {
+      this.params = options.params;
+    }
+    if (options.fields !== undefined) {
+      this.fields = options.fields;
+    }
+    if (options.traceId !== undefined) {
+      this.traceId = options.traceId;
     }
   }
 }
@@ -109,6 +131,7 @@ export class ApiClient {
         status: response.status,
         path,
         payload,
+        ...readErrorContract(payload),
       });
     }
 
@@ -175,6 +198,22 @@ async function parseResponsePayload(response: Response): Promise<unknown> {
       return null;
     }
   }
+}
+
+/** Reads `{ errorKey, params, fields, traceId }` from the server error body, when present. */
+function readErrorContract(
+  payload: unknown,
+): Pick<ApiErrorOptions, 'errorKey' | 'params' | 'fields' | 'traceId'> {
+  if (!payload || typeof payload !== 'object') return {};
+  const body = payload as Record<string, unknown>;
+  const isRecord = (value: unknown): value is Record<string, never> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+  return {
+    ...(typeof body.errorKey === 'string' ? { errorKey: body.errorKey } : {}),
+    ...(isRecord(body.params) ? { params: body.params } : {}),
+    ...(isRecord(body.fields) ? { fields: body.fields } : {}),
+    ...(typeof body.traceId === 'string' ? { traceId: body.traceId } : {}),
+  };
 }
 
 function extractErrorMessage(payload: unknown, fallback: string): string {

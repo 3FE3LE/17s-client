@@ -28,7 +28,7 @@ function eslintStaged(files) {
   }
   return [...groups].map(
     ([dir, rel]) =>
-      `pnpm --dir ${path.relative(ROOT, dir)} exec eslint --fix --max-warnings=0 ${rel.join(' ')}`,
+      `pnpm --dir ${path.relative(ROOT, dir)} exec eslint --fix --no-warn-ignored --max-warnings=0 ${rel.join(' ')}`,
   );
 }
 

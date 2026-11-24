@@ -16,6 +16,8 @@ interface ScreenProps extends PropsWithChildren {
    * screen's primary action; it rises above the keyboard with the content.
    */
   footer?: ReactNode;
+  /** Show the language picker below the content (sign-in and home screens). */
+  showLanguageSelect?: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export function Screen({
   onRefresh,
   refreshing,
   footer,
+  showLanguageSelect = false,
   children,
 }: ScreenProps) {
   const router = useRouter();
@@ -53,6 +56,7 @@ export function Screen({
       <AppFrame
         appName={title}
         automaticallyAdjustKeyboardInsets={!resizeForKeyboard}
+        showLanguageSelect={showLanguageSelect}
         {...(subtitle ? { subtitle } : {})}
         {...(back && canGoBack ? { onBack: () => router.back() } : {})}
         {...(onRefresh ? { onRefresh, refreshing: Boolean(refreshing) } : {})}

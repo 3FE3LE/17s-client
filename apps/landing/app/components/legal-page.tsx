@@ -1,22 +1,26 @@
 import Link from 'next/link';
+import type { Locale } from '@17suit/i18n';
 import type { ReactNode, SVGProps } from 'react';
-import { SiteHeader } from './landing-ui';
+import { getT } from '../i18n';
+import { localePath } from '../lib/locale-path';
+import { SiteHeader } from './site-header';
 
 /*
- * Shared structure for the placeholder legal pages (/privacidad, /terminos).
+ * Shared structure for the placeholder legal pages (/privacy, /terms).
  * The owner writes the legal text; this component only renders the outline.
  * Do not add legal or data-handling claims here.
  */
 
 export interface LegalSection {
-  /** Stable anchor id; other pages link to it (e.g. /privacidad#acceso-a-gmail). */
+  /** Stable anchor id; other pages link to it (e.g. /privacy#gmail-access). */
   id: string;
   title: string;
-  /** Points the reader to /contacto while the section text is pending. */
+  /** Points the reader to /contact while the section text is pending. */
   linksToContact?: boolean;
 }
 
 interface LegalPageProps {
+  locale: Locale;
   title: string;
   description: string;
   sections: readonly LegalSection[];
@@ -58,7 +62,8 @@ export function ReviewNotice({ children }: { children: ReactNode }) {
   );
 }
 
-export function LegalPage({ title, description, sections }: LegalPageProps) {
+export function LegalPage({ locale, title, description, sections }: LegalPageProps) {
+  const t = getT(locale);
   return (
     <main className="min-h-screen bg-suit-canvas text-text">
       <div className="mx-auto max-w-[1120px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pb-[var(--spacing-x4l)] md:pt-[var(--spacing-lg)]">
@@ -82,20 +87,23 @@ export function LegalPage({ title, description, sections }: LegalPageProps) {
             </p>
             {/* TODO(legal): replace "Pendiente" with the publication date of the final text. */}
             <p className="m-0 text-sm leading-[18px] text-muted">
-              Última actualización: <span className="font-bold text-text">Pendiente</span>
+              {t('legal.lastUpdated')}{' '}
+              <span className="font-bold text-text">{t('legal.pending')}</span>
             </p>
             <ReviewNotice>
               {/* TODO(legal): replace with the final notice once the text is approved. */}
-              Documento en revisión.
+              {t('legal.inReview')}
             </ReviewNotice>
           </header>
 
           <nav
-            aria-label="Contenido"
+            aria-label={t('legal.toc')}
             className="mt-[var(--spacing-xl)] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0"
           >
             <div className="lg:sticky lg:top-[var(--spacing-lg)] lg:rounded-[var(--radius-lg)] lg:border lg:border-line lg:bg-surface lg:p-[var(--spacing-md)]">
-              <h2 className="m-0 font-arvo text-md font-bold leading-[1.3] text-text">Contenido</h2>
+              <h2 className="m-0 font-arvo text-md font-bold leading-[1.3] text-text">
+                {t('legal.toc')}
+              </h2>
               <ol className="m-0 mt-[var(--spacing-xs)] grid list-decimal gap-x-[var(--spacing-lg)] pl-[1.25em] text-md leading-[1.4] text-muted sm:grid-cols-2 lg:grid-cols-1">
                 {sections.map((section) => (
                   <li key={section.id}>
@@ -127,16 +135,16 @@ export function LegalPage({ title, description, sections }: LegalPageProps) {
                 </h2>
                 {/* TODO(legal): replace this placeholder with the owner-approved text. */}
                 <p className="m-0 mt-[var(--spacing-sm)] text-md italic leading-[1.5] text-muted">
-                  Pendiente de redacción.
+                  {t('legal.pendingText')}
                 </p>
                 {section.linksToContact ? (
                   <p className="m-0 text-md leading-[1.5] text-muted">
-                    Mientras tanto, escríbenos desde la{' '}
+                    {t('legal.meanwhile')}{' '}
                     <Link
-                      href="/contacto"
+                      href={localePath(locale, '/contact')}
                       className="font-bold text-text underline underline-offset-4"
                     >
-                      página de contacto
+                      {t('legal.contactPage')}
                     </Link>
                     .
                   </p>
