@@ -48,6 +48,7 @@ export default async function PrivacyPage({ params }: PageProps) {
   const sections: readonly LegalSection[] = sectionIds.map((id) => ({
     id,
     title: t(`legal.privacy.sections.${id}`),
+    body: t(`legal.privacy.body.${id}`),
     linksToContact: id === 'contact',
   }));
 

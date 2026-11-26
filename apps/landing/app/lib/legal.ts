@@ -8,4 +8,4 @@
  *
  * TODO(legal): set to true once the owner publishes the final privacy policy text.
  */
-export const LEGAL_PUBLISHED = false;
+export const LEGAL_PUBLISHED = true;

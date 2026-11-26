@@ -51,6 +51,7 @@ export default async function TermsPage({ params }: PageProps) {
   const sections: readonly LegalSection[] = sectionIds.map((id) => ({
     id,
     title: t(`legal.terms.sections.${id}`),
+    body: t(`legal.terms.body.${id}`),
     linksToContact: id === 'contact',
   }));
 
