@@ -1,11 +1,4 @@
-import {
-  EMPTY_CO_ADDRESS_DRAFT,
-  coAddressFromDraft,
-  validateCoAddressDraft,
-  type CoAddressDraft,
-  type CoAddressErrorKey,
-  type CoAddressField,
-} from '@17suit/core';
+import { EMPTY_CO_ADDRESS_DRAFT, coAddressDraftSchema, coAddressFromDraft } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppInput, AppSelect, AppSkeleton, GapView } from '@17suit/ui-native';
@@ -14,7 +7,7 @@ import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
 import { useMemo, useState } from 'react';
 import { z } from 'zod';
-import { CoAddressFields } from '../../../components/co-address-fields';
+import { addressErrorKeys, CoAddressFields } from '../../../components/co-address-fields';
 import { Screen } from '../../../components/screen';
 import { FormError } from '../../../components/form-field';
 import { humanizeError } from '../../../lib/error-messages';
@@ -26,6 +19,7 @@ import { useCreateVenueMutation } from '../../../lib/owner-queries';
 const createComplexSchema = z.object({
   name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   timezone: z.string().trim().max(80, 'Máximo 80 caracteres.').optional().or(z.literal('')),
+  address: coAddressDraftSchema,
 });
 
 type CreateComplexFormValues = z.infer<typeof createComplexSchema>;
@@ -56,10 +50,6 @@ export default function CreateComplexScreen() {
     enabled: Boolean(user?.id),
   });
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [address, setAddress] = useState<CoAddressDraft>({ ...EMPTY_CO_ADDRESS_DRAFT });
-  const [addressErrors, setAddressErrors] = useState<
-    Partial<Record<CoAddressField, CoAddressErrorKey>>
-  >({});
   const detectedTimezone = useMemo(() => detectLocalTimezone(), []);
   const timezoneOptions = useMemo(() => {
     const unique = new Set<string>([detectedTimezone, ...IANA_TIMEZONES]);
@@ -75,6 +65,7 @@ export default function CreateComplexScreen() {
     defaultValues: {
       name: '',
       timezone: detectedTimezone,
+      address: { ...EMPTY_CO_ADDRESS_DRAFT },
     },
   });
 
@@ -101,14 +92,8 @@ export default function CreateComplexScreen() {
 
   const onSubmit = handleSubmit(async (values) => {
     setSubmitError(null);
-    const nextAddressErrors = validateCoAddressDraft(address);
-    setAddressErrors(nextAddressErrors);
-    if (Object.keys(nextAddressErrors).length > 0) {
-      setSubmitError('Revisa los campos de la dirección.');
-      return;
-    }
     try {
-      const addressParts = coAddressFromDraft(address);
+      const addressParts = coAddressFromDraft(values.address);
       const timezone = toOptionalValue(values.timezone);
 
       const created = await createVenueMutation.mutateAsync({
@@ -164,7 +149,17 @@ export default function CreateComplexScreen() {
             </>
           )}
         />
-        <CoAddressFields value={address} onChange={setAddress} errors={addressErrors} />
+        <Controller
+          control={control}
+          name="address"
+          render={({ field }) => (
+            <CoAddressFields
+              value={field.value}
+              onChange={field.onChange}
+              errors={addressErrorKeys(formState.errors.address)}
+            />
+          )}
+        />
         <Controller
           control={control}
           name="timezone"
