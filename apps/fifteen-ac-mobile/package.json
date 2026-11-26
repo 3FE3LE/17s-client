@@ -8,6 +8,7 @@
     "dev:tunnel": "ANDROID_HOME= ANDROID_SDK_ROOT= expo start --port 8083 --tunnel",
     "build": "expo export --platform all",
     "lint": "eslint . --max-warnings=0",
+    "lint:i18n": "eslint -c eslint.i18n.config.cjs .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "clean": "rm -rf .expo dist web-build",
     "build:ios": "eas build --platform ios",
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
+    "@17suit/i18n": "workspace:*",
     "@17suit/module-fifteen-all-check": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@17suit/ui-native": "workspace:*",

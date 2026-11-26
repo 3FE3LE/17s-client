@@ -1,7 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import {
-  getNineCareCompanionPostAuthPath,
-} from '@17suit/module-nine-care-companion';
+import { getNineCareCompanionPostAuthPath } from '@17suit/module-nine-care-companion';
 import { buttonRecipe, cardRecipe, cx, pageContainerRecipe } from '@17suit/ui';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -124,8 +122,8 @@ export default async function HomePage() {
                 Todos los cuidadores alineados
               </h2>
               <p className="m-0 text-md leading-[1.5] text-muted">
-                Cada familiar y profesional participa segun permisos. La misma medicacion, la
-                misma agenda, sin versiones distintas del mismo plan.
+                Cada familiar y profesional participa segun permisos. La misma medicacion, la misma
+                agenda, sin versiones distintas del mismo plan.
               </p>
             </article>
 

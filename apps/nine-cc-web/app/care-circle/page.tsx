@@ -27,8 +27,8 @@ export default async function CareCirclePage({ searchParams }: PageProps) {
       <main className="mx-auto max-w-2xl px-[var(--spacing-lg)] py-[var(--spacing-xl)]">
         <h1 className="font-arvo text-3xl text-text">Sin círculo todavía</h1>
         <p className="mt-[var(--spacing-md)] text-md leading-[1.5] text-muted">
-          Todavía no pertenecés a un círculo de cuidado. Cuando te inviten, vas a ver
-          el estado diario del paciente acá.
+          Todavía no pertenecés a un círculo de cuidado. Cuando te inviten, vas a ver el estado
+          diario del paciente acá.
         </p>
       </main>
     );
@@ -49,9 +49,7 @@ export default async function CareCirclePage({ searchParams }: PageProps) {
         <p className="text-xs font-light uppercase tracking-plus1_5 text-muted">
           Círculo de {circle.patientDisplayName}
         </p>
-        <h1 className="mt-[var(--spacing-sm)] font-arvo text-4xl text-text">
-          Hola, Sara
-        </h1>
+        <h1 className="mt-[var(--spacing-sm)] font-arvo text-4xl text-text">Hola, Sara</h1>
         <p className="mt-[var(--spacing-sm)] text-md leading-[1.5] text-muted">
           Hoy ({timeline.date}) tenés {circle.blocksToday} tomas configuradas —{' '}
           {circle.blocksConfirmedToday} confirmadas, {circle.blocksPendingToday} pendientes,{' '}
@@ -64,16 +62,11 @@ export default async function CareCirclePage({ searchParams }: PageProps) {
           <p className="text-xs font-light uppercase tracking-plus1_5 text-brand-dark">
             Próxima toma
           </p>
-          <p className="mt-[var(--spacing-sm)] font-arvo text-2xl text-text">
-            {next.voiceLine}
-          </p>
+          <p className="mt-[var(--spacing-sm)] font-arvo text-2xl text-text">{next.voiceLine}</p>
           <p className="mt-[var(--spacing-sm)] text-sm text-muted">
             {new Date(next.scheduledAt).toUTCString()}
           </p>
-          <ConfirmBlockButton
-            blockId={next.id}
-            medicationName={next.medicationName}
-          />
+          <ConfirmBlockButton blockId={next.id} medicationName={next.medicationName} />
         </section>
       ) : (
         <section className="mb-[var(--spacing-xl)] rounded-[var(--radius-lg)] border border-border-default bg-success/10 p-[var(--spacing-lg)]">
@@ -84,9 +77,7 @@ export default async function CareCirclePage({ searchParams }: PageProps) {
       )}
 
       <section>
-        <h2 className="mb-[var(--spacing-md)] font-arvo text-2xl text-text">
-          Timeline de hoy
-        </h2>
+        <h2 className="mb-[var(--spacing-md)] font-arvo text-2xl text-text">Timeline de hoy</h2>
         <ol className="grid gap-[var(--spacing-sm)]">
           {timeline.blocks.map((block) => (
             <li
@@ -94,9 +85,7 @@ export default async function CareCirclePage({ searchParams }: PageProps) {
               className="flex items-center justify-between gap-[var(--spacing-md)] rounded-[var(--radius-md)] border border-border-default bg-canvas px-[var(--spacing-md)] py-[var(--spacing-sm)]"
             >
               <div>
-                <p className="font-arvo text-md text-text">
-                  {block.medicationName}
-                </p>
+                <p className="font-arvo text-md text-text">{block.medicationName}</p>
                 <p className="text-xs text-muted">
                   {new Date(block.scheduledAt).toUTCString()} · {block.dosage}
                 </p>

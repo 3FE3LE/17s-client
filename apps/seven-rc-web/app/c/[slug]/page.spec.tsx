@@ -27,6 +27,7 @@ const venue = {
   bookingHorizonDays: 30,
   depositPercent: 30,
   holdMinutes: 30,
+  policyVersion: 2,
   pitches: [
     {
       id: 'p1',

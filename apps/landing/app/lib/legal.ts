@@ -1,5 +1,5 @@
 /**
- * Publication state of the owner-written legal texts (/privacidad, /terminos).
+ * Publication state of the owner-written legal texts (/privacy, /terms).
  *
  * While this is false the legal pages are outlines only, so product pages must
  * not send people to them as if they held a real policy (e.g. Fifteen's

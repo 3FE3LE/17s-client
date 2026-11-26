@@ -66,6 +66,7 @@ export default function SignInScreen() {
 
   return (
     <AppFrame
+      showLanguageSelect
       appName="Nine Care Companion"
       subtitle="Inicia sesion con email y password o continua con Google."
     >

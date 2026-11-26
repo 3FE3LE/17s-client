@@ -1,3 +1,4 @@
+import { getProductLocale } from '@17suit/i18n/next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import { ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
@@ -33,10 +34,11 @@ export const metadata: Metadata = {
   description: 'Fifteen All Check product workspace on cash-pulse.17suit.com.',
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getProductLocale();
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
       // ThemeScript sets the `dark` class before hydration.
       suppressHydrationWarning
@@ -46,7 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <WebAuthProvider>
-          <AppProviders>
+          <AppProviders locale={locale}>
             <NuqsAdapter>{children}</NuqsAdapter>
           </AppProviders>
         </WebAuthProvider>

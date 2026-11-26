@@ -32,6 +32,13 @@ const PITCH = {
   capacity: 14,
   slotDurationMinutes: 60,
   basePriceMinor: 12000000,
+  depositPercent: 30,
+  holdMinutes: 60,
+  cancellationWindowHours: 24,
+  paymentInstructions: null,
+  lateCancelDeposit: 'owner_decides' as const,
+  noShowDeposit: 'owner_decides' as const,
+  conditionsText: null,
 };
 const SLOT_HOURS = [16, 17, 18, 19, 20, 21];
 
@@ -62,6 +69,10 @@ function venueDto(): Venue {
     depositPercent: 30,
     holdMinutes: 60,
     cancellationWindowHours: 24,
+    lateCancelDeposit: 'owner_decides',
+    noShowDeposit: 'owner_decides',
+    conditionsText: null,
+    policyVersion: 1,
     bookingHorizonDays: 14,
     today: venueToday(),
     pitches: [PITCH],
@@ -113,6 +124,17 @@ function reservationDto(record: Stored): ReservationDto {
     paymentStatus: 'unpaid',
     holdExpiresAt: new Date(Date.now() + 3_600_000).toISOString(),
     cancellableUntil: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+    policy: {
+      version: 1,
+      depositPercent: 30,
+      holdMinutes: 60,
+      cancellationWindowHours: 24,
+      paymentInstructions: null,
+      lateCancelDeposit: 'owner_decides',
+      noShowDeposit: 'owner_decides',
+      conditionsText: null,
+    },
+    depositOutcome: 'none',
     venue: {
       name: 'Complejo E2E',
       slug: VENUE_SLUG,

@@ -53,7 +53,12 @@ export function fetchPublicReservation(token: string): Promise<PublicReservation
 
 export type CreatePublicReservationResult =
   | { ok: true; reservation: PublicReservation }
-  | { ok: false; status: number; message: string };
+  | { ok: false; status: number; message: string; code: string };
+
+function errorCode(body: unknown): string {
+  const code = (body as { code?: unknown } | null)?.code;
+  return typeof code === 'string' ? code : '';
+}
 
 function errorMessage(body: unknown): string {
   const message = (body as { message?: unknown } | null)?.message;
@@ -77,7 +82,12 @@ export async function createPublicReservation(
   );
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    return { ok: false, status: response.status, message: errorMessage(body) };
+    return {
+      ok: false,
+      status: response.status,
+      message: errorMessage(body),
+      code: errorCode(body),
+    };
   }
   return { ok: true, reservation: body as PublicReservation };
 }

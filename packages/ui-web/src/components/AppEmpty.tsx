@@ -1,4 +1,4 @@
-import { Inbox } from 'lucide-react';
+import { Inbox } from '../icons';
 import type { CSSProperties, PropsWithChildren, ReactNode } from 'react';
 import { useAppTheme } from '../theme/theme-context';
 import { AppButton } from './AppButton';

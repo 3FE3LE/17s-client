@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  CreateConfirmationSchema,
-} from '@17suit/module-nine-care-companion';
+import { CreateConfirmationSchema } from '@17suit/module-nine-care-companion';
 import { createBffNineCcDataSource } from '@17suit/module-nine-care-companion/client';
 
 interface Props {
@@ -66,9 +64,7 @@ export function ConfirmBlockButton({ blockId, medicationName, compact }: Props) 
         onClick={() => handle('taken')}
         className="rounded-[var(--radius-md)] border border-brand-primary bg-brand-primary px-[var(--spacing-md)] py-[var(--spacing-sm)] font-arvo text-md text-brand-foreground disabled:opacity-50"
       >
-        {isSubmitting === 'taken'
-          ? 'Registrando…'
-          : `Confirmar ${medicationName}`}
+        {isSubmitting === 'taken' ? 'Registrando…' : `Confirmar ${medicationName}`}
       </button>
       <button
         type="button"

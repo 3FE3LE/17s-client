@@ -7,8 +7,10 @@ import {
   ZillaSlab_500Medium,
   ZillaSlab_700Bold,
 } from '@expo-google-fonts/zilla-slab';
+import { I18nProvider } from '@17suit/i18n/react';
 import { useFonts } from 'expo-font';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { useLocale } from '../i18n/use-locale';
 import { ThemeProvider, useAppTheme } from '../theme/theme-context';
 import type { ThemeModePreference } from '../theme/theme-context';
 
@@ -18,6 +20,7 @@ export interface AppProvidersProps extends PropsWithChildren {
 }
 
 export function AppProviders({ children, themeMode, onThemeModeChange }: AppProvidersProps) {
+  const [locale] = useLocale();
   const [fontsLoaded] = useFonts({
     Amaranth_400Regular,
     Amaranth_700Bold,
@@ -47,11 +50,13 @@ export function AppProviders({ children, themeMode, onThemeModeChange }: AppProv
   }
 
   return (
-    <ThemeProvider {...themeProviderProps}>
-      <SafeAreaProvider>
-        <ThemeSafeArea>{children}</ThemeSafeArea>
-      </SafeAreaProvider>
-    </ThemeProvider>
+    <I18nProvider locale={locale}>
+      <ThemeProvider {...themeProviderProps}>
+        <SafeAreaProvider>
+          <ThemeSafeArea>{children}</ThemeSafeArea>
+        </SafeAreaProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 
