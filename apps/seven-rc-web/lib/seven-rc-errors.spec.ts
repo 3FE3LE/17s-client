@@ -78,3 +78,31 @@ describe('isSlotConflict', () => {
     expect(isSlotConflict('Timeslot is unavailable')).toBe(false);
   });
 });
+
+describe('server errorKey contract', () => {
+  const keyed = (errorKey: string, status: number, params?: Record<string, number>) =>
+    new SevenRcApiError('technical english', status, { errorKey, ...(params ? { params } : {}) });
+
+  it('translates by errorKey even when the message is unknown English text', () => {
+    expect(describeError(keyed('slotUnavailable', 409), FALLBACK)).toMatch(
+      /Otra persona acaba de reservar/,
+    );
+  });
+
+  it('interpolates server params', () => {
+    expect(
+      describeError(keyed('cancellationWindowPassed', 400, { hours: 12 }), FALLBACK),
+    ).toContain('hasta 12 h antes');
+  });
+
+  it('follows the requested locale', () => {
+    expect(describeError(keyed('slotBlocked', 409), FALLBACK, 'en')).toBe(
+      'The venue blocked that time. Pick another one from the list.',
+    );
+  });
+
+  it('detects stale slots by errorKey', () => {
+    expect(isSlotConflict(keyed('slotBlocked', 409))).toBe(true);
+    expect(isSlotConflict(keyed('venueNotFound', 404))).toBe(false);
+  });
+});

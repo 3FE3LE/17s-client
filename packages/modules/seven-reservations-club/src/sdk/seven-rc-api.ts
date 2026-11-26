@@ -220,6 +220,26 @@ export class SevenRcApiError extends Error {
     this.payload = payload;
   }
 
+  /** Stable catalog key from the server error contract (`errorKey`), when present. */
+  get errorKey(): string | undefined {
+    const value = this.field('errorKey');
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
+  }
+
+  /** Interpolation values for the `errorKey` text (`params` of the contract). */
+  get params(): Record<string, string | number> | undefined {
+    const value = this.field('params');
+    return value && typeof value === 'object'
+      ? (value as Record<string, string | number>)
+      : undefined;
+  }
+
+  private field(name: string): unknown {
+    return this.payload && typeof this.payload === 'object'
+      ? (this.payload as Record<string, unknown>)[name]
+      : undefined;
+  }
+
   /** Reservations that overlap a rejected pitch block (409 from the block endpoint). */
   get conflicts(): ReservationBase[] {
     const value =

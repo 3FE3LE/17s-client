@@ -18,5 +18,5 @@ export type { CreateI18nOptions } from './create-i18n';
 export { sharedResources, SHARED_NAMESPACES } from './catalogs';
 export type { SharedNamespace } from './catalogs';
 export type { CatalogShape } from './types';
-export { resolveErrorKey, translateApiError } from './api-error';
+export { describeApiError, resolveErrorKey, translateApiError } from './api-error';
 export type { ApiErrorLike, ErrorKey, TranslateFn } from './api-error';

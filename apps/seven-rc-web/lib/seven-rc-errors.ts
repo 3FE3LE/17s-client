@@ -4,6 +4,7 @@
  * generic message; otherwise the action-specific fallback. Raw server text is
  * never shown to users (it is English and often internal).
  */
+import { describeApiError, resolveErrorKey, type Locale } from '@17suit/i18n';
 import { SevenRcApiError } from '@17suit/module-seven-reservations-club';
 
 const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchArray) => string }> =
@@ -112,7 +113,16 @@ const KNOWN_ERRORS: ReadonlyArray<{ match: RegExp; message: (found: RegExpMatchA
     },
   ];
 
-export function describeError(error: unknown, fallback: string): string {
+export function describeError(error: unknown, fallback: string, locale: Locale = 'es'): string {
+  // The server `errorKey` is the contract; the regexes below only cover older servers.
+  if (error instanceof SevenRcApiError && error.errorKey) {
+    const apiError = {
+      errorKey: error.errorKey,
+      ...(error.params ? { params: error.params } : {}),
+    };
+    if (resolveErrorKey(apiError) !== 'unknown') return describeApiError(apiError, locale);
+  }
+
   const raw = error instanceof Error ? error.message.trim() : '';
 
   for (const entry of KNOWN_ERRORS) {
@@ -141,8 +151,18 @@ function describeStatus(status: number): string | null {
   return null;
 }
 
+const SLOT_CONFLICT_KEYS = new Set([
+  'slotUnavailable',
+  'slotBlocked',
+  'slotAlreadyStarted',
+  'slotNotAligned',
+]);
+
 /** True when the failure means the slot list on screen is stale. */
 export function isSlotConflict(error: unknown): boolean {
+  if (error instanceof SevenRcApiError && error.errorKey) {
+    return SLOT_CONFLICT_KEYS.has(error.errorKey);
+  }
   const raw = error instanceof Error ? error.message : '';
   return /Timeslot is (unavailable|blocked)|Slot has already started|align with configured/i.test(
     raw,
