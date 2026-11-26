@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EMPTY_CO_ADDRESS_DRAFT,
+  coAddressDraftSchema,
   coAddressFromDraft,
   draftFromCoAddress,
   formatCoAddress,
@@ -62,5 +63,18 @@ describe('co-address', () => {
     expect(parseCoAddress(null)).toBeNull();
     expect(parseCoAddress({ viaTipo: 'plaza' })).toBeNull();
     expect(draftFromCoAddress(null)).toEqual(EMPTY_CO_ADDRESS_DRAFT);
+  });
+});
+
+describe('coAddressDraftSchema', () => {
+  it('accepts an empty draft and reports per-field keys otherwise', () => {
+    expect(coAddressDraftSchema.safeParse(EMPTY_CO_ADDRESS_DRAFT).success).toBe(true);
+    const result = coAddressDraftSchema.safeParse({ ...EMPTY_CO_ADDRESS_DRAFT, viaNumero: '72' });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const byField: Record<string, string> = {};
+      for (const issue of result.error.issues) byField[String(issue.path[0])] = issue.message;
+      expect(byField).toMatchObject({ viaTipo: 'required', cruceNumero: 'required' });
+    }
   });
 });

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * Colombian urban address in three conventional components:
  * `<via tipo> <via número> # <cruce>-<placa>`. Mirrors the server
@@ -133,6 +135,27 @@ export function validateCoAddressDraft(
   }
   return errors;
 }
+
+/**
+ * zod view of the draft for react-hook-form. Rules stay in `validateCoAddressDraft`;
+ * each issue carries the stable `CoAddressErrorKey` as its message.
+ */
+export const coAddressDraftSchema = z
+  .object({
+    viaTipo: z.union([z.enum(VIA_TIPOS), z.literal('')]),
+    viaNumero: z.string(),
+    cruceNumero: z.string(),
+    placaNumero: z.string(),
+    complemento: z.string(),
+    barrio: z.string(),
+    municipio: z.string(),
+    departamento: z.string(),
+  })
+  .superRefine((draft, ctx) => {
+    for (const [field, key] of Object.entries(validateCoAddressDraft(draft))) {
+      ctx.addIssue({ code: 'custom', path: [field], message: key });
+    }
+  });
 
 /** Valid draft to the API shape; `undefined` when empty or invalid. */
 export function coAddressFromDraft(draft: CoAddressDraft): CoAddress | undefined {
