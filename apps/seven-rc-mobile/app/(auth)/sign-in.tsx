@@ -1,11 +1,15 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signInSchema, type SignInValues } from '@17suit/core';
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
 import { AppButton, AppDivider, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { View } from 'react-native';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { FormError, FormField } from '../../components/form-field';
 import { Screen } from '../../components/screen';
+import { authErrorText } from '../../lib/auth-errors';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -14,24 +18,17 @@ export default function SignInScreen() {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const emailError = submitAttempted && email.trim().length === 0 ? 'Ingresa tu correo.' : null;
-  const passwordError =
-    submitAttempted && password.trim().length === 0 ? 'Ingresa tu contraseña.' : null;
+  const { control, handleSubmit, formState } = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: '', password: '' },
+  });
 
-  const handlePasswordSignIn = async () => {
+  const handlePasswordSignIn = handleSubmit(async (values) => {
     if (!isLoaded) return;
-    setSubmitAttempted(true);
     setFormError(null);
-    if (email.trim().length === 0 || password.trim().length === 0) return;
-
-    setIsSubmitting(true);
     try {
-      const result = await signIn.create({ identifier: email.trim(), password });
+      const result = await signIn.create({ identifier: values.email, password: values.password });
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive?.({ session: result.createdSessionId });
@@ -42,10 +39,8 @@ export default function SignInScreen() {
       setFormError('Tu cuenta requiere un paso adicional de verificación para iniciar sesión.');
     } catch (err) {
       setFormError(humanizeClerkError(err, 'No pudimos iniciar sesión. Inténtalo de nuevo.'));
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const handleGoogleSignIn = async () => {
     setFormError(null);
@@ -74,29 +69,41 @@ export default function SignInScreen() {
 
         <AppDivider />
 
-        <FormField
-          label="Correo"
-          kind="email"
-          value={email}
-          onChangeText={setEmail}
-          placeholder="tu@correo.com"
-          error={emailError}
-          returnKeyType="next"
+        <Controller
+          control={control}
+          name="email"
+          render={({ field, fieldState }) => (
+            <FormField
+              label="Correo"
+              kind="email"
+              value={field.value}
+              onChangeText={field.onChange}
+              placeholder="tu@correo.com"
+              error={authErrorText(fieldState.error?.message)}
+              returnKeyType="next"
+            />
+          )}
         />
-        <FormField
-          label="Contraseña"
-          kind="password"
-          value={password}
-          onChangeText={setPassword}
-          error={passwordError}
-          returnKeyType="go"
-          onSubmitEditing={() => {
-            void handlePasswordSignIn();
-          }}
+        <Controller
+          control={control}
+          name="password"
+          render={({ field, fieldState }) => (
+            <FormField
+              label="Contraseña"
+              kind="password"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={authErrorText(fieldState.error?.message)}
+              returnKeyType="go"
+              onSubmitEditing={() => {
+                void handlePasswordSignIn();
+              }}
+            />
+          )}
         />
         <FormError message={formError} />
-        <AppButton onPress={handlePasswordSignIn} disabled={isSubmitting}>
-          {isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
+        <AppButton onPress={handlePasswordSignIn} disabled={formState.isSubmitting}>
+          {formState.isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
         </AppButton>
         <View className="mt-2 flex-row flex-wrap items-center gap-4">
           <AppLinkAction onPress={() => router.push('/sign-up')}>Crear cuenta</AppLinkAction>
