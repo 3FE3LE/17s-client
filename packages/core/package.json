@@ -18,6 +18,9 @@
     "./auth/expo-redirect": {
       "default": "./src/auth/expo-redirect.ts"
     },
+    "./site-origins": {
+      "default": "./src/site-origins.ts"
+    },
     "./query-client": {
       "default": "./src/query-client.ts"
     },

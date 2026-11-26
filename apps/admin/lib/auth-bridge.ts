@@ -1,4 +1,5 @@
 import { headers } from 'next/headers';
+import { landingAuthUrl } from '@17suit/core/site-origins';
 import { redirect } from 'next/navigation';
 
 // Mirrors the auth bridge pages in seven-rc-web / fifteen-ac-web: admin hosts no
@@ -10,10 +11,7 @@ export type AuthBridgeSearchParams = Promise<Record<string, string | string[] | 
 type LandingAuthPath = '/sign-in' | '/forgot-password' | '/sso-callback';
 
 function resolveLandingUrl(path: LandingAuthPath): string {
-  const configured = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL;
-  const signInUrl =
-    configured && configured.trim().length > 0 ? configured : 'http://localhost:3000/sign-in';
-  return path === '/sign-in' ? signInUrl : signInUrl.replace(/\/sign-in\/?$/, path);
+  return landingAuthUrl(path.slice(1) as 'sign-in' | 'forgot-password' | 'sso-callback');
 }
 
 /** Origin of the shared landing site (where a full sign-out sends the user). */

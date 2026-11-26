@@ -48,7 +48,7 @@ export function FifteenAcShell({
 }) {
   const { signOut } = useClerk();
   const pathname = usePathname();
-  const signInUrl = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL ?? '/sign-in';
+  const signInUrl = '/sign-in';
 
   return (
     <AppWorkspaceShell
