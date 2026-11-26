@@ -28,17 +28,11 @@ export async function PATCH(request: Request, context: ProxyContext): Promise<Ne
   return proxyToBackend(request, context);
 }
 
-export async function DELETE(
-  request: Request,
-  context: ProxyContext,
-): Promise<NextResponse> {
+export async function DELETE(request: Request, context: ProxyContext): Promise<NextResponse> {
   return proxyToBackend(request, context);
 }
 
-async function proxyToBackend(
-  request: Request,
-  context: ProxyContext,
-): Promise<NextResponse> {
+async function proxyToBackend(request: Request, context: ProxyContext): Promise<NextResponse> {
   const { userId, getToken } = await auth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -11,9 +11,7 @@ interface PageProps {
 
 export const dynamic = 'force-dynamic';
 
-export default async function MedicationBlockConfirmPage({
-  params,
-}: PageProps) {
+export default async function MedicationBlockConfirmPage({ params }: PageProps) {
   const resolved = await params;
   const blockId = resolved.blockId?.[0];
   if (!blockId) redirect('/care-circle');
@@ -37,8 +35,7 @@ export default async function MedicationBlockConfirmPage({
           {parsed.instructions}
         </h1>
         <p className="mt-[var(--spacing-sm)] text-md text-muted">
-          {parsed.patientDisplayName} ·{' '}
-          {new Date(parsed.scheduledAt).toUTCString()} ·{' '}
+          {parsed.patientDisplayName} · {new Date(parsed.scheduledAt).toUTCString()} ·{' '}
           <span className="uppercase tracking-plus1_5">{parsed.status.toLowerCase()}</span>
         </p>
       </header>
