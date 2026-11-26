@@ -43,7 +43,7 @@ describe('reports period form', () => {
   it('applies a preset period', async () => {
     render(<OwnerReportsPage />);
     await userEvent.click(screen.getByRole('button', { name: 'Últimos 7 días' }));
-    const last = reportQuery.mock.calls.at(-1) as string[];
-    expect(last[1] < last[2]).toBe(true);
+    const [, from = '', to = ''] = reportQuery.mock.calls.at(-1) as string[];
+    expect(from < to).toBe(true);
   });
 });
