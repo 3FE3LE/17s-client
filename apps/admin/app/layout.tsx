@@ -1,3 +1,4 @@
+import { getProductLocale } from '@17suit/i18n/next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
@@ -37,10 +38,11 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getProductLocale();
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
       // ThemeScript sets the `dark` class before hydration.
       suppressHydrationWarning
@@ -50,7 +52,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <WebAuthProvider>
-          <AppProviders>{children}</AppProviders>
+          <AppProviders locale={locale}>{children}</AppProviders>
         </WebAuthProvider>
       </body>
     </html>

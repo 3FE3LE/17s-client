@@ -1,0 +1,4 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "ignoreCommand": "bash ../../tooling/scripts/vercel-ignore.sh @17suit/admin"
+}

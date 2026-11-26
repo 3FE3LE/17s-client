@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/theme-context';
 import { AppTitle } from './AppTitle';
 import { withGap } from '../utils/withGap';
+import { AppLanguageSelect } from './AppLanguageSelect';
 
 export interface AppFrameProps extends PropsWithChildren {
   appName: string;
@@ -25,6 +26,8 @@ export interface AppFrameProps extends PropsWithChildren {
    * twice; the frame then scrolls the focused field into view when it shrinks.
    */
   automaticallyAdjustKeyboardInsets?: boolean;
+  /** Show the language picker below the content (home and sign-in screens). */
+  showLanguageSelect?: boolean;
 }
 
 export function AppFrame({
@@ -34,6 +37,7 @@ export function AppFrame({
   onRefresh,
   refreshing = false,
   automaticallyAdjustKeyboardInsets = true,
+  showLanguageSelect = false,
   children,
 }: AppFrameProps) {
   const { theme } = useAppTheme();
@@ -105,6 +109,11 @@ export function AppFrame({
           </Text>
         ) : null}
         <View style={{ marginTop: theme.spacing.lg }}>{withGap(children, theme.spacing.md)}</View>
+        {showLanguageSelect ? (
+          <View style={{ marginTop: theme.spacing.lg }}>
+            <AppLanguageSelect />
+          </View>
+        ) : null}
       </View>
     </ScrollView>
   );

@@ -36,7 +36,11 @@ type ConfigurePitchSlotsResult = ApiSchema<'ConfigurePitchSlotsResponseDto'>;
 export type CreatePitchBlockInput = ApiInput<ApiSchema<'CreatePitchBlockDto'>>;
 export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDto'>>;
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
+export type ConfigurePitchPolicyInput = ApiInput<ApiSchema<'ConfigurePitchPolicyDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
+export type MarkNoShowInput = ApiInput<ApiSchema<'MarkNoShowDto'>>;
+export type CustomerHistory = ApiSchema<'CustomerHistoryResponseDto'>;
+export type CancelReservationByOwnerInput = ApiInput<ApiSchema<'CancelReservationByOwnerDto'>>;
 export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
 export type CreateRecurringReservationInput = ApiInput<ApiSchema<'CreateRecurringReservationDto'>>;
 export type RecurringReservationResult = ApiSchema<'RecurringReservationResponseDto'>;
@@ -75,6 +79,7 @@ export interface SevenRcOwnerApi {
   /** Partial update: omitted fields keep their stored value. */
   updateVenueSettings: (venueId: string, input: UpdateVenueSettingsInput) => Promise<VenueSettings>;
   /** Replaces the base price and the whole rule list. */
+  configurePitchPolicy: (pitchId: string, input: ConfigurePitchPolicyInput) => Promise<Pitch>;
   configurePitchPricing: (
     pitchId: string,
     input: ConfigurePitchPricingInput,
@@ -88,10 +93,19 @@ export interface SevenRcOwnerApi {
     reservationId: string,
     input: RecordReservationPaymentInput,
   ) => Promise<ReservationBase>;
-  markNoShow: (reservationId: string) => Promise<ReservationBase>;
+  /** Records the no-show. With held money and an owner-decides policy, `depositOutcome` is required. */
+  markNoShow: (reservationId: string, input?: MarkNoShowInput) => Promise<ReservationBase>;
+  /** No-shows and late cancels of a customer (by E.164 phone) at one venue. */
+  getCustomerHistory: (venueId: string, phone: string) => Promise<CustomerHistory>;
   completeReservation: (reservationId: string) => Promise<ReservationBase>;
-  /** Venue-side cancel; no cancellation window applies. */
-  ownerCancelReservation: (reservationId: string) => Promise<ReservationBase>;
+  /**
+   * Venue-side cancel; no cancellation window applies. With paid money the
+   * server requires `refundDecision` (400 REFUND_DECISION_REQUIRED otherwise).
+   */
+  ownerCancelReservation: (
+    reservationId: string,
+    input?: CancelReservationByOwnerInput,
+  ) => Promise<ReservationBase>;
   /** Walk-in / phone booking entered from the agenda; created confirmed. */
   createOwnerReservation: (
     venueId: string,
@@ -369,6 +383,13 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         body: JSON.stringify(input),
       });
     },
+    configurePitchPolicy(pitchId, input) {
+      return request<Pitch>(apiPath('/7rc/pitches/{pitchId}/policy', { pitchId }), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+    },
     configurePitchPricing(pitchId, input) {
       return request<PitchWithPricing>(apiPath('/7rc/pitches/{pitchId}/pricing', { pitchId }), {
         method: 'PUT',
@@ -386,10 +407,20 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         },
       );
     },
-    markNoShow(reservationId) {
+    markNoShow(reservationId, input) {
       return request<ReservationBase>(
         apiPath('/7rc/reservations/{id}/no-show', { id: reservationId }),
-        { method: 'POST' },
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input ?? {}),
+        },
+      );
+    },
+    getCustomerHistory(venueId, phone) {
+      return request<CustomerHistory>(
+        `${apiPath('/7rc/venues/{venueId}/customer-history', { venueId })}?phone=${encodeURIComponent(phone)}`,
+        { method: 'GET' },
       );
     },
     completeReservation(reservationId) {
@@ -398,10 +429,15 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         { method: 'POST' },
       );
     },
-    ownerCancelReservation(reservationId) {
+    ownerCancelReservation(reservationId, input) {
       return request<ReservationBase>(
         apiPath('/7rc/reservations/{id}/owner-cancel', { id: reservationId }),
-        { method: 'POST' },
+        {
+          method: 'POST',
+          ...(input
+            ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) }
+            : {}),
+        },
       );
     },
     createOwnerReservation(venueId, input) {

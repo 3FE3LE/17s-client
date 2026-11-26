@@ -20,6 +20,8 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
+import { revalidatePath } from 'next/cache';
+
 import { cancelReservationAction, reserveAction } from './actions';
 
 const PITCH_ID = '123e4567-e89b-42d3-a456-426614174000';
@@ -109,6 +111,28 @@ describe('reserveAction', () => {
     expect(await redirectOf(reserveAction('club', EMPTY, form()))).toBe(
       '/c/club?fecha=2026-11-22&conflicto=1',
     );
+  });
+
+  it('sends the policy version the visitor saw', async () => {
+    api.createPublicReservation.mockResolvedValue({ ok: true, reservation: { token: TOKEN } });
+    await redirectOf(reserveAction('club', EMPTY, form({ policyVersion: '3' })));
+    expect(api.createPublicReservation).toHaveBeenCalledWith(
+      'club',
+      expect.objectContaining({ policyVersion: 3 }),
+    );
+  });
+
+  it('redirects with condiciones=1 and drops the cached venue on POLICY_CHANGED', async () => {
+    api.createPublicReservation.mockResolvedValue({
+      ok: false,
+      status: 409,
+      message: '',
+      code: 'POLICY_CHANGED',
+    });
+    expect(await redirectOf(reserveAction('club', EMPTY, form({ policyVersion: '1' })))).toBe(
+      '/c/club?fecha=2026-11-22&condiciones=1',
+    );
+    expect(revalidatePath).toHaveBeenCalledWith('/c/club');
   });
 
   it('adds conflicto=1 with ? when there is no valid date', async () => {

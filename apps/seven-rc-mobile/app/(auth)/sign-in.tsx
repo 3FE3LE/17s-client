@@ -63,6 +63,7 @@ export default function SignInScreen() {
   return (
     <Screen
       back={false}
+      showLanguageSelect
       title="Seven Reservations Club"
       subtitle="Inicia sesión para reservar o administrar tus canchas."
     >

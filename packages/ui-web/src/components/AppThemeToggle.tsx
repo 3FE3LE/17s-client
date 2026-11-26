@@ -1,9 +1,9 @@
 'use client';
 
+import { useTranslation } from '@17suit/i18n/react';
 import { useId } from 'react';
 import {
   THEME_PREFERENCES,
-  THEME_PREFERENCE_LABELS,
   cx,
   themeToggleLabelRecipe,
   themeToggleOptionRecipe,
@@ -11,12 +11,21 @@ import {
   type ThemePreference,
 } from '@17suit/design-system';
 
+import { Monitor, Moon, Sun, type LucideIcon } from '../icons';
 import { useAppTheme } from '../theme/theme-context';
 
+const THEME_ICONS: Record<ThemePreference, LucideIcon> = {
+  system: Monitor,
+  light: Sun,
+  dark: Moon,
+};
+
 export interface AppThemeToggleProps {
-  /** Visible group label; defaults to a visually hidden "Tema". */
+  /** Group label; defaults to the translated `common:theme.label` (visually hidden). */
   label?: string;
   showLabel?: boolean;
+  /** Option labels; default to the translated `common:theme.*` strings. */
+  labels?: Partial<Record<ThemePreference, string>>;
   className?: string;
 }
 
@@ -25,21 +34,24 @@ export interface AppThemeToggleProps {
  * fieldset: keyboard (arrows), screen readers and forms work without ARIA.
  */
 export function AppThemeToggle({
-  label = 'Tema',
+  label,
   showLabel = false,
+  labels,
   className,
 }: AppThemeToggleProps) {
   const { mode, setMode } = useAppTheme();
+  const { t } = useTranslation('common');
   const name = useId();
 
   return (
     <fieldset className={cx('m-0 min-w-0 border-0 p-0', className)}>
       <legend className={showLabel ? 'mb-xs font-zilla text-xs text-muted' : 'sr-only'}>
-        {label}
+        {label ?? t('theme.label')}
       </legend>
       <div className={themeToggleRecipe({ platform: 'web' })}>
         {THEME_PREFERENCES.map((preference: ThemePreference) => {
           const selected = preference === mode;
+          const Icon = THEME_ICONS[preference];
           return (
             <label
               key={preference}
@@ -53,8 +65,14 @@ export function AppThemeToggle({
                 onChange={() => setMode(preference)}
                 className="sr-only"
               />
-              <span className={themeToggleLabelRecipe({ selected })}>
-                {THEME_PREFERENCE_LABELS[preference]}
+              <span
+                className={cx(
+                  'inline-flex items-center gap-xs',
+                  themeToggleLabelRecipe({ selected }),
+                )}
+              >
+                <Icon aria-hidden size={14} />
+                {labels?.[preference] ?? t(`theme.${preference}`)}
               </span>
             </label>
           );

@@ -980,7 +980,7 @@ function BookingSuccess({
           <p className="m-0">
             Tu turno está apartado.{' '}
             {details
-              ? `Si no puedes ir, cancela con al menos ${details.venue.cancellationWindowHours} h de anticipación desde “Mis próximas reservas”.`
+              ? `Si no puedes ir, cancela con al menos ${details.policySnapshot.cancellationWindowHours} h de anticipación desde “Mis próximas reservas”.`
               : 'Si no puedes ir, revisa el plazo de cancelación en “Mis próximas reservas”.'}
           </p>
         )}
@@ -1168,7 +1168,7 @@ function ReservationItem({
   const status = reservationStatus(reservation.status);
   const isPending = reservation.status === 'pending_confirmation';
   const isActive = isPending || reservation.status === 'confirmed';
-  const windowHours = reservation.venue.cancellationWindowHours;
+  const windowHours = reservation.policySnapshot.cancellationWindowHours;
   const cancelDeadline = new Date(reservation.startAt).getTime() - windowHours * 3_600_000;
   const holdExpired = isHoldExpired(reservation, now);
   const canCancel = isActive && !holdExpired && now < cancelDeadline && Boolean(onCancel);

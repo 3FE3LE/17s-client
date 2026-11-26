@@ -1,9 +1,5 @@
-import { auth } from '@clerk/nextjs/server';
-import Link from 'next/link';
 import type { SVGProps } from 'react';
-import { statusLabel, type ProductStatus } from '../lib/products';
-import { SignOutControl } from './sign-out-control';
-import { SiteLogo } from './site-logo';
+import type { ProductStatus } from '../lib/products';
 
 /*
  * Shared landing primitives. Colors come from design tokens only
@@ -78,11 +74,11 @@ export function ArrowDownIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-/** Underlined text link for tertiary actions ("Volver al inicio", "Ya tengo cuenta"). */
+/** Underlined text link for tertiary actions ("Back to home", "I already have an account"). */
 export const textLinkClass =
   'inline-flex min-h-11 items-center px-[var(--spacing-sm)] font-bold text-text underline underline-offset-4';
 
-export function StatusBadge({ status }: { status: ProductStatus }) {
+export function StatusBadge({ status, label }: { status: ProductStatus; label: string }) {
   const tone: Record<ProductStatus, string> = {
     live: 'border-product bg-product text-on-product',
     beta: 'border-product bg-surface text-product',
@@ -93,44 +89,7 @@ export function StatusBadge({ status }: { status: ProductStatus }) {
     <span
       className={`inline-flex w-fit items-center self-start rounded-full border px-2.5 py-0.5 text-sm font-bold leading-[18px] ${tone[status]}`}
     >
-      {statusLabel[status]}
+      {label}
     </span>
-  );
-}
-
-interface SiteHeaderProps {
-  /** Where "Entrar" goes; product pages pass a `redirect_url` back to the product. */
-  signInHref?: string;
-}
-
-/*
- * Server component: reads the Clerk session so signed-in visitors see
- * "Mis apps" and "Cerrar sesión" instead of the sign-in entry point.
- */
-export async function SiteHeader({ signInHref = '/sign-in' }: SiteHeaderProps) {
-  const { userId } = await auth();
-
-  return (
-    <header className="mb-[var(--spacing-xl)] flex flex-nowrap items-center justify-between gap-[var(--spacing-sm)] md:mb-[var(--spacing-x3l)]">
-      <SiteLogo />
-
-      <nav
-        aria-label="Cuenta"
-        className="flex items-center gap-[var(--spacing-xs)] md:gap-[var(--spacing-sm)]"
-      >
-        {userId ? (
-          <>
-            <Link href="/apps" className={compactSecondaryButtonClass}>
-              Mis apps
-            </Link>
-            <SignOutControl className="inline-flex min-h-11 cursor-pointer items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 text-md font-bold leading-[1.3] text-text underline underline-offset-4" />
-          </>
-        ) : (
-          <Link href={signInHref} className={compactSecondaryButtonClass}>
-            Entrar
-          </Link>
-        )}
-      </nav>
-    </header>
   );
 }
