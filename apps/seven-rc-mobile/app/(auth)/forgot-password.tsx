@@ -1,67 +1,55 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import {
+  emailOnlySchema,
+  resetPasswordSchema,
+  type EmailOnlyValues,
+  type ResetPasswordValues,
+} from '@17suit/core';
 import { useSignIn } from '@clerk/clerk-expo';
 import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { FormError, FormField } from '../../components/form-field';
 import { Screen } from '../../components/screen';
+import { authErrorText } from '../../lib/auth-errors';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [step, setStep] = useState<'request' | 'reset'>('request');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [sentTo, setSentTo] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const requestForm = useForm<EmailOnlyValues>({
+    resolver: zodResolver(emailOnlySchema),
+    defaultValues: { email: '' },
+  });
+  const resetForm = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { code: '', password: '', confirmPassword: '' },
+  });
 
-  const required = (value: string, message: string) =>
-    submitAttempted && value.trim().length === 0 ? message : null;
-  const confirmError =
-    required(confirmNewPassword, 'Repite la nueva contraseña.') ??
-    (submitAttempted && newPassword !== confirmNewPassword
-      ? 'Las contraseñas no coinciden.'
-      : null);
-
-  const sendResetCode = async () => {
+  const sendResetCode = requestForm.handleSubmit(async (values) => {
     if (!isLoaded) return;
-    setSubmitAttempted(true);
     setFormError(null);
-    if (email.trim().length === 0) return;
-    setIsSubmitting(true);
     try {
-      await signIn.create({ strategy: 'reset_password_email_code', identifier: email.trim() });
-      setSubmitAttempted(false);
+      await signIn.create({ strategy: 'reset_password_email_code', identifier: values.email });
+      setSentTo(values.email);
       setStep('reset');
     } catch (err) {
       setFormError(humanizeClerkError(err, 'No pudimos enviar el código. Inténtalo de nuevo.'));
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
-  const resetPassword = async () => {
+  const resetPassword = resetForm.handleSubmit(async (values) => {
     if (!isLoaded) return;
-    setSubmitAttempted(true);
     setFormError(null);
-    if (
-      code.trim().length === 0 ||
-      newPassword.trim().length === 0 ||
-      confirmNewPassword.trim().length === 0 ||
-      newPassword !== confirmNewPassword
-    ) {
-      return;
-    }
-
-    setIsSubmitting(true);
     try {
       const result = await signIn.attemptFirstFactor({
         strategy: 'reset_password_email_code',
-        code: code.trim(),
-        password: newPassword,
+        code: values.code,
+        password: values.password,
       });
 
       if (result.status === 'complete' && result.createdSessionId) {
@@ -75,10 +63,8 @@ export default function ForgotPasswordScreen() {
       setFormError(
         humanizeClerkError(err, 'No pudimos cambiar la contraseña. Inténtalo de nuevo.'),
       );
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   return (
     <Screen
@@ -87,60 +73,84 @@ export default function ForgotPasswordScreen() {
       subtitle={
         step === 'request'
           ? 'Te enviaremos un código a tu correo.'
-          : `Escribe el código que enviamos a ${email.trim()} y tu nueva contraseña.`
+          : `Escribe el código que enviamos a ${sentTo} y tu nueva contraseña.`
       }
     >
       <GapView gap="sm">
         {step === 'request' ? (
           <>
-            <FormField
-              label="Correo"
-              kind="email"
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@correo.com"
-              error={required(email, 'Ingresa tu correo.')}
-              returnKeyType="send"
-              onSubmitEditing={() => {
-                void sendResetCode();
-              }}
+            <Controller
+              control={requestForm.control}
+              name="email"
+              render={({ field, fieldState }) => (
+                <FormField
+                  label="Correo"
+                  kind="email"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  placeholder="tu@correo.com"
+                  returnKeyType="send"
+                  onSubmitEditing={() => {
+                    void sendResetCode();
+                  }}
+                  error={authErrorText(fieldState.error?.message)}
+                />
+              )}
             />
             <FormError message={formError} />
-            <AppButton onPress={sendResetCode} disabled={isSubmitting}>
-              {isSubmitting ? 'Enviando…' : 'Enviar código'}
+            <AppButton onPress={sendResetCode} disabled={requestForm.formState.isSubmitting}>
+              {requestForm.formState.isSubmitting ? 'Enviando…' : 'Enviar código'}
             </AppButton>
           </>
         ) : (
           <>
-            <FormField
-              label="Código de verificación"
-              kind="code"
-              value={code}
-              onChangeText={setCode}
-              error={required(code, 'Ingresa el código.')}
+            <Controller
+              control={resetForm.control}
+              name="code"
+              render={({ field, fieldState }) => (
+                <FormField
+                  label="Código de verificación"
+                  kind="code"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={authErrorText(fieldState.error?.message)}
+                />
+              )}
             />
-            <FormField
-              label="Nueva contraseña"
-              kind="new-password"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="Mínimo 8 caracteres"
-              error={required(newPassword, 'Crea una nueva contraseña.')}
+            <Controller
+              control={resetForm.control}
+              name="password"
+              render={({ field, fieldState }) => (
+                <FormField
+                  label="Nueva contraseña"
+                  kind="new-password"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  placeholder="Mínimo 8 caracteres"
+                  error={authErrorText(fieldState.error?.message)}
+                />
+              )}
             />
-            <FormField
-              label="Repetir nueva contraseña"
-              kind="new-password"
-              value={confirmNewPassword}
-              onChangeText={setConfirmNewPassword}
-              error={confirmError}
-              returnKeyType="go"
-              onSubmitEditing={() => {
-                void resetPassword();
-              }}
+            <Controller
+              control={resetForm.control}
+              name="confirmPassword"
+              render={({ field, fieldState }) => (
+                <FormField
+                  label="Repetir nueva contraseña"
+                  kind="new-password"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  returnKeyType="go"
+                  onSubmitEditing={() => {
+                    void resetPassword();
+                  }}
+                  error={authErrorText(fieldState.error?.message)}
+                />
+              )}
             />
             <FormError message={formError} />
-            <AppButton onPress={resetPassword} disabled={isSubmitting}>
-              {isSubmitting ? 'Actualizando…' : 'Cambiar contraseña'}
+            <AppButton onPress={resetPassword} disabled={resetForm.formState.isSubmitting}>
+              {resetForm.formState.isSubmitting ? 'Actualizando…' : 'Cambiar contraseña'}
             </AppButton>
           </>
         )}

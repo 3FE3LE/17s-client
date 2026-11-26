@@ -39,7 +39,12 @@ type AvailabilitySlot = PitchAvailability['slots'][number];
 
 const reservationSchema = z.object({
   pitchId: z.string().trim().min(1, 'Selecciona una cancha.'),
-  invitedCount: z.string().trim().optional(),
+  invitedCount: z
+    .string()
+    .trim()
+    .regex(/^\d{0,3}$/, 'Usa un número entero entre 0 y 100.')
+    .refine((value) => value === '' || Number(value) <= 100, 'Usa un número entero entre 0 y 100.')
+    .optional(),
   notes: z.string().trim().max(500, 'Máximo 500 caracteres.').optional(),
 });
 

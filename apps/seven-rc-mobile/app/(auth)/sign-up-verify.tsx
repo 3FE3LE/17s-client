@@ -1,33 +1,34 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { verifyCodeSchema, type VerifyCodeValues } from '@17suit/core';
 import { useSignUp } from '@clerk/clerk-expo';
 import { AppButton, AppLinkAction, AppTypography, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
+import { Controller, useForm } from 'react-hook-form';
 import { FormError, FormField } from '../../components/form-field';
 import { Screen } from '../../components/screen';
+import { authErrorText } from '../../lib/auth-errors';
 import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpVerifyScreen() {
   const router = useRouter();
   const { isLoaded, signUp, setActive } = useSignUp();
-  const [code, setCode] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
-  const codeError =
-    submitAttempted && code.trim().length === 0 ? 'Ingresa el código de verificación.' : null;
+  const { control, handleSubmit, formState } = useForm<VerifyCodeValues>({
+    resolver: zodResolver(verifyCodeSchema),
+    defaultValues: { code: '' },
+  });
+  const isSubmitting = formState.isSubmitting || isResending;
 
-  const handleVerifyEmail = async () => {
+  const handleVerifyEmail = handleSubmit(async (values) => {
     if (!isLoaded) return;
-    setSubmitAttempted(true);
     setFormError(null);
     setResent(false);
-    if (code.trim().length === 0) return;
-
-    setIsSubmitting(true);
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      const result = await signUp.attemptEmailAddressVerification({ code: values.code });
 
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive?.({ session: result.createdSessionId });
@@ -38,23 +39,21 @@ export default function SignUpVerifyScreen() {
       setFormError('No pudimos completar la verificación. Inténtalo de nuevo.');
     } catch (err) {
       setFormError(humanizeClerkError(err, 'No pudimos verificar tu correo.'));
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const handleResendCode = async () => {
     if (!isLoaded) return;
     setFormError(null);
     setResent(false);
-    setIsSubmitting(true);
+    setIsResending(true);
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setResent(true);
     } catch (err) {
       setFormError(humanizeClerkError(err, 'No pudimos reenviar el código.'));
     } finally {
-      setIsSubmitting(false);
+      setIsResending(false);
     }
   };
 
@@ -65,16 +64,22 @@ export default function SignUpVerifyScreen() {
       subtitle="Escribe el código de verificación que te enviamos por correo."
     >
       <GapView gap="sm">
-        <FormField
-          label="Código de verificación"
-          kind="code"
-          value={code}
-          onChangeText={setCode}
-          error={codeError}
-          returnKeyType="go"
-          onSubmitEditing={() => {
-            void handleVerifyEmail();
-          }}
+        <Controller
+          control={control}
+          name="code"
+          render={({ field, fieldState }) => (
+            <FormField
+              label="Código de verificación"
+              kind="code"
+              value={field.value}
+              onChangeText={field.onChange}
+              returnKeyType="go"
+              onSubmitEditing={() => {
+                void handleVerifyEmail();
+              }}
+              error={authErrorText(fieldState.error?.message)}
+            />
+          )}
         />
         <FormError message={formError} />
         {resent ? (
