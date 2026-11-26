@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { AppButton, AppInput, cx } from '@17suit/ui';
 import {
   HintedInput,
@@ -30,6 +33,77 @@ const SKIP_REASON_LABEL: Record<string, string> = {
   RESERVED: 'ya reservado',
   UNAVAILABLE: 'fuera de horario',
 };
+interface ReservationSchemaContext {
+  countryCode: string;
+  hasSlot: boolean;
+  slotPriceMinor: number;
+}
+
+/** Rules that depend on the chosen turn (price, availability) come in through `ctx`. */
+function buildReservationSchema(ctx: ReservationSchemaContext) {
+  return z
+    .object({
+      customerName: z
+        .string()
+        .trim()
+        .min(2, 'Escribe el nombre del cliente (mínimo 2 letras).')
+        .max(120),
+      customerPhone: z.string(),
+      notes: z.string().max(500),
+      deposit: z.string(),
+      method: z.string(),
+      repeat: z.boolean(),
+      weeks: z.string(),
+      slot: z.string(),
+    })
+    .superRefine((values, issues) => {
+      const phone = values.customerPhone.trim();
+      if (phone) {
+        const normalized = normalizePhone(phone, ctx.countryCode);
+        if (!normalized || !E164_PATTERN.test(normalized)) {
+          issues.addIssue({
+            code: 'custom',
+            path: ['customerPhone'],
+            message: 'El teléfono debe incluir el código de país, p. ej. +57 300 123 4567.',
+          });
+        }
+      }
+      if (!ctx.hasSlot) {
+        issues.addIssue({
+          code: 'custom',
+          path: ['slot'],
+          message: 'Elige un horario disponible.',
+        });
+      }
+      if (values.repeat) {
+        const weekCount = Number(values.weeks);
+        if (!Number.isInteger(weekCount) || weekCount < 2 || weekCount > RECURRING_MAX_WEEKS) {
+          issues.addIssue({
+            code: 'custom',
+            path: ['weeks'],
+            message: `Usa entre 2 y ${RECURRING_MAX_WEEKS} semanas.`,
+          });
+        }
+      } else if (values.deposit.trim()) {
+        const amount = parseAmount(values.deposit);
+        if (!amount || amount <= 0) {
+          issues.addIssue({
+            code: 'custom',
+            path: ['deposit'],
+            message: 'Escribe un anticipo mayor que cero, p. ej. 30.000, o déjalo vacío.',
+          });
+        } else if (ctx.slotPriceMinor > 0 && amount > ctx.slotPriceMinor) {
+          issues.addIssue({
+            code: 'custom',
+            path: ['deposit'],
+            message: 'El anticipo supera el precio del turno.',
+          });
+        }
+      }
+    });
+}
+type ReservationValues = z.infer<ReturnType<typeof buildReservationSchema>>;
+
 const HEADING_ID = 'nueva-reserva-title';
 const SLOT_UNAVAILABLE_LABEL: Record<string, string> = {
   RESERVED: 'ocupado',
@@ -117,13 +191,6 @@ function OwnerReservationForm({
 }) {
   const [date, setDate] = useState(todayKey);
   const [explicitSlot, setExplicitSlot] = useState<string | null>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
-  const [deposit, setDeposit] = useState('');
-  const [method, setMethod] = useState<ReservationPaymentMethod>('cash');
-  const [repeat, setRepeat] = useState(false);
-  const [weeks, setWeeks] = useState(String(RECURRING_DEFAULT_WEEKS));
   const [skipped, setSkipped] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -141,46 +208,44 @@ function OwnerReservationForm({
   const isPending =
     createMutation.isPending || paymentMutation.isPending || recurringMutation.isPending;
 
+  const { control, handleSubmit, getValues, reset, watch, formState } = useForm<ReservationValues>({
+    resolver: (values, context, options) =>
+      zodResolver(
+        buildReservationSchema({
+          countryCode: venue.countryCode,
+          hasSlot: Boolean(selectedSlot),
+          slotPriceMinor: selectedSlot?.priceMinor ?? 0,
+        }),
+      )(values, context, options),
+    defaultValues: {
+      customerName: '',
+      customerPhone: '',
+      notes: '',
+      deposit: '',
+      method: 'cash',
+      repeat: false,
+      weeks: String(RECURRING_DEFAULT_WEEKS),
+      slot: '',
+    },
+  });
+  const repeat = watch('repeat');
+  const deposit = watch('deposit');
   const depositMinor = deposit.trim() ? parseAmount(deposit) : null;
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const onSubmit = handleSubmit(async (values) => {
     setError(null);
     setNotice(null);
     setSkipped([]);
+    if (!selectedSlot) return;
 
-    const name = customerName.trim();
-    if (name.length < 2) {
-      setError('Escribe el nombre del cliente (mínimo 2 letras).');
-      return;
-    }
-    const normalizedPhone = phone.trim() ? normalizePhone(phone, venue.countryCode) : null;
-    if (normalizedPhone && !E164_PATTERN.test(normalizedPhone)) {
-      setError('El teléfono debe incluir el código de país, p. ej. +57 300 123 4567.');
-      return;
-    }
-    if (!selectedSlot) {
-      setError('Elige un horario disponible.');
-      return;
-    }
-    const weekCount = Number(weeks);
-    if (
-      repeat &&
-      (!Number.isInteger(weekCount) || weekCount < 2 || weekCount > RECURRING_MAX_WEEKS)
-    ) {
-      setError(`Usa entre 2 y ${RECURRING_MAX_WEEKS} semanas.`);
-      return;
-    }
-    if (!repeat && deposit.trim() && (!depositMinor || depositMinor <= 0)) {
-      setError('Escribe un anticipo mayor que cero, p. ej. 30.000, o déjalo vacío.');
-      return;
-    }
-    if (depositMinor && selectedSlot.priceMinor > 0 && depositMinor > selectedSlot.priceMinor) {
-      setError('El anticipo supera el precio del turno.');
-      return;
-    }
+    const name = values.customerName;
+    const phone = values.customerPhone.trim();
+    const normalizedPhone = phone ? normalizePhone(phone, venue.countryCode) : null;
+    const notes = values.notes.trim();
+    const weekCount = Number(values.weeks);
+    const method = values.method as ReservationPaymentMethod;
 
-    if (repeat) {
+    if (values.repeat) {
       try {
         const series = await recurringMutation.mutateAsync({
           pitchId: pitch.id,
@@ -188,7 +253,7 @@ function OwnerReservationForm({
           occurrences: weekCount,
           customerName: name,
           ...(normalizedPhone ? { customerPhone: normalizedPhone } : {}),
-          ...(notes.trim() ? { notes: notes.trim() } : {}),
+          ...(notes ? { notes } : {}),
         });
         setSkipped(
           series.skipped.map(
@@ -200,10 +265,7 @@ function OwnerReservationForm({
           `Serie de ${name} creada: ${pitch.name}, ${series.created.length} de ${weekCount} semanas reservadas.`,
         );
         setExplicitSlot(null);
-        setCustomerName('');
-        setPhone('');
-        setNotes('');
-        setRepeat(false);
+        reset({ ...getValues(), customerName: '', customerPhone: '', notes: '', repeat: false });
       } catch (caught) {
         void availabilityQuery.refetch();
         setError(describeError(caught, 'No se pudo crear la serie.'));
@@ -211,6 +273,7 @@ function OwnerReservationForm({
       return;
     }
 
+    const depositAmount = values.deposit.trim() ? parseAmount(values.deposit) : null;
     let created;
     try {
       created = await createMutation.mutateAsync({
@@ -218,7 +281,7 @@ function OwnerReservationForm({
         startAt: selectedSlot.startAt,
         customerName: name,
         ...(normalizedPhone ? { customerPhone: normalizedPhone } : {}),
-        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(notes ? { notes } : {}),
       });
     } catch (caught) {
       // Nothing was created. Refresh the slots so a taken turn shows as occupied.
@@ -229,11 +292,11 @@ function OwnerReservationForm({
 
     const when = formatSlotWhen(created.startAt, created.endAt, timeZone);
     let paymentFailed = false;
-    if (depositMinor) {
+    if (depositAmount) {
       try {
         await paymentMutation.mutateAsync({
           reservationId: created.id,
-          input: { kind: 'deposit', method, amountMinor: depositMinor },
+          input: { kind: 'deposit', method, amountMinor: depositAmount },
         });
       } catch (caught) {
         paymentFailed = true;
@@ -245,23 +308,21 @@ function OwnerReservationForm({
 
     setNotice(
       `Reserva de ${name} creada: ${pitch.name}, ${when}.${
-        depositMinor && !paymentFailed
-          ? ` Anticipo de ${formatMoneyMinor(depositMinor, currency)} anotado.`
+        depositAmount && !paymentFailed
+          ? ` Anticipo de ${formatMoneyMinor(depositAmount, currency)} anotado.`
           : ''
       }`,
     );
     setExplicitSlot(null);
-    setCustomerName('');
-    setPhone('');
-    setNotes('');
-    setDeposit('');
-  }
+    reset({ ...getValues(), customerName: '', customerPhone: '', notes: '', deposit: '' });
+  });
 
   return (
     <form
       onSubmit={(event) => void onSubmit(event)}
       aria-labelledby={`${HEADING_ID}-form`}
       className="grid gap-sm"
+      noValidate
     >
       <h3 id={`${HEADING_ID}-form`} className="m-0 font-arvo text-md text-text">
         Datos de la reserva
@@ -352,96 +413,149 @@ function OwnerReservationForm({
             })}
           </div>
         )}
+        <InlineError message={formState.errors.slot?.message ?? null} />
       </fieldset>
 
       <div className="grid max-w-[var(--container-form)] gap-sm sm:grid-cols-2">
-        <AppInput
-          type="text"
+        <Controller
+          control={control}
           name="customerName"
-          label="Nombre del cliente"
-          required
-          minLength={2}
-          maxLength={120}
-          autoComplete="off"
-          value={customerName}
-          onChangeText={setCustomerName}
+          render={({ field, fieldState }) => (
+            <div className="grid content-start gap-xs">
+              <AppInput
+                type="text"
+                name="customerName"
+                label="Nombre del cliente"
+                maxLength={120}
+                autoComplete="off"
+                error={Boolean(fieldState.error)}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+              />
+              <InlineError message={fieldState.error?.message ?? null} />
+            </div>
+          )}
         />
-        <HintedInput
-          type="tel"
+        <Controller
+          control={control}
           name="customerPhone"
-          label="Teléfono (opcional)"
-          inputMode="tel"
-          autoComplete="off"
-          value={phone}
-          onChangeText={setPhone}
-          hint="Ej.: 300 123 4567 o +57 300 123 4567."
+          render={({ field, fieldState }) => (
+            <HintedInput
+              type="tel"
+              name="customerPhone"
+              label="Teléfono (opcional)"
+              inputMode="tel"
+              autoComplete="off"
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              hint="Ej.: 300 123 4567 o +57 300 123 4567."
+              errorMessage={fieldState.error?.message ?? null}
+            />
+          )}
         />
       </div>
       <div className="grid max-w-[var(--container-form)] gap-sm">
-        <label className="flex items-center gap-sm text-md leading-[1.5] text-text">
-          <input
-            type="checkbox"
-            name="repeatWeekly"
-            checked={repeat}
-            onChange={(event) => setRepeat(event.target.checked)}
-          />
-          Repetir cada semana (cancha fija)
-        </label>
+        <Controller
+          control={control}
+          name="repeat"
+          render={({ field }) => (
+            <label className="flex items-center gap-sm text-md leading-[1.5] text-text">
+              <input
+                type="checkbox"
+                name="repeatWeekly"
+                checked={field.value}
+                onChange={(event) => field.onChange(event.target.checked)}
+              />
+              Repetir cada semana (cancha fija)
+            </label>
+          )}
+        />
         {repeat ? (
-          <HintedInput
-            type="number"
-            name="repeatWeeks"
-            label="Semanas (incluye la primera)"
-            inputMode="numeric"
-            min={2}
-            max={RECURRING_MAX_WEEKS}
-            autoComplete="off"
-            value={weeks}
-            onChangeText={setWeeks}
-            hint="Mismo día y hora cada semana. Los turnos ocupados o bloqueados se omiten y te los mostramos."
+          <Controller
+            control={control}
+            name="weeks"
+            render={({ field, fieldState }) => (
+              <HintedInput
+                type="number"
+                name="repeatWeeks"
+                label="Semanas (incluye la primera)"
+                inputMode="numeric"
+                min={2}
+                max={RECURRING_MAX_WEEKS}
+                autoComplete="off"
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                hint="Mismo día y hora cada semana. Los turnos ocupados o bloqueados se omiten y te los mostramos."
+                errorMessage={fieldState.error?.message ?? null}
+              />
+            )}
           />
         ) : null}
       </div>
       <div className="grid max-w-[var(--container-form)] gap-sm sm:grid-cols-2">
-        <HintedInput
+        <Controller
+          control={control}
           name="deposit"
-          label={`Anticipo (${currency}, opcional)`}
-          inputMode="decimal"
-          autoComplete="off"
-          value={deposit}
-          disabled={repeat}
-          onChangeText={setDeposit}
-          hint={
-            depositMinor
-              ? `Se anotará ${formatMoneyMinor(depositMinor, currency)}.`
-              : selectedSlot && selectedSlot.priceMinor > 0
-                ? `Precio del turno ${formatAmountInput(selectedSlot.priceMinor)}. 17Suit no mueve dinero: solo lo anota.`
-                : 'Ej.: 30.000. 17Suit no mueve dinero: solo lo anota.'
-          }
+          render={({ field, fieldState }) => (
+            <HintedInput
+              name="deposit"
+              label={`Anticipo (${currency}, opcional)`}
+              inputMode="decimal"
+              autoComplete="off"
+              value={field.value}
+              disabled={repeat}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              errorMessage={fieldState.error?.message ?? null}
+              hint={
+                depositMinor
+                  ? `Se anotará ${formatMoneyMinor(depositMinor, currency)}.`
+                  : selectedSlot && selectedSlot.priceMinor > 0
+                    ? `Precio del turno ${formatAmountInput(selectedSlot.priceMinor)}. 17Suit no mueve dinero: solo lo anota.`
+                    : 'Ej.: 30.000. 17Suit no mueve dinero: solo lo anota.'
+              }
+            />
+          )}
         />
-        <SelectField
-          label="Medio del anticipo"
-          name="depositMethod"
-          value={method}
-          onChangeValue={(value) => setMethod(value as ReservationPaymentMethod)}
-          options={PAYMENT_METHOD_OPTIONS}
-          disabled={!depositMinor || repeat}
+        <Controller
+          control={control}
+          name="method"
+          render={({ field }) => (
+            <SelectField
+              label="Medio del anticipo"
+              name="depositMethod"
+              value={field.value}
+              onChangeValue={field.onChange}
+              options={PAYMENT_METHOD_OPTIONS}
+              disabled={!depositMinor || repeat}
+            />
+          )}
         />
       </div>
       <div className="max-w-[var(--container-form)]">
-        <AppInput
-          type="text"
+        <Controller
+          control={control}
           name="notes"
-          label="Nota (opcional)"
-          maxLength={500}
-          autoComplete="off"
-          value={notes}
-          onChangeText={setNotes}
+          render={({ field }) => (
+            <AppInput
+              type="text"
+              name="notes"
+              label="Nota (opcional)"
+              maxLength={500}
+              autoComplete="off"
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+            />
+          )}
         />
       </div>
       <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={isPending}>
-          {isPending ? 'Guardando…' : 'Crear reserva'}
+        <AppButton type="submit" disabled={isPending || formState.isSubmitting}>
+          {isPending || formState.isSubmitting ? 'Guardando…' : 'Crear reserva'}
         </AppButton>
       </div>
       <InlineError message={error} />

@@ -86,7 +86,7 @@ describe('OwnerReservationSection weekly repeat', () => {
     expect(screen.getByText(/cancha bloqueada/)).toBeTruthy();
   });
 
-  it('does not submit out-of-range weeks (native min/max validation)', async () => {
+  it('rejects out-of-range weeks inline without calling the server', async () => {
     renderForm();
     await fillBase();
     await userEvent.click(screen.getByRole('checkbox', { name: /repetir cada semana/i }));
@@ -94,6 +94,7 @@ describe('OwnerReservationSection weekly repeat', () => {
     await userEvent.type(screen.getByLabelText(/semanas/i), '1');
     await userEvent.click(screen.getByRole('button', { name: 'Crear reserva' }));
 
+    expect(await screen.findByText('Usa entre 2 y 52 semanas.')).toBeTruthy();
     expect(screen.queryByText(/semanas reservadas/)).toBeNull();
     expect(createSeries).not.toHaveBeenCalled();
   });
@@ -110,5 +111,26 @@ describe('OwnerReservationSection weekly repeat', () => {
 
     expect(createOne).toHaveBeenCalledTimes(1);
     expect(createSeries).not.toHaveBeenCalled();
+  });
+
+  it('blocks a deposit above the slot price inline', async () => {
+    renderForm();
+    await fillBase();
+    await userEvent.type(screen.getByLabelText(/Anticipo/), '60.000');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear reserva' }));
+
+    expect(await screen.findByText('El anticipo supera el precio del turno.')).toBeTruthy();
+    expect(createOne).not.toHaveBeenCalled();
+  });
+
+  it('asks for a slot and a valid phone before calling the server', async () => {
+    renderForm();
+    await userEvent.type(screen.getByLabelText('Nombre del cliente'), 'Los Pibes');
+    await userEvent.type(screen.getByLabelText(/Teléfono/), '123');
+    await userEvent.click(screen.getByRole('button', { name: 'Crear reserva' }));
+
+    expect(await screen.findByText('Elige un horario disponible.')).toBeTruthy();
+    expect(screen.getByText(/debe incluir el código de país/)).toBeTruthy();
+    expect(createOne).not.toHaveBeenCalled();
   });
 });
