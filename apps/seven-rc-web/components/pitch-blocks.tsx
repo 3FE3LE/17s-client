@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm, type Control } from 'react-hook-form';
+import { z } from 'zod';
 import { SevenRcApiError } from '@17suit/module-seven-reservations-club';
 import { AppButton, AppInput } from '@17suit/ui';
 import {
@@ -29,6 +32,85 @@ import {
 
 const HEADING_ID = 'bloqueos-title';
 const REASON_MAX = 200;
+
+const TIME_PATTERN = /^\d{2}:\d{2}$/;
+
+function buildBlockSchema(timeZone: string) {
+  return z
+    .object({
+      date: z.string().min(1, 'Elige la fecha del bloqueo.'),
+      startTime: z.string().regex(TIME_PATTERN, 'Elige la hora de inicio.'),
+      endTime: z.string().regex(TIME_PATTERN, 'Elige la hora de fin.'),
+      reason: z.string().max(REASON_MAX),
+    })
+    .superRefine((values, issues) => {
+      if (
+        !values.date ||
+        !TIME_PATTERN.test(values.startTime) ||
+        !TIME_PATTERN.test(values.endTime)
+      ) {
+        return;
+      }
+      if (values.endTime <= values.startTime) {
+        issues.addIssue({
+          code: 'custom',
+          path: ['endTime'],
+          message: 'La hora de fin debe ser posterior a la de inicio.',
+        });
+        return;
+      }
+      const endAt = zonedTimeToInstant(values.date, values.endTime, timeZone);
+      if (endAt.getTime() <= Date.now()) {
+        issues.addIssue({
+          code: 'custom',
+          path: ['endTime'],
+          message: 'Ese horario ya pasó. Elige uno más tarde.',
+        });
+      }
+    });
+}
+type BlockValues = z.infer<ReturnType<typeof buildBlockSchema>>;
+
+function BlockTextField({
+  control,
+  name,
+  label,
+  type,
+  min,
+}: {
+  control: Control<BlockValues>;
+  name: 'date' | 'startTime' | 'endTime';
+  label: string;
+  type: 'date' | 'time';
+  min?: string;
+}) {
+  const field = {
+    date: 'blockDate',
+    startTime: 'blockStart',
+    endTime: 'blockEnd',
+  }[name];
+  return (
+    <Controller
+      control={control}
+      name={name}
+      render={({ field: input, fieldState }) => (
+        <div className="grid content-start gap-xs">
+          <AppInput
+            type={type}
+            name={field}
+            label={label}
+            {...(min ? { min } : {})}
+            error={Boolean(fieldState.error)}
+            value={input.value}
+            onChangeText={input.onChange}
+            onBlur={input.onBlur}
+          />
+          <InlineError message={fieldState.error?.message ?? null} />
+        </div>
+      )}
+    />
+  );
+}
 
 export interface PitchBlocksSectionProps {
   pitches: PitchWithPricing[];
@@ -99,55 +181,40 @@ function PitchBlocksPanel({
   const createMutation = useCreatePitchBlockMutation(pitch.id);
   const deleteMutation = useDeletePitchBlockMutation(pitch.id);
 
-  const [date, setDate] = useState(todayKey);
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [reason, setReason] = useState('');
+  const { control, handleSubmit, getValues, reset } = useForm<BlockValues>({
+    resolver: zodResolver(buildBlockSchema(timeZone)),
+    defaultValues: { date: todayKey, startTime: '', endTime: '', reason: '' },
+  });
   const [error, setError] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<ReservationBase[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const onSubmit = handleSubmit(async (values) => {
     setError(null);
     setConflicts([]);
     setNotice(null);
-
-    if (!date || !startTime || !endTime) {
-      setError('Elige la fecha y las horas de inicio y fin del bloqueo.');
-      return;
-    }
-    if (endTime <= startTime) {
-      setError('La hora de fin debe ser posterior a la de inicio.');
-      return;
-    }
-    const startAt = zonedTimeToInstant(date, startTime, timeZone);
-    const endAt = zonedTimeToInstant(date, endTime, timeZone);
-    if (endAt.getTime() <= Date.now()) {
-      setError('Ese horario ya pasó. Elige uno más tarde.');
-      return;
-    }
+    const startAt = zonedTimeToInstant(values.date, values.startTime, timeZone);
+    const endAt = zonedTimeToInstant(values.date, values.endTime, timeZone);
+    const reason = values.reason.trim();
 
     try {
       const created = await createMutation.mutateAsync({
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
-        ...(reason.trim() ? { reason: reason.trim() } : {}),
+        ...(reason ? { reason } : {}),
       });
       setNotice(
         `${pitch.name} bloqueada: ${formatSlotWhen(created.startAt, created.endAt, timeZone)}.`,
       );
-      setStartTime('');
-      setEndTime('');
-      setReason('');
+      reset({ ...getValues(), startTime: '', endTime: '', reason: '' });
     } catch (caught) {
       if (caught instanceof SevenRcApiError && caught.status === 409) {
         setConflicts(caught.conflicts);
       }
       setError(describeError(caught, 'No se pudo crear el bloqueo.'));
     }
-  }
+  });
 
   async function onRemove(block: PitchBlock) {
     setError(null);
@@ -174,47 +241,33 @@ function PitchBlocksPanel({
         onSubmit={(event) => void onSubmit(event)}
         aria-labelledby={`${HEADING_ID}-nuevo`}
         className="grid gap-sm"
+        noValidate
       >
         <h3 id={`${HEADING_ID}-nuevo`} className="m-0 font-arvo text-md text-text">
           Nuevo bloqueo
         </h3>
         <div className="grid max-w-[var(--container-form)] gap-sm sm:grid-cols-3">
-          <AppInput
-            type="date"
-            name="blockDate"
-            label="Fecha"
-            required
-            min={todayKey}
-            value={date}
-            onChangeText={setDate}
-          />
-          <AppInput
-            type="time"
-            name="blockStart"
-            label="Desde"
-            required
-            value={startTime}
-            onChangeText={setStartTime}
-          />
-          <AppInput
-            type="time"
-            name="blockEnd"
-            label="Hasta"
-            required
-            value={endTime}
-            onChangeText={setEndTime}
-          />
+          <BlockTextField control={control} name="date" label="Fecha" type="date" min={todayKey} />
+          <BlockTextField control={control} name="startTime" label="Desde" type="time" />
+          <BlockTextField control={control} name="endTime" label="Hasta" type="time" />
         </div>
         <div className="max-w-[var(--container-form)]">
-          <HintedInput
-            type="text"
-            name="blockReason"
-            label="Motivo (opcional)"
-            maxLength={REASON_MAX}
-            autoComplete="off"
-            value={reason}
-            onChangeText={setReason}
-            hint="Solo lo ves tú. Ej.: Mantenimiento del césped."
+          <Controller
+            control={control}
+            name="reason"
+            render={({ field }) => (
+              <HintedInput
+                type="text"
+                name="blockReason"
+                label="Motivo (opcional)"
+                maxLength={REASON_MAX}
+                autoComplete="off"
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                hint="Solo lo ves tú. Ej.: Mantenimiento del césped."
+              />
+            )}
           />
         </div>
         <div className="grid gap-sm sm:max-w-[280px]">
