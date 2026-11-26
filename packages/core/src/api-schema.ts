@@ -216,6 +216,23 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/7rc/pitches/{pitchId}/policy': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Set per-pitch booking conditions; null fields inherit the venue (OWNER) */
+    put: operations['SevenReservationsClubController_configurePitchPolicy'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/7rc/pitches/{pitchId}/availability': {
     parameters: {
       query?: never;
@@ -1800,6 +1817,14 @@ export interface components {
       };
       /** @description Minor units of the venue currency */
       basePriceMinor: number;
+      /** @description Null inherits the venue */
+      depositPercent: number | null;
+      /** @description Null inherits the venue */
+      holdMinutes: number | null;
+      /** @description Null inherits the venue */
+      cancellationWindowHours: number | null;
+      /** @description Null inherits the venue */
+      paymentInstructions: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1898,6 +1923,14 @@ export interface components {
       };
       /** @description Minor units of the venue currency */
       basePriceMinor: number;
+      /** @description Null inherits the venue */
+      depositPercent: number | null;
+      /** @description Null inherits the venue */
+      holdMinutes: number | null;
+      /** @description Null inherits the venue */
+      cancellationWindowHours: number | null;
+      /** @description Null inherits the venue */
+      paymentInstructions: string | null;
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1976,6 +2009,16 @@ export interface components {
       basePriceMinor: number;
       /** @description Peak/off-peak overrides; first match wins */
       rules: components['schemas']['PitchPriceRuleDto'][];
+    };
+    ConfigurePitchPolicyDto: {
+      /** @description Deposit % for this pitch. Null inherits the venue */
+      depositPercent?: number | null;
+      /** @description Minutes an unpaid booking holds this pitch. Null inherits */
+      holdMinutes?: number | null;
+      /** @description Cancel up to N hours before start. Null inherits */
+      cancellationWindowHours?: number | null;
+      /** @description Payment instructions for this pitch. Null inherits */
+      paymentInstructions?: string | null;
     };
     /** @enum {string} */
     AvailabilitySlotStatus: 'AVAILABLE' | 'RESERVED' | 'BLOCKED' | 'PAST';
@@ -2461,6 +2504,14 @@ export interface components {
       capacity: number;
       slotDurationMinutes: number;
       basePriceMinor: number;
+      /** @description Resolved: pitch override, else venue value */
+      depositPercent: number;
+      /** @description Resolved: pitch override, else venue value */
+      holdMinutes: number;
+      /** @description Resolved: pitch override, else venue value */
+      cancellationWindowHours: number;
+      /** @description Resolved */
+      paymentInstructions?: string | null;
     };
     PublicVenueResponseDto: {
       /** Format: uuid */
@@ -3311,6 +3362,69 @@ export interface operations {
         };
       };
       /** @description Invalid pricing payload */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ValidationErrorResponseDto'];
+        };
+      };
+      /** @description Missing or invalid bearer token */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Requires OWNER role and venue ownership */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description Pitch not found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+    };
+  };
+  SevenReservationsClubController_configurePitchPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Pitch id */
+        pitchId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ConfigurePitchPolicyDto'];
+      };
+    };
+    responses: {
+      /** @description Pitch conditions updated */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PitchResponseDto'];
+        };
+      };
+      /** @description Invalid policy payload */
       400: {
         headers: {
           [name: string]: unknown;

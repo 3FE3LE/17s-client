@@ -18,6 +18,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import { PitchPolicyForm } from '@/components/pitch-policy-form';
 import { PitchPriceRules } from '@/components/pitch-price-rules';
 import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
@@ -902,6 +903,7 @@ function OwnerWorkspace() {
               />
               <PitchConfig
                 venueId={selectedVenue.id}
+                venue={selectedVenue}
                 currency={selectedVenue.currency}
                 pitches={pitches}
                 selectedId={configPitchId}
@@ -1707,6 +1709,7 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
 /** One pitch picker drives price, weekly hours and slot length, each saved on its own. */
 function PitchConfig({
   venueId,
+  venue,
   currency,
   pitches,
   selectedId,
@@ -1716,6 +1719,7 @@ function PitchConfig({
   onRetry,
 }: {
   venueId: string;
+  venue: OwnerVenue;
   currency: string;
   pitches: PitchWithPricing[];
   selectedId: string | null;
@@ -1775,6 +1779,12 @@ function PitchConfig({
         key={`tarifas-${pitch.id}-${JSON.stringify(pitch.priceRules)}-${pitch.basePriceMinor}`}
         venueId={venueId}
         currency={currency}
+        pitch={pitch}
+      />
+      <PitchPolicyForm
+        key={`condiciones-${pitch.id}-${pitch.depositPercent}-${pitch.holdMinutes}-${pitch.cancellationWindowHours}-${pitch.paymentInstructions}`}
+        venueId={venueId}
+        venue={venue}
         pitch={pitch}
       />
       <OpeningHoursForm key={`horas-${pitch.id}`} venueId={venueId} pitch={pitch} />

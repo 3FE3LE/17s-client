@@ -36,6 +36,7 @@ type ConfigurePitchSlotsResult = ApiSchema<'ConfigurePitchSlotsResponseDto'>;
 export type CreatePitchBlockInput = ApiInput<ApiSchema<'CreatePitchBlockDto'>>;
 export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDto'>>;
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
+export type ConfigurePitchPolicyInput = ApiInput<ApiSchema<'ConfigurePitchPolicyDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
 export type CancelReservationByOwnerInput = ApiInput<ApiSchema<'CancelReservationByOwnerDto'>>;
 export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
@@ -76,6 +77,7 @@ export interface SevenRcOwnerApi {
   /** Partial update: omitted fields keep their stored value. */
   updateVenueSettings: (venueId: string, input: UpdateVenueSettingsInput) => Promise<VenueSettings>;
   /** Replaces the base price and the whole rule list. */
+  configurePitchPolicy: (pitchId: string, input: ConfigurePitchPolicyInput) => Promise<Pitch>;
   configurePitchPricing: (
     pitchId: string,
     input: ConfigurePitchPricingInput,
@@ -372,6 +374,13 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
     updateVenueSettings(venueId, input) {
       return request<VenueSettings>(apiPath('/7rc/venues/{venueId}/settings', { venueId }), {
         method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+    },
+    configurePitchPolicy(pitchId, input) {
+      return request<Pitch>(apiPath('/7rc/pitches/{pitchId}/policy', { pitchId }), {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
