@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next';
 
 import { errors } from './catalogs/en/errors';
+import { errors as esErrors } from './catalogs/es/errors';
+import { DEFAULT_LOCALE, type Locale } from './locales';
 
 /** Shape of `ApiError` from `@17suit/core` that the translation needs. */
 export interface ApiErrorLike {
@@ -34,4 +36,22 @@ export type TranslateFn = TFunction;
 export function translateApiError(t: TranslateFn, error: ApiErrorLike | null | undefined): string {
   const translate = t as unknown as (key: string, options?: object) => string;
   return translate(`errors:${resolveErrorKey(error)}`, { ...(error?.params ?? {}) });
+}
+
+const CATALOGS: Record<Locale, Record<ErrorKey, string>> = { en: errors, es: esErrors };
+
+/**
+ * Same text as `translateApiError`, without i18next: for code that has no
+ * React context (server actions, query helpers, native alerts). Interpolates
+ * `{{param}}` placeholders from the server `params`.
+ */
+export function describeApiError(
+  error: ApiErrorLike | null | undefined,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const template = (CATALOGS[locale] ?? CATALOGS[DEFAULT_LOCALE])[resolveErrorKey(error)];
+  const params = error?.params ?? {};
+  return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    Object.hasOwn(params, name) ? String(params[name]) : match,
+  );
 }

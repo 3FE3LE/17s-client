@@ -19,6 +19,9 @@
     "./feedback/toast": {
       "react-native": "./src/feedback/toast.native.ts",
       "default": "./src/feedback/toast.ts"
+    },
+    "./feedback": {
+      "default": "./src/feedback/run-action.ts"
     }
   },
   "scripts": {
@@ -74,6 +77,7 @@
     "@17suit/ui-native": "workspace:*",
     "@17suit/ui-web": "workspace:*",
     "lucide-react": "^0.542.0",
-    "lucide-react-native": "^0.542.0"
+    "lucide-react-native": "^0.542.0",
+    "@17suit/i18n": "workspace:*"
   }
 }

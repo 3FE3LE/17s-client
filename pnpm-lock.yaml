@@ -1027,6 +1027,9 @@ importers:
       '@17suit/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../i18n
       '@17suit/ui-native':
         specifier: workspace:*
         version: link:../ui-native

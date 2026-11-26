@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveErrorKey, translateApiError } from './api-error';
+import { describeApiError, resolveErrorKey, translateApiError } from './api-error';
 import { createI18n } from './create-i18n';
 
 describe('resolveErrorKey', () => {
@@ -28,5 +28,25 @@ describe('translateApiError', () => {
       'Too many attempts. Wait a minute and try again.',
     );
     expect(translateApiError(en.t, {})).toBe('Something went wrong. Please try again.');
+  });
+});
+
+describe('describeApiError', () => {
+  it('interpolates server params in both locales', () => {
+    const error = { errorKey: 'cancellationWindowPassed', params: { hours: 24 } };
+    expect(describeApiError(error, 'es')).toContain('hasta 24 h antes');
+    expect(describeApiError(error, 'en')).toContain('up to 24 h before');
+  });
+
+  it('keeps every server key of the 7RC error contract in both catalogs', () => {
+    for (const key of ['slotUnavailable', 'blockOverlapsReservations', 'policyChanged']) {
+      expect(resolveErrorKey({ errorKey: key })).toBe(key);
+    }
+  });
+
+  it('falls back to the unknown text and never leaks a raw message', () => {
+    expect(describeApiError({ errorKey: 'madeUp' }, 'es')).toBe(
+      'Algo salió mal. Inténtalo de nuevo.',
+    );
   });
 });
