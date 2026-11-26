@@ -167,3 +167,14 @@ export function CoAddressFields({ value, onChange, errors }: CoAddressFieldsProp
     </fieldset>
   );
 }
+
+/** Maps react-hook-form address errors (zod message = error key) to the keys the fields render. */
+export function addressErrorKeys(
+  errors: Partial<Record<CoAddressField, { message?: string }>> | undefined,
+): Partial<Record<CoAddressField, CoAddressErrorKey>> {
+  const out: Partial<Record<CoAddressField, CoAddressErrorKey>> = {};
+  for (const [field, error] of Object.entries(errors ?? {})) {
+    if (error?.message) out[field as CoAddressField] = error.message as CoAddressErrorKey;
+  }
+  return out;
+}
