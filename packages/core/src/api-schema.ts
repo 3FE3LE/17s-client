@@ -1650,6 +1650,45 @@ export interface components {
       mode: 'dummy' | 'manual' | 'live';
       note: string;
     };
+    CoAddressDto: {
+      /**
+       * @example calle
+       * @enum {string}
+       */
+      viaTipo:
+        | 'calle'
+        | 'carrera'
+        | 'avenida'
+        | 'avenida_calle'
+        | 'avenida_carrera'
+        | 'diagonal'
+        | 'transversal'
+        | 'circular'
+        | 'autopista';
+      /**
+       * @description Street number, e.g. 72, 72A, 72 Bis Sur
+       * @example 72 Bis Sur
+       */
+      viaNumero: string;
+      /**
+       * @description Number after the #
+       * @example 10
+       */
+      cruceNumero: string;
+      /**
+       * @description Number after the dash
+       * @example 25
+       */
+      placaNumero: string;
+      /** @example Local 2 */
+      complemento?: string;
+      /** @example Chapinero */
+      barrio?: string;
+      /** @example Bogotá */
+      municipio: string;
+      /** @example Cundinamarca */
+      departamento: string;
+    };
     CreateVenueDto: {
       /**
        * @description Human-readable venue name
@@ -1661,6 +1700,8 @@ export interface components {
        * @example 45 Park Ave, New York
        */
       location?: string;
+      /** @description Colombian address in components. When sent it replaces `location`, and the venue `address` is derived from it. */
+      addressParts?: components['schemas']['CoAddressDto'];
       /**
        * @description IANA timezone for venue operations (default America/Bogota)
        * @example America/Bogota
@@ -1686,6 +1727,7 @@ export interface components {
       ownerUserId?: string | null;
       name: string;
       address?: string | null;
+      addressParts?: components['schemas']['CoAddressDto'] | null;
       timezone: string;
       /** @example cancha-la-70 */
       slug?: string | null;
@@ -1723,6 +1765,7 @@ export interface components {
       ownerUserId?: string | null;
       name: string;
       address?: string | null;
+      addressParts?: components['schemas']['CoAddressDto'] | null;
       timezone: string;
       /** @example cancha-la-70 */
       slug?: string | null;
@@ -1755,6 +1798,8 @@ export interface components {
       name?: string;
       /** @example Cra 70 #45-10, Medellín */
       location?: string;
+      /** @description Colombian address in components. When sent it replaces `location`, and the venue `address` is derived from it. */
+      addressParts?: components['schemas']['CoAddressDto'];
       /**
        * @description IANA timezone
        * @example America/Bogota
@@ -2629,6 +2674,7 @@ export interface components {
       slug: string;
       name: string;
       address?: string | null;
+      addressParts?: components['schemas']['CoAddressDto'] | null;
       timezone: string;
       countryCode: string;
       currency: string;

@@ -2,6 +2,7 @@ export * from './analytics';
 export * from './api-client';
 export * from './api-types';
 export * from './auth';
+export * from './co-address';
 export * from './env';
 export * from './feature-flags';
 export * from './logger';

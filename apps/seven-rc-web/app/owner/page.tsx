@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
 import {
+  EMPTY_CO_ADDRESS_DRAFT,
+  coAddressFromDraft,
+  validateCoAddressDraft,
+  type CoAddressDraft,
+  type CoAddressErrorKey,
+  type CoAddressField,
+} from '@17suit/core';
+import {
   useCurrentUserRoleQuery,
   useRoleGate,
 } from '@17suit/module-seven-reservations-club/client';
@@ -33,7 +41,9 @@ import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { CreatePitchForm } from '@/components/create-pitch-form';
+import { CoAddressFields } from '@/components/co-address-fields';
 import { PublishVenueForm } from '@/components/publish-venue-form';
+import { VenueIdentityForm } from '@/components/venue-identity-form';
 import {
   ConfirmDialog,
   HintedInput,
@@ -916,6 +926,7 @@ function OwnerWorkspace() {
         <div className="grid gap-xl border-t border-border-default p-md">
           {selectedVenue ? (
             <>
+              <VenueIdentityForm key={`identity-${selectedVenue.id}`} venue={selectedVenue} />
               <VenueSettingsForm key={selectedVenue.id} venue={selectedVenue} />
               <PublishVenueForm
                 key={`publish-${selectedVenue.id}`}
@@ -1978,7 +1989,10 @@ function PitchPriceForm({
 function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) => void }) {
   const createVenueMutation = useCreateVenueMutation();
   const [name, setName] = useState('');
-  const [location, setLocation] = useState('');
+  const [address, setAddress] = useState<CoAddressDraft>({ ...EMPTY_CO_ADDRESS_DRAFT });
+  const [addressErrors, setAddressErrors] = useState<
+    Partial<Record<CoAddressField, CoAddressErrorKey>>
+  >({});
   const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1991,14 +2005,21 @@ function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) => void }
       setError('El nombre del complejo necesita al menos 3 caracteres.');
       return;
     }
+    const nextAddressErrors = validateCoAddressDraft(address);
+    setAddressErrors(nextAddressErrors);
+    if (Object.keys(nextAddressErrors).length > 0) {
+      setError('Revisa los campos de la dirección.');
+      return;
+    }
+    const addressParts = coAddressFromDraft(address);
     try {
       const created = await createVenueMutation.mutateAsync({
         name: name.trim(),
-        ...(location.trim() ? { location: location.trim() } : {}),
+        ...(addressParts ? { addressParts } : {}),
         timezone,
       });
       setName('');
-      setLocation('');
+      setAddress({ ...EMPTY_CO_ADDRESS_DRAFT });
       setNotice(`Creaste “${created.name}”. Ahora agrega sus canchas.`);
       onCreated(created.id);
     } catch (caught) {
@@ -2027,14 +2048,6 @@ function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) => void }
           value={name}
           onChangeText={setName}
         />
-        <AppInput
-          name="location"
-          label="Dirección (opcional)"
-          autoComplete="street-address"
-          maxLength={255}
-          value={location}
-          onChangeText={setLocation}
-        />
         <SelectField
           label="Zona horaria del complejo"
           name="timezone"
@@ -2044,6 +2057,7 @@ function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) => void }
           hint="Los horarios de las canchas se muestran en esta hora."
         />
       </div>
+      <CoAddressFields value={address} onChange={setAddress} errors={addressErrors} />
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={createVenueMutation.isPending}>
           {createVenueMutation.isPending ? 'Creando…' : 'Crear complejo'}
