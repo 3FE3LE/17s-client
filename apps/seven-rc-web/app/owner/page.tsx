@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useRef, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
+import { useRef, useState, type MouseEvent, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
-import {} from '@17suit/core';
 import {
   useCurrentUserRoleQuery,
   useRoleGate,
@@ -27,10 +26,10 @@ import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { CreateVenueForm, VENUE_NAME_INPUT_ID } from '@/components/create-venue-form';
+import { OpeningHoursForm } from '@/components/opening-hours-form';
 import { PaymentForm } from '@/components/payment-form';
 import { PitchPriceForm } from '@/components/pitch-price-form';
 import { SlotDurationForm } from '@/components/slot-duration-form';
-import { weekPayload } from '@/lib/opening-hours';
 import { VenueSettingsForm } from '@/components/venue-settings-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { customerLabel, PAYABLE_STATUSES } from '@/lib/owner-reservation-view';
@@ -49,10 +48,8 @@ import {
 } from '@/components/seven-rc-ui';
 import { describeError } from '@/lib/seven-rc-errors';
 import {
-  WEEKDAYS,
   addDaysToDateKey,
   dateKeyInTimeZone,
-  formatDuration,
   formatLongDate,
   formatMoneyMinor,
   formatSlotWhen,
@@ -64,7 +61,6 @@ import {
 } from '@/lib/seven-rc-format';
 import {
   useCompleteReservationMutation,
-  useConfigurePitchSlotsMutation,
   useConfirmVenueReservationMutation,
   useIntegrationsQuery,
   useMarkNoShowMutation,
@@ -1504,233 +1500,5 @@ function PitchConfig({
       <OpeningHoursForm key={`horas-${pitch.id}`} venueId={venueId} pitch={pitch} />
       <SlotDurationForm key={`turno-${pitch.id}`} venueId={venueId} pitch={pitch} />
     </div>
-  );
-}
-
-function OpeningHoursForm({ venueId, pitch }: { venueId: string; pitch: PitchWithPricing }) {
-  const configureMutation = useConfigurePitchSlotsMutation(pitch.id, venueId);
-  const [days, setDays] = useState<number[]>([]);
-  const [mode, setMode] = useState<'open' | 'closed'>('open');
-  const closeDialogRef = useRef<HTMLDialogElement | null>(null);
-  const [openTime, setOpenTime] = useState('08:00');
-  const [closeTime, setCloseTime] = useState('22:00');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  const currentHours = pitch.openingHours ?? {};
-
-  function toggleDay(day: number, checked: boolean) {
-    setDays((current) =>
-      checked ? [...new Set([...current, day])] : current.filter((value) => value !== day),
-    );
-  }
-
-  const dayNames = (values: number[]) =>
-    WEEKDAYS.filter((day) => values.includes(day.value))
-      .map((day) => day.label.toLowerCase())
-      .join(', ');
-  // Days in the selection that are open today and would become closed.
-  const closingDays = days.filter((day) => {
-    const hours = currentHours[String(day)];
-    return Boolean(hours?.openTime && hours.closeTime);
-  });
-
-  async function save() {
-    // The endpoint replaces the whole week, so carry over days not being edited.
-    // Days marked "Cerrado" are simply left out of the payload.
-    const keptDays = weekPayload(currentHours).filter((item) => !days.includes(item.dayOfWeek));
-    const editedDays =
-      mode === 'open' ? days.map((dayOfWeek) => ({ dayOfWeek, openTime, closeTime })) : [];
-
-    try {
-      // Slot length has its own form; omitted, the server keeps the stored value.
-      await configureMutation.mutateAsync({ openingHours: [...keptDays, ...editedDays] });
-      const names = dayNames(days);
-      setNotice(
-        mode === 'open'
-          ? `Guardaste ${openTime}–${closeTime} para ${names} en ${pitch.name}.`
-          : `Días cerrados en ${pitch.name}: ${names}. Los jugadores ya no verán turnos esos días.`,
-      );
-      setDays([]);
-      closeDialogRef.current?.close();
-    } catch (caught) {
-      setError(describeError(caught, 'No se pudieron guardar los horarios.'));
-    }
-  }
-
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setNotice(null);
-    if (days.length === 0) {
-      setError('Elige al menos un día.');
-      return;
-    }
-    if (mode === 'open' && closeTime <= openTime && closeTime !== '00:00') {
-      setError('La hora de cierre debe ser posterior a la de apertura.');
-      return;
-    }
-
-    if (mode === 'closed') {
-      if (closingDays.length === 0) {
-        setNotice(
-          days.length === 1
-            ? `El ${dayNames(days)} ya estaba cerrado. No hubo cambios.`
-            : `Esos días ya estaban cerrados. No hubo cambios.`,
-        );
-        return;
-      }
-      closeDialogRef.current?.showModal();
-      return;
-    }
-    void save();
-  }
-
-  return (
-    <form onSubmit={onSubmit} aria-labelledby="horarios-title" className="grid gap-md">
-      <h3 id="horarios-title" className="m-0 font-arvo text-md text-text">
-        Horarios de apertura
-      </h3>
-      <div className="grid gap-md md:grid-cols-2">
-        <div>
-          <p className="m-0 mb-xs text-sm leading-[1.5] text-muted">Semana actual</p>
-          <ul className="m-0 grid list-none gap-1 p-0 text-sm leading-[1.5]">
-            {WEEKDAYS.map((day) => {
-              const hours = currentHours[String(day.value)];
-              return (
-                <li key={day.value} className="flex justify-between gap-sm">
-                  <span className="text-text">{day.label}</span>
-                  <span className="tabular-nums text-muted">
-                    {hours?.openTime && hours.closeTime
-                      ? `${hours.openTime}–${hours.closeTime}`
-                      : 'Cerrado'}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="m-0 mt-xs text-sm leading-[18px] text-muted">
-            Turnos de {formatDuration(pitch.slotDurationMinutes)}.
-          </p>
-        </div>
-
-        <div className="grid content-start gap-sm">
-          <fieldset className="m-0 grid gap-sm border-0 p-0">
-            <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">
-              Días a los que aplicar el horario
-            </legend>
-            <div className="flex flex-wrap gap-sm">
-              {WEEKDAYS.map((day) => (
-                <label
-                  key={day.value}
-                  className="flex min-h-11 cursor-pointer items-center gap-xs rounded-[var(--radius-md)] border border-border-strong px-3 text-md text-text has-[:checked]:border-action-primary has-[:checked]:bg-action-primary-soft"
-                >
-                  <input
-                    type="checkbox"
-                    name="days"
-                    value={day.value}
-                    checked={days.includes(day.value)}
-                    onChange={(event) => toggleDay(day.value, event.target.checked)}
-                    className="h-4 w-4 accent-[var(--color-action-primary)]"
-                  />
-                  {day.label}
-                </label>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-md">
-              <button
-                type="button"
-                className="min-h-11 cursor-pointer border-0 bg-transparent px-0 text-sm text-text underline underline-offset-4"
-                onClick={() => setDays([1, 2, 3, 4, 5])}
-              >
-                Lunes a viernes
-              </button>
-              <button
-                type="button"
-                className="min-h-11 cursor-pointer border-0 bg-transparent px-0 text-sm text-text underline underline-offset-4"
-                onClick={() => setDays([0, 1, 2, 3, 4, 5, 6])}
-              >
-                Toda la semana
-              </button>
-            </div>
-          </fieldset>
-          <fieldset className="m-0 grid gap-sm border-0 p-0">
-            <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">
-              Cada día elegido queda
-            </legend>
-            <div className="flex flex-wrap gap-sm">
-              {(
-                [
-                  ['open', 'Abierto'],
-                  ['closed', 'Cerrado'],
-                ] as const
-              ).map(([value, label]) => (
-                <label
-                  key={value}
-                  className="flex min-h-11 cursor-pointer items-center gap-xs rounded-[var(--radius-md)] border border-border-strong px-3 text-md text-text has-[:checked]:border-action-primary has-[:checked]:bg-action-primary-soft"
-                >
-                  <input
-                    type="radio"
-                    name="hoursMode"
-                    value={value}
-                    checked={mode === value}
-                    onChange={() => setMode(value)}
-                    className="h-4 w-4 accent-[var(--color-action-primary)]"
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <div className={cx('grid grid-cols-2 gap-sm', mode === 'closed' && 'hidden')}>
-            <AppInput
-              type="time"
-              name="openTime"
-              label="Abre"
-              step={900}
-              required
-              value={openTime}
-              onChangeText={setOpenTime}
-            />
-            <AppInput
-              type="time"
-              name="closeTime"
-              label="Cierra"
-              step={900}
-              required
-              value={closeTime}
-              onChangeText={setCloseTime}
-            />
-          </div>
-          <AppButton type="submit" disabled={configureMutation.isPending}>
-            {configureMutation.isPending
-              ? 'Guardando…'
-              : mode === 'closed'
-                ? 'Marcar como cerrado'
-                : 'Guardar horarios'}
-          </AppButton>
-          <InlineError message={error} />
-          <InlineStatus message={notice} />
-        </div>
-      </div>
-      <ConfirmDialog
-        dialogRef={closeDialogRef}
-        title="¿Cerrar estos días?"
-        confirmLabel="Sí, cerrar"
-        pendingLabel="Guardando…"
-        dismissLabel="Volver"
-        isPending={configureMutation.isPending}
-        error={error}
-        onConfirm={() => void save()}
-        onClosed={() => undefined}
-      >
-        <p className="m-0 text-text">
-          {pitch.name} dejará de abrir {dayNames(closingDays)}.
-        </p>
-        <p className="m-0">
-          Los jugadores ya no podrán reservar esos días. Las reservas ya hechas no se cancelan.
-        </p>
-      </ConfirmDialog>
-    </form>
   );
 }
