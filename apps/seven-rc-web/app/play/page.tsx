@@ -1,7 +1,11 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Suspense, useCallback, useRef, useState, type FormEvent } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { intInRange } from '@17suit/core';
 import {
   useCurrentUserRoleQuery,
   useRoleGate,
@@ -62,6 +66,13 @@ const SEARCH_DEBOUNCE_MS = 350;
 const DATE_STRIP_DAYS = 14;
 const MAX_VENUE_RESULTS = 12;
 const PENDING_POLL_MS = 30_000;
+
+const reserveSchema = z.object({
+  invitedCount: intInRange(0, 50, 'Los invitados deben ser entre 0 y 50.'),
+  notes: z.string().max(500),
+});
+type ReserveValues = z.infer<typeof reserveSchema>;
+
 const RESERVE_FORM_ID = 'reserva-form';
 
 /** Part-of-day buckets by venue-local start hour. */
@@ -238,8 +249,10 @@ function PlayerWorkspace() {
         slot.status === 'AVAILABLE',
     ) ?? null;
 
-  const [invitedCount, setInvitedCount] = useState('0');
-  const [notes, setNotes] = useState('');
+  const { control, handleSubmit, reset } = useForm<ReserveValues>({
+    resolver: zodResolver(reserveSchema),
+    defaultValues: { invitedCount: '0', notes: '' },
+  });
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [completedBooking, setCompletedBooking] = useState<CompletedBooking | null>(null);
 
@@ -286,32 +299,31 @@ function PlayerWorkspace() {
     setSearchTerm(searchInput.trim());
   }
 
-  async function onReserve(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const onReserve = handleSubmit(async (values) => {
     setBookingError(null);
     if (!selectedVenue || !selectedPitch || !selectedSlot) {
       setBookingError('Elige un horario disponible para reservar.');
       return;
     }
 
-    const guests = Math.max(0, Math.min(50, Number(invitedCount) || 0));
+    const guests = Number(values.invitedCount);
+    const note = values.notes.trim();
     try {
       const reservation = await createReservationMutation.mutateAsync({
         pitchId: selectedPitch.id,
         startAt: selectedSlot.startAt,
         endAt: selectedSlot.endAt,
         ...(guests > 0 ? { invitedCount: guests } : {}),
-        ...(notes.trim() ? { notes: notes.trim() } : {}),
+        ...(note ? { notes: note } : {}),
       });
       setCompletedBooking({ reservation, venue: selectedVenue, pitch: selectedPitch });
       setExplicitSlot(null);
-      setNotes('');
-      setInvitedCount('0');
+      reset();
     } catch (error) {
       setBookingError(describeError(error, 'No se pudo enviar la reserva.'));
       if (isSlotConflict(error)) setExplicitSlot(null);
     }
-  }
+  });
 
   return (
     <AppFrame
@@ -447,7 +459,8 @@ function PlayerWorkspace() {
 
             <form
               id={RESERVE_FORM_ID}
-              onSubmit={onReserve}
+              onSubmit={(event) => void onReserve(event)}
+              noValidate
               aria-labelledby="resumen-title"
               className="grid gap-md rounded-[var(--radius-lg)] border border-border-strong bg-background p-md lg:sticky lg:top-md"
             >
@@ -464,25 +477,43 @@ function PlayerWorkspace() {
               />
               {selectedSlot ? (
                 <>
-                  <AppInput
-                    type="number"
+                  <Controller
+                    control={control}
                     name="invitedCount"
-                    label="Invitados además de ti (opcional)"
-                    inputMode="numeric"
-                    min={0}
-                    max={50}
-                    step={1}
-                    value={invitedCount}
-                    onChangeText={setInvitedCount}
+                    render={({ field, fieldState }) => (
+                      <div className="grid content-start gap-xs">
+                        <AppInput
+                          type="number"
+                          name="invitedCount"
+                          label="Invitados además de ti (opcional)"
+                          inputMode="numeric"
+                          min={0}
+                          max={50}
+                          step={1}
+                          error={Boolean(fieldState.error)}
+                          value={field.value}
+                          onChangeText={field.onChange}
+                          onBlur={field.onBlur}
+                        />
+                        <InlineError message={fieldState.error?.message ?? null} />
+                      </div>
+                    )}
                   />
-                  <AppInput
+                  <Controller
+                    control={control}
                     name="notes"
-                    label="Nota para el complejo (opcional)"
-                    placeholder="Ej.: traemos balón"
-                    maxLength={500}
-                    autoComplete="off"
-                    value={notes}
-                    onChangeText={setNotes}
+                    render={({ field }) => (
+                      <AppInput
+                        name="notes"
+                        label="Nota para el complejo (opcional)"
+                        placeholder="Ej.: traemos balón"
+                        maxLength={500}
+                        autoComplete="off"
+                        value={field.value}
+                        onChangeText={field.onChange}
+                        onBlur={field.onBlur}
+                      />
+                    )}
                   />
                 </>
               ) : null}
