@@ -39,7 +39,9 @@ import { PitchPriceRules } from '@/components/pitch-price-rules';
 import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
+import { PaymentForm } from '@/components/payment-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
+import { customerLabel, PAYABLE_STATUSES } from '@/lib/owner-reservation-view';
 import { CreatePitchForm } from '@/components/create-pitch-form';
 import { CoAddressFields } from '@/components/co-address-fields';
 import { PublishVenueForm } from '@/components/publish-venue-form';
@@ -90,7 +92,6 @@ import {
   useUpdateVenueSettingsMutation,
   type OwnerVenue,
   type PitchWithPricing,
-  type ReservationPaymentKind,
   type ReservationPaymentMethod,
   type VenueReservation,
 } from '@/lib/owner-queries';
@@ -109,7 +110,6 @@ const PENDING_POLL_MS = 30_000;
 const SETTLED_ROW_MS = 2_500;
 const PENDING_HEADING_ID = 'pendientes-title';
 const TODAY_HEADING_ID = 'hoy-title';
-const PAYABLE_STATUSES = new Set(['pending_confirmation', 'confirmed', 'completed']);
 const VENUE_NAME_INPUT_ID = 'nuevo-complejo-nombre';
 const INACTIVE_STATUSES = new Set(['cancelled', 'rejected', 'expired']);
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
@@ -234,15 +234,6 @@ export default function OwnerPage() {
   }
 
   return <OwnerWorkspace />;
-}
-
-function customerLabel(reservation: VenueReservation): string {
-  return (
-    reservation.user?.name ??
-    reservation.customerName ??
-    reservation.user?.email ??
-    'Jugador sin nombre'
-  );
 }
 
 function owesDeposit(reservation: VenueReservation): boolean {
@@ -1445,151 +1436,6 @@ function PaymentDialog({
         />
       ) : null}
     </dialog>
-  );
-}
-
-function PaymentForm({
-  reservation,
-  timeZone,
-  isPending,
-  onCancel,
-  onSubmit,
-}: {
-  reservation: VenueReservation;
-  timeZone: string;
-  isPending: boolean;
-  onCancel: () => void;
-  onSubmit: (input: {
-    kind: ReservationPaymentKind;
-    method: ReservationPaymentMethod;
-    amountMinor: number;
-    note?: string;
-  }) => Promise<void>;
-}) {
-  const depositDue = Math.max(0, reservation.depositMinor - reservation.paidMinor);
-  const balanceDue = Math.max(0, reservation.priceMinor - reservation.paidMinor);
-  const payable = PAYABLE_STATUSES.has(reservation.status);
-  const kindOptions = PAYMENT_KIND_OPTIONS.filter((option) =>
-    option.value === 'refund' ? reservation.paidMinor > 0 : payable,
-  );
-  const dueByKind: Record<ReservationPaymentKind, number> = {
-    deposit: depositDue,
-    balance: balanceDue,
-    refund: reservation.paidMinor,
-  };
-  const defaultKind: ReservationPaymentKind = !payable
-    ? 'refund'
-    : depositDue > 0
-      ? 'deposit'
-      : 'balance';
-  const defaultAmount = dueByKind[defaultKind];
-  const [kind, setKind] = useState<ReservationPaymentKind>(defaultKind);
-  const [method, setMethod] = useState<ReservationPaymentMethod>('transfer');
-  const [amount, setAmount] = useState(defaultAmount > 0 ? formatAmountInput(defaultAmount) : '');
-  const [note, setNote] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const preview = parseAmount(amount);
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    if (!preview || preview <= 0) {
-      setError('Escribe un monto mayor que cero, p. ej. 30.000.');
-      return;
-    }
-    if (kind === 'refund' && preview > reservation.paidMinor) {
-      setError('La devolución supera lo que el jugador ha pagado.');
-      return;
-    }
-    try {
-      await onSubmit({
-        kind,
-        method,
-        amountMinor: preview,
-        ...(note.trim() ? { note: note.trim() } : {}),
-      });
-    } catch (caught) {
-      setError(describeError(caught, 'No se pudo registrar el pago.'));
-    }
-  }
-
-  return (
-    <form onSubmit={(event) => void handleSubmit(event)} className="grid gap-md">
-      <div className="grid gap-xs">
-        <h2 id="pago-title" className="m-0 font-arvo text-lg leading-[1.3]">
-          Registrar pago
-        </h2>
-        <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
-          {customerLabel(reservation)} · {reservation.pitch.name} ·{' '}
-          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
-        </p>
-        <p className="m-0 text-sm leading-[18px] text-muted">
-          {reservation.priceMinor > 0
-            ? `Precio ${formatMoneyMinor(reservation.priceMinor, reservation.currency)}`
-            : 'Precio sin definir'}
-          {reservation.depositMinor > 0
-            ? ` · anticipo ${formatMoneyMinor(reservation.depositMinor, reservation.currency)}`
-            : ''}
-          {` · pagado ${formatMoneyMinor(reservation.paidMinor, reservation.currency)}`}
-        </p>
-      </div>
-      <div className="grid gap-sm sm:grid-cols-2">
-        <SelectField
-          label="Concepto"
-          name="kind"
-          value={kind}
-          onChangeValue={(value) => {
-            const next = value as ReservationPaymentKind;
-            setKind(next);
-            setAmount(dueByKind[next] > 0 ? formatAmountInput(dueByKind[next]) : '');
-          }}
-          options={kindOptions}
-        />
-        <SelectField
-          label="Medio"
-          name="method"
-          value={method}
-          onChangeValue={(value) => setMethod(value as ReservationPaymentMethod)}
-          options={PAYMENT_METHOD_OPTIONS}
-        />
-      </div>
-      <HintedInput
-        name="amount"
-        label={`Monto (${reservation.currency})`}
-        inputMode="decimal"
-        autoComplete="off"
-        required
-        value={amount}
-        onChangeText={setAmount}
-        hint={
-          preview
-            ? `Se anotará ${formatMoneyMinor(preview, reservation.currency)}.${
-                kind === 'deposit' && reservation.status === 'pending_confirmation'
-                  ? ' Si cubre el anticipo, la reserva se confirma.'
-                  : ''
-              }`
-            : 'Ej.: 30.000. 17Suit no mueve dinero: solo lo anota.'
-        }
-      />
-      <AppInput
-        name="note"
-        label="Nota (opcional)"
-        placeholder="Ej.: comprobante Nequi 4821"
-        maxLength={300}
-        autoComplete="off"
-        value={note}
-        onChangeText={setNote}
-      />
-      <InlineError message={error} />
-      <div className="flex flex-col-reverse gap-sm sm:flex-row sm:justify-end">
-        <AppButton variant="neutral" fullWidth={false} disabled={isPending} onPress={onCancel}>
-          Volver
-        </AppButton>
-        <AppButton type="submit" fullWidth={false} disabled={isPending}>
-          {isPending ? 'Guardando…' : 'Registrar pago'}
-        </AppButton>
-      </div>
-    </form>
   );
 }
 
