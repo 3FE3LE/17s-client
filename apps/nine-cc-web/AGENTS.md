@@ -36,18 +36,18 @@
 
 ## Local screen map (Day 1)
 
-| Route | Role | Day-1 status |
-|---|---|---|
-| `/` | marketing home (signed-out) / care dashboard redirect (signed-in) | scaffolded |
-| `/sign-in`, `/sign-up`, `/forgot-password`, `/sso-callback` | Clerk auth bridge (redirect-stubs → landing) | scaffolded |
-| `/care-circle` | caregiver's primary care circle + day's blocks | not yet |
-| `/care-circle/members` | add / remove / re-role circle members | not yet |
-| `/patient` | patient profile editor (display name, locale, allergies, instructions) | not yet |
-| `/medication-blocks` | block schedule editor + per-circle slot vocabulary | not yet |
-| `/escalation-policy` | escalation contacts + cadence editor | not yet |
-| `/patients/:id/daily-timeline?date=YYYY-MM-DD` | full-day review (powers the care dashboard) | not yet |
-| `/medication-blocks/:id/confirm` | caregiver-side confirmation form (taken / skipped / unknown) | not yet |
-| `/history` | medication history (caregiver-side) | not yet |
+| Route                                                       | Role                                                                   | Day-1 status |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------- | ------------ |
+| `/`                                                         | marketing home (signed-out) / care dashboard redirect (signed-in)      | scaffolded   |
+| `/sign-in`, `/sign-up`, `/forgot-password`, `/sso-callback` | Clerk auth bridge (redirect-stubs → landing)                           | scaffolded   |
+| `/care-circle`                                              | caregiver's primary care circle + day's blocks                         | not yet      |
+| `/care-circle/members`                                      | add / remove / re-role circle members                                  | not yet      |
+| `/patient`                                                  | patient profile editor (display name, locale, allergies, instructions) | not yet      |
+| `/medication-blocks`                                        | block schedule editor + per-circle slot vocabulary                     | not yet      |
+| `/escalation-policy`                                        | escalation contacts + cadence editor                                   | not yet      |
+| `/patients/:id/daily-timeline?date=YYYY-MM-DD`              | full-day review (powers the care dashboard)                            | not yet      |
+| `/medication-blocks/:id/confirm`                            | caregiver-side confirmation form (taken / skipped / unknown)           | not yet      |
+| `/history`                                                  | medication history (caregiver-side)                                    | not yet      |
 
 Care data routes are all behind auth; only the marketing + auth bridge surfaces are public.
 
