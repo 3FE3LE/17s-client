@@ -1,7 +1,8 @@
+import { getProductLocale } from '@17suit/i18n/next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProductFooter, buttonRecipe, ThemeScript } from '@17suit/ui';
 import { AppProviders } from '@17suit/ui/app-providers';
-import { auth } from '@clerk/nextjs/server';
+import { getServerAuth } from '@/lib/server-auth';
 import type { Metadata } from 'next';
 import { Amaranth, Arvo, Zilla_Slab } from 'next/font/google';
 import Link from 'next/link';
@@ -50,12 +51,13 @@ const footerButton = (intent: 'primary' | 'secondary') =>
   buttonRecipe({ intent, size: 'sm', platform: 'web', fullWidth: false });
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const { userId } = await auth();
+  const locale = await getProductLocale();
+  const { userId } = await getServerAuth();
   const isSignedIn = Boolean(userId);
 
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
       // ThemeScript sets the `dark` class before hydration.
       suppressHydrationWarning
@@ -65,7 +67,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <WebAuthProvider>
-          <AppProviders>
+          <AppProviders locale={locale}>
             <SevenRcClientProviders>
               {isSignedIn ? (
                 <header className="bg-background px-lg pt-sm">

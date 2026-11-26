@@ -1,7 +1,7 @@
 'use client';
 
 import { cx, inputRecipe } from '@17suit/design-system';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from '../icons';
 import type { InputHTMLAttributes, ReactNode } from 'react';
 import { useId, useState } from 'react';
 

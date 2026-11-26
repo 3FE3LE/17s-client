@@ -8,8 +8,8 @@ name: E2E real (nightly)
 # - Server ref defaults to `main`; override it from "Run workflow" to test a server branch.
 # - Clerk keys are placeholders, not credentials. The public flow needs no Clerk session.
 on:
-  schedule:
-    - cron: '0 7 * * *' # 02:00 America/Bogota
+  # Nightly schedule paused 2026-11-24 (workspace#90, #95): 7rc flows are not defined yet.
+  # Restore `schedule: - cron: '0 7 * * *'` (02:00 America/Bogota) once the MVP is consolidated.
   workflow_dispatch:
     inputs:
       server_ref:
@@ -87,6 +87,7 @@ jobs:
           NODE_ENV: development
           PORT: '4000'
           LOG_LEVEL: warn
+          E2E_FAKE_AUTH: '1'
           CLERK_ISSUER: https://clerk.example.com
           CLERK_JWKS_URL: https://clerk.example.com/.well-known/jwks.json
         run: |

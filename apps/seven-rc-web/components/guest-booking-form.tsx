@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { AppButton } from '@17suit/ui';
 import { reserveAction, type BookingFormState } from '@/app/c/[slug]/actions';
+import { policySummaryLines, type PolicySummaryInput } from '@/lib/deposit-policy';
 import { HintedInput, InlineError, TextAreaField } from '@/components/seven-rc-ui';
 
 export interface GuestBookingFormProps {
@@ -18,6 +19,10 @@ export interface GuestBookingFormProps {
   depositPercent: number;
   depositLabel: string;
   holdMinutes: number;
+  /** Venue conditions version the visitor saw; the server rejects the booking if it moved. */
+  policyVersion: number;
+  /** Conditions of this pitch, shown before the player confirms. */
+  policy: PolicySummaryInput;
 }
 
 const INITIAL: BookingFormState = { fieldErrors: {}, formError: null };
@@ -54,6 +59,7 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
       <input type="hidden" name="pitchId" value={props.pitchId} />
       <input type="hidden" name="startAt" value={props.startAt} />
       <input type="hidden" name="fecha" value={props.date} />
+      <input type="hidden" name="policyVersion" value={props.policyVersion} />
 
       <dl className="m-0 grid gap-xs text-md text-text">
         <div className="grid gap-[2px]">
@@ -80,6 +86,29 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
           ? `Apartamos el turno ${holdText(props.holdMinutes)} para que pagues el anticipo. Si no llega a tiempo, el horario se libera.`
           : 'Tu reserva se confirma al instante.'}
       </p>
+
+      <section
+        aria-labelledby="condiciones-titulo"
+        className="grid gap-xs rounded-[var(--radius-md)] border border-border-default p-sm"
+      >
+        <h3 id="condiciones-titulo" className="m-0 text-sm font-bold leading-[18px] text-text">
+          Condiciones de esta reserva
+        </h3>
+        <ul className="m-0 grid list-disc gap-[2px] pl-md text-sm leading-[18px] text-muted">
+          {policySummaryLines(props.policy).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+        {props.policy.conditionsText?.trim() ? (
+          <p className="m-0 whitespace-pre-line text-sm leading-[18px] text-text">
+            {props.policy.conditionsText.trim()}
+          </p>
+        ) : null}
+        <p className="m-0 text-sm leading-[18px] text-muted">
+          Al reservar aceptas estas condiciones. El pago del anticipo se arregla directamente con el
+          complejo.
+        </p>
+      </section>
 
       <div className="grid gap-md md:grid-cols-2">
         <HintedInput

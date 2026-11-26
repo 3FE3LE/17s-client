@@ -1,8 +1,9 @@
 'use client';
 
 import { buttonRecipe, cardRecipe, cx, pageContainerRecipe } from '@17suit/design-system';
-import { LogOut } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { LogOut } from '../icons';
+import { ProductLanguageSelect } from './ProductLanguageSelect';
+import type { LucideIcon } from '../icons';
 import {
   Fragment,
   useSyncExternalStore,
@@ -84,6 +85,8 @@ export interface AppWorkspaceShellProps extends PropsWithChildren {
   activePath?: string;
   homeHref?: string;
   onSignOut?: () => void;
+  /** Language control in the sidebar; defaults to ProductLanguageSelect, `false` hides it. */
+  languageControl?: ReactNode | false;
   signOutLabel?: string;
   density?: AppWorkspaceShellDensity;
   /**
@@ -115,6 +118,7 @@ export function AppWorkspaceShell({
   activePath = '',
   homeHref = '/',
   onSignOut,
+  languageControl,
   signOutLabel = 'Log out',
   density = 'default',
   account,
@@ -310,6 +314,11 @@ export function AppWorkspaceShell({
             // override `hidden` on the button itself and duplicate the mobile sign-out.
             <div className="mt-[var(--spacing-md)] hidden lg:block">{signOutButton}</div>
           ) : null}
+          {languageControl === false ? null : (
+            <div className="mt-[var(--spacing-md)]">
+              {languageControl ?? <ProductLanguageSelect />}
+            </div>
+          )}
         </aside>
 
         <section

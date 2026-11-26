@@ -1,5 +1,10 @@
+'use client';
+
+import { useTranslation } from '@17suit/i18n/react';
 import type { PropsWithChildren } from 'react';
+import { tList } from '../i18n';
 import { SiteLogo } from './site-logo';
+import { useUiLocale } from './use-ui-locale';
 
 interface AuthShellProps extends PropsWithChildren {
   title: string;
@@ -8,18 +13,15 @@ interface AuthShellProps extends PropsWithChildren {
   context?: { accentKey: string; text: string } | undefined;
 }
 
-const reasons = [
-  'Una cuenta para todas las apps de 17Suit.',
-  'Después de entrar, vuelves a la app desde la que llegaste.',
-  'Si olvidas tu contraseña, la recuperas con un código en tu correo.',
-];
-
 export function AuthShell({ title, description, context, children }: AuthShellProps) {
+  const { t } = useTranslation('landing');
+  const locale = useUiLocale();
+  const reasons = tList(t, 'account.shell.reasons');
   return (
     <main className="min-h-screen bg-suit-canvas font-zilla text-text">
       <div className="mx-auto max-w-[1000px] px-[var(--spacing-md)] pb-[var(--spacing-x3l)] pt-[var(--spacing-md)] md:px-[var(--spacing-lg)] md:pt-[var(--spacing-lg)] lg:flex lg:min-h-screen lg:flex-col">
         <header className="mb-[var(--spacing-xl)] flex items-center md:mb-[var(--spacing-x3l)] lg:mb-[var(--spacing-xl)]">
-          <SiteLogo />
+          <SiteLogo locale={locale} />
         </header>
 
         {/* Desktop: narrower container, columns centred vertically so the form and its

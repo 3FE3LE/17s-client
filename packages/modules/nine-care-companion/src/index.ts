@@ -109,13 +109,9 @@ export function validateDailyTimeline(input: unknown): DailyTimeline {
 export function validateMedicationBlockSummary(input: unknown): MedicationBlockSummary {
   return MedicationBlockSummarySchema.parse(input);
 }
-export function validateMedicationBlockInstructions(
-  input: unknown,
-): MedicationBlockInstructions {
+export function validateMedicationBlockInstructions(input: unknown): MedicationBlockInstructions {
   return MedicationBlockInstructionsSchema.parse(input);
 }
-export function validateCreateConfirmation(
-  input: unknown,
-): CreateConfirmationInput {
+export function validateCreateConfirmation(input: unknown): CreateConfirmationInput {
   return CreateConfirmationSchema.parse(input);
 }

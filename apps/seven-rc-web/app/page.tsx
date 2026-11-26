@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { getServerAuth } from '@/lib/server-auth';
 import { getSevenReservationsClubPostAuthPath } from '@17suit/module-seven-reservations-club';
 import { CheckCircle2, buttonRecipe, cx, pageContainerRecipe } from '@17suit/ui';
 import Image from 'next/image';
@@ -80,7 +80,7 @@ function SlotPreview() {
 }
 
 export default async function HomePage() {
-  const { userId } = await auth();
+  const { userId } = await getServerAuth();
 
   if (userId) {
     const { role } = await getCurrentUserRole();

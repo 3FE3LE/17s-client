@@ -96,7 +96,9 @@ for (const { slug, entry } of webApps) {
   }
 
   if (fileFailures.length === 0) {
-    console.log(`PASS  ${slug}  (${entry.appDir}) — all 4 auth-bridge stubs present and redirect to landing.`);
+    console.log(
+      `PASS  ${slug}  (${entry.appDir}) — all 4 auth-bridge stubs present and redirect to landing.`,
+    );
   } else {
     failures.push({ slug, appDir: entry.appDir, fileFailures });
     console.log(`FAIL  ${slug}  (${entry.appDir})`);

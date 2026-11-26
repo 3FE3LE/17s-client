@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 // A form submitted before hydration uses the browser default, so every auth
 // form has to declare its method instead of relying on `onSubmit`.
 const authForms = [
-  '../sign-in/[[...sign-in]]/sign-in-client.tsx',
-  '../sign-up/[[...sign-up]]/sign-up-client.tsx',
-  '../forgot-password/page.tsx',
+  '../(account)/sign-in/[[...sign-in]]/sign-in-client.tsx',
+  '../(account)/sign-up/[[...sign-up]]/sign-up-client.tsx',
+  '../(account)/forgot-password/page.tsx',
 ];
 
 describe('auth forms', () => {

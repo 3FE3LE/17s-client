@@ -3,9 +3,11 @@
  * names, amounts and places are fictional sample data. The drawing is
  * aria-hidden; the figcaption carries the one-line description for assistive
  * tech and sighted readers alike. `compact` trims rows for the home hero.
+ * Server components: copy comes from the `mocks` catalog through the `t` prop.
  */
 
 import type { ReactNode } from 'react';
+import { tItems, tList, type LandingT } from '../i18n';
 
 const frameClass =
   'overflow-hidden rounded-[var(--radius-xl)] border border-line bg-surface shadow-[0_18px_40px_rgb(0_23_31/0.1)] dark:shadow-[0_10px_24px_rgb(0_0_0/0.3)]';
@@ -13,9 +15,8 @@ const frameClass =
 const chromeClass =
   'flex items-center justify-between gap-[var(--spacing-sm)] border-b border-line px-[var(--spacing-md)] py-[var(--spacing-sm)]';
 
-const SAMPLE_CAPTION = 'Vista de ejemplo con datos ficticios.';
-
 export interface MockProps {
+  t: LandingT;
   /** Fewer rows, for the home hero. */
   compact?: boolean;
   caption?: string;
@@ -43,39 +44,24 @@ function MockFigure({
   );
 }
 
-const movements = [
-  {
-    sender: 'Banco Andino',
-    detail: 'Compra en Café Lumbre',
-    amount: '−$245.00',
-    category: 'Comida',
-  },
-  {
-    sender: 'PagaFácil',
-    detail: 'Suscripción Musicbox',
-    amount: '−$129.00',
-    category: 'Suscripciones',
-  },
-  {
-    sender: 'Banco Andino',
-    detail: 'Transferencia recibida',
-    amount: '+$3,200.00',
-    category: 'Ingresos',
-  },
-] as const;
+interface Movement {
+  sender: string;
+  detail: string;
+  amount: string;
+  category: string;
+}
 
-export function FifteenReviewMock({
-  compact = false,
-  caption = SAMPLE_CAPTION,
-  className,
-}: MockProps = {}) {
+export function FifteenReviewMock({ t, compact = false, caption, className }: MockProps) {
+  const movements = tItems<Movement>(t, 'mocks.fifteen.movements');
   const rows = compact ? movements.slice(0, 2) : movements;
   return (
-    <MockFigure caption={caption} className={className}>
+    <MockFigure caption={caption ?? t('mocks.sample')} className={className}>
       <div className={chromeClass}>
-        <span className="font-arvo text-md font-bold leading-[1.3] text-text">Por revisar</span>
+        <span className="font-arvo text-md font-bold leading-[1.3] text-text">
+          {t('mocks.fifteen.title')}
+        </span>
         <span className="rounded-full bg-[color-mix(in_oklab,var(--landing-product)_14%,transparent)] px-2.5 py-0.5 text-sm font-bold leading-[18px] text-product tabular-nums">
-          {movements.length} movimientos
+          {t('mocks.fifteen.count', { count: movements.length })}
         </span>
       </div>
       <ul className="m-0 grid list-none p-0">
@@ -105,7 +91,7 @@ export function FifteenReviewMock({
                 index === 0 ? 'bg-product text-on-product' : 'border border-product text-product'
               }`}
             >
-              Confirmar
+              {t('mocks.fifteen.confirm')}
             </span>
           </li>
         ))}
@@ -132,30 +118,27 @@ const slotTone: Record<(typeof slots)[number]['state'], string> = {
   selected: 'border-product bg-product text-on-product',
 };
 
-const days = [
-  { label: 'Vie', date: '13' },
-  { label: 'Sáb', date: '14', active: true },
-  { label: 'Dom', date: '15' },
-] as const;
+const dayDates = ['13', '14', '15'] as const;
+const ACTIVE_DAY = '14';
 
-export function SevenSlotMock({
-  compact = false,
-  caption = SAMPLE_CAPTION,
-  className,
-}: MockProps = {}) {
+export function SevenSlotMock({ t, compact = false, caption, className }: MockProps) {
+  const dayLabels = tList(t, 'mocks.seven.days');
+  const days = dayDates.map((date, index) => ({ date, label: dayLabels[index] ?? '' }));
   const visibleSlots = compact ? slots.slice(0, 4) : slots;
   return (
-    <MockFigure caption={caption} className={className}>
+    <MockFigure caption={caption ?? t('mocks.sample')} className={className}>
       <div className={chromeClass}>
         <span className="min-w-0">
           <span className="block truncate text-sm leading-[18px] text-muted">
-            Complejo Los Álamos
+            {t('mocks.seven.venue')}
           </span>
           <span className="block font-arvo text-md font-bold leading-[1.3] text-text">
-            Cancha 2 · Fútbol 7
+            {t('mocks.seven.court')}
           </span>
         </span>
-        <span className="shrink-0 text-sm leading-[18px] text-muted">Turnos de 1 h</span>
+        <span className="shrink-0 text-sm leading-[18px] text-muted">
+          {t('mocks.seven.slotLength')}
+        </span>
       </div>
       <div className="grid gap-[var(--spacing-md)] p-[var(--spacing-md)]">
         <div className="flex gap-[var(--spacing-xs)]">
@@ -163,9 +146,7 @@ export function SevenSlotMock({
             <span
               key={day.date}
               className={`grid min-w-14 justify-items-center rounded-[var(--radius-lg)] border px-3 py-1.5 leading-[1.2] ${
-                'active' in day && day.active
-                  ? 'border-product text-product'
-                  : 'border-line text-muted'
+                day.date === ACTIVE_DAY ? 'border-product text-product' : 'border-line text-muted'
               }`}
             >
               <span className="text-sm">{day.label}</span>
@@ -184,9 +165,9 @@ export function SevenSlotMock({
           ))}
         </div>
         <div className="flex items-center justify-between gap-[var(--spacing-sm)] border-t border-line pt-[var(--spacing-sm)]">
-          <span className="text-sm leading-[18px] text-muted">Sábado 14 · 10:00</span>
+          <span className="text-sm leading-[18px] text-muted">{t('mocks.seven.selected')}</span>
           <span className="rounded-full bg-product px-4 py-1.5 text-sm font-bold leading-[18px] text-on-product">
-            Reservar
+            {t('mocks.seven.book')}
           </span>
         </div>
       </div>
@@ -197,7 +178,7 @@ export function SevenSlotMock({
 /*
  * Concept sketches for products that have not opened yet. Deliberately
  * wireframe-level (dashed strokes, generic labels) so nobody reads them as a
- * finished screen; the chrome says "Idea en desarrollo" and the caption repeats it.
+ * finished screen; the chrome says "Idea in development" and the caption repeats it.
  */
 
 type ConceptKey = 'one' | 'closet' | 'five';
@@ -208,13 +189,13 @@ const sketchFrameClass =
 const sketchCellClass =
   'rounded-[var(--radius-lg)] border border-dashed border-[color-mix(in_oklab,var(--landing-product)_40%,transparent)] bg-surface';
 
-const tripDays = [
-  { day: 'Día 1', items: ['Vuelo de ida', 'Hotel'] },
-  { day: 'Día 2', items: ['Museo', 'Cena reservada'] },
-  { day: 'Día 3', items: ['Playa', 'Vuelo de regreso'] },
-] as const;
+interface TripDay {
+  day: string;
+  items: string[];
+}
 
-function TripSketch() {
+function TripSketch({ t }: { t: LandingT }) {
+  const tripDays = tItems<TripDay>(t, 'mocks.concept.trip.days');
   return (
     <div className="grid gap-[var(--spacing-sm)] p-[var(--spacing-md)]">
       {tripDays.map((entry) => (
@@ -238,7 +219,7 @@ function TripSketch() {
         </div>
       ))}
       <div className="flex items-center justify-between gap-[var(--spacing-sm)] pt-[var(--spacing-xs)]">
-        <span className="text-sm leading-[18px] text-muted">Plan compartido</span>
+        <span className="text-sm leading-[18px] text-muted">{t('mocks.concept.trip.shared')}</span>
         <span className="flex -space-x-2">
           {['A', 'L', 'M'].map((initial) => (
             <span
@@ -254,78 +235,80 @@ function TripSketch() {
   );
 }
 
-const garments = [
-  { name: 'Camisa', inLook: true },
-  { name: 'Pantalón', inLook: true },
-  { name: 'Chaqueta', inLook: false },
-  { name: 'Vestido', inLook: false },
-  { name: 'Zapatos', inLook: true },
-  { name: 'Bufanda', inLook: false },
-] as const;
+/** Positions of the garments that are part of the sketched look. */
+const GARMENTS_IN_LOOK: ReadonlySet<number> = new Set([0, 1, 4]);
 
-function ClosetSketch() {
+function ClosetSketch({ t }: { t: LandingT }) {
+  const garments = tList(t, 'mocks.concept.closet.garments');
   return (
     <div className="grid gap-[var(--spacing-sm)] p-[var(--spacing-md)]">
       <div className="grid grid-cols-3 gap-[var(--spacing-xs)]">
-        {garments.map((garment) => (
+        {garments.map((garment, index) => (
           <span
-            key={garment.name}
+            key={garment}
             className={`${sketchCellClass} flex aspect-[4/3] items-end p-[var(--spacing-xs)] text-sm font-bold leading-[18px] ${
-              garment.inLook ? 'border-solid border-product text-product' : 'text-muted'
+              GARMENTS_IN_LOOK.has(index)
+                ? 'border-solid border-product text-product'
+                : 'text-muted'
             }`}
           >
-            {garment.name}
+            {garment}
           </span>
         ))}
       </div>
       <div className="flex items-center justify-between gap-[var(--spacing-sm)] border-t border-dashed border-line pt-[var(--spacing-sm)]">
-        <span className="text-sm leading-[18px] text-muted">Look para el trabajo</span>
+        <span className="text-sm leading-[18px] text-muted">{t('mocks.concept.closet.look')}</span>
         <span className="rounded-full bg-product px-3 py-1 text-sm font-bold leading-[18px] text-on-product">
-          Guardar look
+          {t('mocks.concept.closet.save')}
         </span>
       </div>
     </div>
   );
 }
 
-const barberColumns = [
-  {
-    barber: 'Barbero 1',
-    slots: [
-      { time: '10:00', label: 'Corte' },
-      { time: '10:30', label: null },
-      { time: '11:00', label: 'Barba' },
-    ],
-  },
-  {
-    barber: 'Barbero 2',
-    slots: [
-      { time: '10:00', label: null },
-      { time: '10:30', label: 'Corte' },
-      { time: '11:00', label: null },
-    ],
-  },
-] as const;
+type BarberService = 'cut' | 'beard' | null;
 
-function BarberSketch() {
+const barberColumns: ReadonlyArray<{
+  slots: ReadonlyArray<{ time: string; service: BarberService }>;
+}> = [
+  {
+    slots: [
+      { time: '10:00', service: 'cut' },
+      { time: '10:30', service: null },
+      { time: '11:00', service: 'beard' },
+    ],
+  },
+  {
+    slots: [
+      { time: '10:00', service: null },
+      { time: '10:30', service: 'cut' },
+      { time: '11:00', service: null },
+    ],
+  },
+];
+
+function BarberSketch({ t }: { t: LandingT }) {
+  const barbers = tList(t, 'mocks.concept.barber.barbers');
   return (
     <div className="grid gap-[var(--spacing-sm)] p-[var(--spacing-md)]">
       <div className="grid grid-cols-2 gap-[var(--spacing-sm)]">
-        {barberColumns.map((column) => (
-          <div key={column.barber} className="grid gap-[var(--spacing-xs)]">
+        {barberColumns.map((column, columnIndex) => (
+          <div key={barbers[columnIndex]} className="grid gap-[var(--spacing-xs)]">
             <span className="font-arvo text-md font-bold leading-[1.2] text-text">
-              {column.barber}
+              {barbers[columnIndex]}
             </span>
             {column.slots.map((slot) => (
               <span
                 key={slot.time}
                 className={`${sketchCellClass} flex items-center justify-between gap-[var(--spacing-xs)] px-[var(--spacing-sm)] py-1.5 text-sm leading-[18px] ${
-                  slot.label ? 'border-solid border-product' : ''
+                  slot.service ? 'border-solid border-product' : ''
                 }`}
               >
                 <span className="tabular-nums text-muted">{slot.time}</span>
-                <span className={slot.label ? 'font-bold text-product' : 'text-muted'}>
-                  {slot.label ?? 'Libre'}
+                <span className={slot.service ? 'font-bold text-product' : 'text-muted'}>
+                  {slot.service
+                    ? t(`mocks.concept.barber.${slot.service === 'cut' ? 'cut' : 'beard'}`)
+                    : t('mocks.concept.barber.free')}
                 </span>
               </span>
             ))}
@@ -333,40 +316,45 @@ function BarberSketch() {
         ))}
       </div>
       <div className="flex items-center justify-between gap-[var(--spacing-sm)] border-t border-dashed border-line pt-[var(--spacing-sm)]">
-        <span className="text-sm leading-[18px] text-muted">Cliente frecuente</span>
+        <span className="text-sm leading-[18px] text-muted">
+          {t('mocks.concept.barber.regular')}
+        </span>
         <span className="rounded-full border border-product px-3 py-1 text-sm font-bold leading-[18px] text-product">
-          Recordatorio
+          {t('mocks.concept.barber.reminder')}
         </span>
       </div>
     </div>
   );
 }
 
-const sketches: Record<ConceptKey, { title: string; Body: () => React.JSX.Element }> = {
-  one: { title: 'Itinerario', Body: TripSketch },
-  closet: { title: 'Tu clóset', Body: ClosetSketch },
-  five: { title: 'Agenda del día', Body: BarberSketch },
+const sketches: Record<
+  ConceptKey,
+  { titleKey: string; Body: (props: { t: LandingT }) => React.JSX.Element }
+> = {
+  one: { titleKey: 'mocks.concept.trip.title', Body: TripSketch },
+  closet: { titleKey: 'mocks.concept.closet.title', Body: ClosetSketch },
+  five: { titleKey: 'mocks.concept.barber.title', Body: BarberSketch },
 };
 
 export function isConceptKey(key: string): key is ConceptKey {
   return key in sketches;
 }
 
-export function ConceptSketch({ concept }: { concept: ConceptKey }) {
-  const { title, Body } = sketches[concept];
+export function ConceptSketch({ concept, t }: { concept: ConceptKey; t: LandingT }) {
+  const { titleKey, Body } = sketches[concept];
   return (
     <figure className="m-0 w-full min-w-0">
       <div aria-hidden="true" className={`${sketchFrameClass} select-none`}>
         <div className="flex items-center justify-between gap-[var(--spacing-sm)] border-b border-dashed border-[color-mix(in_oklab,var(--landing-product)_35%,transparent)] px-[var(--spacing-md)] py-[var(--spacing-sm)]">
-          <span className="font-arvo text-md font-bold leading-[1.3] text-text">{title}</span>
+          <span className="font-arvo text-md font-bold leading-[1.3] text-text">{t(titleKey)}</span>
           <span className="rounded-full border border-dashed border-product px-2.5 py-0.5 text-sm font-bold leading-[18px] text-product">
-            Idea en desarrollo
+            {t('mocks.concept.badge')}
           </span>
         </div>
-        <Body />
+        <Body t={t} />
       </div>
       <figcaption className="mt-[var(--spacing-xs)] text-pretty text-sm leading-[1.4] text-muted">
-        Boceto de la idea en desarrollo. La app final puede verse distinta.
+        {t('mocks.concept.caption')}
       </figcaption>
     </figure>
   );

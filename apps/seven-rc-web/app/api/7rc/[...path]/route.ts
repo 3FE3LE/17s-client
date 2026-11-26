@@ -1,5 +1,5 @@
 import { loadEnv } from '@17suit/core';
-import { auth } from '@clerk/nextjs/server';
+import { getServerAuth } from '@/lib/server-auth';
 import { NextResponse } from 'next/server';
 
 interface ProxyContext {
@@ -12,7 +12,7 @@ function normalizeApiBaseUrl(baseUrl: string): string {
 }
 
 async function proxyToBackend(request: Request, context: ProxyContext): Promise<NextResponse> {
-  const { userId, getToken } = await auth();
+  const { userId, getToken } = await getServerAuth();
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

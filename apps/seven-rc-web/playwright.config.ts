@@ -28,6 +28,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? WEB_URL,
+    // Specs assert Spanish copy: pin the locale (Accept-Language) so they never depend on the runner.
+    locale: 'es-ES',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     // Clerk dev instances redirect a browser with no dev-browser cookie to their handshake

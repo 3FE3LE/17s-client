@@ -1,9 +1,9 @@
 /**
  * Clerk error helpers shared by sign-in, sign-up and forgot-password.
  *
- * Users never see raw Clerk codes or English messages: known codes map to
- * Spanish copy that names the problem and the way forward, and anything else
- * falls back to the caller's generic Spanish message.
+ * Users never see raw Clerk codes or messages: known codes map to catalog copy
+ * (`account.errors.*`, per locale) that names the problem and the way forward,
+ * and anything else falls back to the caller's generic message.
  */
 
 export interface ClerkApiError {
@@ -31,44 +31,40 @@ export function isAlreadySignedInError(error: unknown): boolean {
   );
 }
 
-// Messages that send the user to /contacto. AuthFormError renders a link next to them.
-const CONTACT_ACCESS_MESSAGE =
-  'Este correo no tiene acceso. Usa otro o escríbenos desde la página de contacto.';
+/** Translator shape shared with react-i18next's `t`. */
+export type Translate = (key: string) => string;
 
-const contactMessages: ReadonlySet<string> = new Set([CONTACT_ACCESS_MESSAGE]);
+/** Codes whose message sends the user to /contact. AuthFormError renders a link next to them. */
+const CONTACT_CODES: ReadonlySet<string> = new Set(['not_allowed_access']);
 
-export function needsContactLink(message: string): boolean {
-  return contactMessages.has(message);
+export function needsContactLink(message: string, t: Translate): boolean {
+  return [...CONTACT_CODES].some((code) => message === t(`account.errors.${code}`));
 }
 
-const messagesByCode: Record<string, string> = {
-  form_identifier_not_found:
-    'No encontramos una cuenta con ese correo. Revísalo o crea una cuenta.',
-  form_password_incorrect: 'La contraseña no es correcta. Inténtalo de nuevo o restablécela.',
-  form_identifier_exists: 'Ya existe una cuenta con ese correo. Inicia sesión.',
-  form_param_format_invalid: 'Revisa el formato del correo electrónico.',
-  form_param_nil: 'Completa todos los campos.',
-  form_password_length_too_short: 'La contraseña es muy corta. Elige una más larga.',
-  form_password_pwned: 'Esa contraseña apareció en una filtración de datos. Elige una distinta.',
-  form_password_not_strong_enough: 'La contraseña es muy débil. Combina más caracteres.',
-  form_password_validation_failed: 'La contraseña no cumple los requisitos. Elige otra.',
-  form_code_incorrect: 'El código no es correcto. Revisa tu correo e inténtalo de nuevo.',
-  verification_expired: 'El código venció. Solicita uno nuevo.',
-  verification_failed: 'No pudimos verificar el código. Solicita uno nuevo.',
-  strategy_for_user_invalid:
-    'Esta cuenta no usa contraseña. Entra con Google o restablece tu contraseña.',
-  user_locked:
-    'Tu cuenta está bloqueada temporalmente por varios intentos fallidos. Espera unos minutos.',
-  too_many_requests: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
-  rate_limit_exceeded: 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
-  captcha_invalid:
-    'No pudimos validar que eres una persona. Recarga la página e inténtalo de nuevo.',
-  not_allowed_access: CONTACT_ACCESS_MESSAGE,
-};
+const KNOWN_CODES: ReadonlySet<string> = new Set([
+  'form_identifier_not_found',
+  'form_password_incorrect',
+  'form_identifier_exists',
+  'form_param_format_invalid',
+  'form_param_nil',
+  'form_password_length_too_short',
+  'form_password_pwned',
+  'form_password_not_strong_enough',
+  'form_password_validation_failed',
+  'form_code_incorrect',
+  'verification_expired',
+  'verification_failed',
+  'strategy_for_user_invalid',
+  'user_locked',
+  'too_many_requests',
+  'rate_limit_exceeded',
+  'captcha_invalid',
+  'not_allowed_access',
+]);
 
-export function getClerkErrorMessage(error: unknown, fallback: string): string {
+export function getClerkErrorMessage(error: unknown, fallback: string, t: Translate): string {
   const code = getClerkErrors(error)[0]?.code;
-  return (code && messagesByCode[code]) || fallback;
+  return code && KNOWN_CODES.has(code) ? t(`account.errors.${code}`) : fallback;
 }
 
 /** Which field an error belongs to, so only that input gets `aria-invalid`. */
