@@ -29,7 +29,7 @@
     "@expo-google-fonts/zilla-slab": "latest",
     "@expo/metro-runtime": "~58.0.17",
     "@expo/vector-icons": "^15.0.2",
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^5.9.2",
     "@react-native-community/datetimepicker": "9.2.1",
     "@react-native-picker/picker": "2.11.4",
     "@tanstack/react-query": "^5.90.3",

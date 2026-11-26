@@ -1,56 +1,56 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { intInRange } from '@17suit/core';
 import { AppButton, AppInput } from '@17suit/ui';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { InlineError, InlineStatus, SelectField } from '@/components/seven-rc-ui';
 import { useCreateVenuePitchMutation } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
 import { SPORT_OPTIONS } from '@/lib/seven-rc-format';
 
+const createPitchSchema = z.object({
+  name: z.string().trim().min(2, 'El nombre de la cancha necesita al menos 2 caracteres.').max(120),
+  sportType: z.string().min(1),
+  capacity: intInRange(1, 100, 'La capacidad debe estar entre 1 y 100 jugadores.'),
+  duration: intInRange(30, 240, 'La duración del turno debe estar entre 30 y 240 minutos.'),
+});
+type CreatePitchValues = z.infer<typeof createPitchSchema>;
+
 export function CreatePitchForm({ venueId, venueName }: { venueId: string; venueName: string }) {
   const createPitchMutation = useCreateVenuePitchMutation(venueId);
-  const [name, setName] = useState('');
-  const [sportType, setSportType] = useState('futbol-5');
-  const [capacity, setCapacity] = useState('10');
-  const [duration, setDuration] = useState('60');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { control, handleSubmit, reset, getValues, formState } = useForm<CreatePitchValues>({
+    resolver: zodResolver(createPitchSchema),
+    defaultValues: { name: '', sportType: 'futbol-5', capacity: '10', duration: '60' },
+  });
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const isSaving = formState.isSubmitting || createPitchMutation.isPending;
+
+  const onSubmit = handleSubmit(async (values) => {
     setError(null);
     setNotice(null);
-    const parsedCapacity = Number(capacity);
-    const parsedDuration = Number(duration);
-    if (name.trim().length < 2) {
-      setError('El nombre de la cancha necesita al menos 2 caracteres.');
-      return;
-    }
-    if (!Number.isInteger(parsedCapacity) || parsedCapacity < 1 || parsedCapacity > 100) {
-      setError('La capacidad debe estar entre 1 y 100 jugadores.');
-      return;
-    }
-    if (!Number.isInteger(parsedDuration) || parsedDuration < 30 || parsedDuration > 240) {
-      setError('La duración del turno debe estar entre 30 y 240 minutos.');
-      return;
-    }
     try {
       const created = await createPitchMutation.mutateAsync({
-        name: name.trim(),
-        sportType,
-        capacity: parsedCapacity,
-        slotDurationMinutes: parsedDuration,
+        name: values.name,
+        sportType: values.sportType,
+        capacity: Number(values.capacity),
+        slotDurationMinutes: Number(values.duration),
       });
-      setName('');
+      reset({ ...getValues(), name: '' });
       setNotice(`Agregaste “${created.name}”. Define su precio y sus horarios arriba.`);
     } catch (caught) {
       setError(describeError(caught, 'No se pudo crear la cancha.'));
     }
-  }
+  });
 
   return (
     <form
       onSubmit={(event) => void onSubmit(event)}
+      noValidate
       aria-labelledby="crear-cancha-title"
       className="grid gap-sm"
     >
@@ -58,52 +58,87 @@ export function CreatePitchForm({ venueId, venueName }: { venueId: string; venue
         Nueva cancha en {venueName}
       </h3>
       <div className="grid gap-sm md:grid-cols-2">
-        <AppInput
-          name="pitchName"
-          label="Nombre de la cancha"
-          placeholder="Ej.: Cancha 1"
-          autoComplete="off"
-          required
-          minLength={2}
-          maxLength={120}
-          value={name}
-          onChangeText={setName}
+        <Controller
+          control={control}
+          name="name"
+          render={({ field, fieldState }) => (
+            <div className="grid content-start gap-xs">
+              <AppInput
+                name="pitchName"
+                label="Nombre de la cancha"
+                placeholder="Ej.: Cancha 1"
+                autoComplete="off"
+                maxLength={120}
+                error={fieldState.invalid}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+              />
+              <InlineError message={fieldState.error?.message ?? null} />
+            </div>
+          )}
         />
-        <SelectField
-          label="Deporte"
+        <Controller
+          control={control}
           name="sportType"
-          value={sportType}
-          onChangeValue={setSportType}
-          options={SPORT_OPTIONS}
+          render={({ field }) => (
+            <SelectField
+              label="Deporte"
+              name="sportType"
+              value={field.value}
+              onChangeValue={field.onChange}
+              options={SPORT_OPTIONS}
+            />
+          )}
         />
-        <AppInput
-          type="number"
+        <Controller
+          control={control}
           name="capacity"
-          label="Capacidad (jugadores)"
-          inputMode="numeric"
-          min={1}
-          max={100}
-          step={1}
-          required
-          value={capacity}
-          onChangeText={setCapacity}
+          render={({ field, fieldState }) => (
+            <div className="grid content-start gap-xs">
+              <AppInput
+                type="number"
+                name="capacity"
+                label="Capacidad (jugadores)"
+                inputMode="numeric"
+                min={1}
+                max={100}
+                step={1}
+                error={fieldState.invalid}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+              />
+              <InlineError message={fieldState.error?.message ?? null} />
+            </div>
+          )}
         />
-        <AppInput
-          type="number"
-          name="slotDurationMinutes"
-          label="Duración del turno (minutos)"
-          inputMode="numeric"
-          min={30}
-          max={240}
-          step={15}
-          required
-          value={duration}
-          onChangeText={setDuration}
+        <Controller
+          control={control}
+          name="duration"
+          render={({ field, fieldState }) => (
+            <div className="grid content-start gap-xs">
+              <AppInput
+                type="number"
+                name="slotDurationMinutes"
+                label="Duración del turno (minutos)"
+                inputMode="numeric"
+                min={30}
+                max={240}
+                step={15}
+                error={fieldState.invalid}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+              />
+              <InlineError message={fieldState.error?.message ?? null} />
+            </div>
+          )}
         />
       </div>
       <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={createPitchMutation.isPending}>
-          {createPitchMutation.isPending ? 'Guardando…' : 'Agregar cancha'}
+        <AppButton type="submit" disabled={isSaving}>
+          {isSaving ? 'Guardando…' : 'Agregar cancha'}
         </AppButton>
       </div>
       <InlineError message={error} />
