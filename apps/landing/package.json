@@ -21,9 +21,12 @@
     "@17suit/i18n": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@clerk/nextjs": "^6.30.5",
+    "@hookform/resolvers": "^5.9.2",
     "next": "^16.0.0",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "react-hook-form": "^7.71.2",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@17suit/eslint-config": "workspace:*",

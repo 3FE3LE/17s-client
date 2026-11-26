@@ -1,11 +1,14 @@
 'use client';
 
+import { signInSchema, type SignInValues } from '@17suit/core';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useSignIn } from '@clerk/nextjs';
 import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, AppInput } from '@17suit/ui';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { AuthFormError } from '../../../components/AuthFormError';
 import { AuthShell } from '../../../components/AuthShell';
 import {
@@ -14,6 +17,7 @@ import {
   isAlreadySignedInError,
   type AuthErrorField,
 } from '../../../lib/clerk-errors';
+import { authFieldError } from '../../../lib/auth-validation';
 import { afterAuthPath } from '../../../lib/session-handoff';
 
 const ERROR_ID = 'sign-in-error';
@@ -27,11 +31,12 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
   const { t } = useTranslation('landing');
   const router = useRouter();
   const { isLoaded, signIn, setActive } = useSignIn();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { control, handleSubmit, formState } = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: { email: '', password: '' },
+  });
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<AuthErrorField>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGooglePending, setIsGooglePending] = useState(false);
 
   const fail = (err: unknown, fallback: string) => {
@@ -39,20 +44,26 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
     setErrorField(getClerkErrorField(err));
   };
   const fieldProps = (field: Exclude<AuthErrorField, null>) =>
-    error && errorField === field ? { error: true, 'aria-describedby': ERROR_ID } : {};
+    (error && errorField === field) || formState.errors[field as keyof SignInValues]
+      ? { error: true, 'aria-describedby': ERROR_ID }
+      : {};
 
-  const handlePasswordSignIn = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const isSubmitting = formState.isSubmitting;
+  const firstFieldError =
+    authFieldError(t, formState.errors.email?.message) ??
+    authFieldError(t, formState.errors.password?.message) ??
+    null;
+
+  const handlePasswordSignIn = handleSubmit(async (values) => {
     if (!isLoaded) return;
 
-    setIsSubmitting(true);
     setError(null);
     setErrorField(null);
 
     try {
       const result = await signIn.create({
-        identifier: email.trim(),
-        password,
+        identifier: values.email,
+        password: values.password,
       });
 
       if (result.status === 'complete') {
@@ -69,10 +80,8 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
         return;
       }
       fail(err, t('account.signIn.generic'));
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const onGoogleSSO = async () => {
     if (!isLoaded || isGooglePending) return;
@@ -117,35 +126,54 @@ export function SignInClient({ redirectTarget }: { redirectTarget: string }) {
           {t('account.signIn.or')}
         </p>
 
-        <form method="post" className="grid gap-sm" onSubmit={handlePasswordSignIn}>
-          <AppInput
-            type="email"
+        <form
+          method="post"
+          className="grid gap-sm"
+          noValidate
+          onSubmit={(event) => void handlePasswordSignIn(event)}
+        >
+          <Controller
+            control={control}
             name="email"
-            value={email}
-            onChangeText={setEmail}
-            label={t('account.signIn.email')}
-            placeholder={t('account.signIn.emailPlaceholder')}
-            autoComplete="email"
-            spellCheck={false}
-            required
-            {...fieldProps('email')}
+            render={({ field }) => (
+              <AppInput
+                type="email"
+                name="email"
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                label={t('account.signIn.email')}
+                placeholder={t('account.signIn.emailPlaceholder')}
+                autoComplete="email"
+                spellCheck={false}
+                required
+                {...fieldProps('email')}
+              />
+            )}
           />
-          <AppInput
-            type="password"
+          <Controller
+            control={control}
             name="password"
-            value={password}
-            onChangeText={setPassword}
-            label={t('account.signIn.password')}
-            placeholder={t('account.signIn.passwordPlaceholder')}
-            autoComplete="current-password"
-            required
-            {...fieldProps('password')}
+            render={({ field }) => (
+              <AppInput
+                type="password"
+                name="password"
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+                label={t('account.signIn.password')}
+                placeholder={t('account.signIn.passwordPlaceholder')}
+                autoComplete="current-password"
+                required
+                {...fieldProps('password')}
+              />
+            )}
           />
           <AppButton type="submit" compact disabled={isSubmitting || isGooglePending}>
             {isSubmitting ? t('account.signIn.submitting') : t('account.signIn.submit')}
           </AppButton>
           <div id="clerk-captcha" />
-          <AuthFormError id={ERROR_ID} message={error} />
+          <AuthFormError id={ERROR_ID} message={firstFieldError ?? error} />
         </form>
 
         <div className="flex flex-wrap justify-between gap-x-md">

@@ -1,11 +1,19 @@
 'use client';
 
+import {
+  signUpSchema,
+  verifyCodeSchema,
+  type SignUpValues,
+  type VerifyCodeValues,
+} from '@17suit/core';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useSignUp } from '@clerk/nextjs';
 import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, AppInput } from '@17suit/ui';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { AuthFormError } from '../../../components/AuthFormError';
 import { AuthShell } from '../../../components/AuthShell';
 import {
@@ -16,6 +24,7 @@ import {
 } from '../../../lib/clerk-errors';
 import { useUiLocale } from '../../../components/use-ui-locale';
 import { localePath } from '../../../lib/locale-path';
+import { authFieldError } from '../../../lib/auth-validation';
 import { afterAuthPath } from '../../../lib/session-handoff';
 
 const ERROR_ID = 'sign-up-error';
@@ -33,14 +42,19 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
   const locale = useUiLocale();
   const router = useRouter();
   const { isLoaded, signUp, setActive } = useSignUp();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [code, setCode] = useState('');
+  const signUpForm = useForm<SignUpValues>({
+    resolver: zodResolver(signUpSchema),
+    mode: 'onTouched',
+    defaultValues: { email: '', password: '', confirmPassword: '' },
+  });
+  const verifyForm = useForm<VerifyCodeValues>({
+    resolver: zodResolver(verifyCodeSchema),
+    defaultValues: { code: '' },
+  });
+  const email = signUpForm.watch('email');
   const [needsVerification, setNeedsVerification] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<SignUpErrorField>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isGooglePending, setIsGooglePending] = useState(false);
   const [resendNotice, setResendNotice] = useState<string | null>(null);
@@ -54,26 +68,20 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
     setErrorField(getClerkErrorField(err));
   };
   const isInvalid = (field: Exclude<SignUpErrorField, null>) =>
-    Boolean(error) && errorField === field;
+    (Boolean(error) && errorField === field) ||
+    (field !== 'code' && Boolean(signUpErrors[field])) ||
+    (field === 'code' && Boolean(verifyForm.formState.errors.code));
   const describedBy = (field: Exclude<SignUpErrorField, null>, hintId?: string) =>
     [hintId, isInvalid(field) ? ERROR_ID : null].filter(Boolean).join(' ') || undefined;
 
-  const MISMATCH_ERROR = t('account.errors.mismatch');
-
-  // Checked on blur so the mismatch shows before submit; submit checks again.
-  const handleConfirmBlur = () => {
-    if (confirmPassword && password !== confirmPassword) {
-      setError(MISMATCH_ERROR);
-      setErrorField('confirmPassword');
-    } else if (errorField === 'confirmPassword') {
-      clearError();
-    }
-  };
-
-  // Typing in either password field clears a stale mismatch error.
-  const clearMismatch = () => {
-    if (errorField === 'confirmPassword') clearError();
-  };
+  const signUpErrors = signUpForm.formState.errors;
+  const isSubmitting = signUpForm.formState.isSubmitting || verifyForm.formState.isSubmitting;
+  const mismatchText = authFieldError(t, signUpErrors.confirmPassword?.message);
+  const signUpFieldError =
+    authFieldError(t, signUpErrors.email?.message) ??
+    authFieldError(t, signUpErrors.password?.message) ??
+    null;
+  const codeFieldError = authFieldError(t, verifyForm.formState.errors.code?.message) ?? null;
 
   const onGoogleSSO = async () => {
     if (!isLoaded || isGooglePending) return;
@@ -99,23 +107,15 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
     }
   };
 
-  const handleCreateAccount = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleCreateAccount = signUpForm.handleSubmit(async (values) => {
     if (!isLoaded) return;
 
-    if (password !== confirmPassword) {
-      setError(MISMATCH_ERROR);
-      setErrorField('confirmPassword');
-      return;
-    }
-
-    setIsSubmitting(true);
     clearError();
 
     try {
       const result = await signUp.create({
-        emailAddress: email.trim(),
-        password,
+        emailAddress: values.email,
+        password: values.password,
       });
 
       if (result.status === 'complete' && result.createdSessionId) {
@@ -137,21 +137,17 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
         return;
       }
       fail(err, t('account.signUp.generic'));
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
-  const handleVerifyEmail = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleVerifyEmail = verifyForm.handleSubmit(async (values) => {
     if (!isLoaded) return;
 
-    setIsSubmitting(true);
     clearError();
     setResendNotice(null);
 
     try {
-      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      const result = await signUp.attemptEmailAddressVerification({ code: values.code });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
         router.replace(afterAuthPath(redirectTarget));
@@ -162,10 +158,8 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
       setErrorField('code');
     } catch (err) {
       fail(err, t('account.signUp.generic'));
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  });
 
   const handleResendCode = async () => {
     if (!isLoaded || isResending) return;
@@ -176,7 +170,7 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
 
     try {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setCode('');
+      verifyForm.reset();
       setResendNotice(t('account.signUp.resent', { email: email.trim() }));
     } catch (err) {
       fail(err, t('account.signUp.resendFailed'));
@@ -187,7 +181,7 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
 
   const handleChangeEmail = () => {
     setNeedsVerification(false);
-    setCode('');
+    verifyForm.reset();
     setResendNotice(null);
     clearError();
   };
@@ -226,61 +220,78 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
         ) : null}
 
         {!needsVerification ? (
-          <form method="post" className="grid gap-sm" onSubmit={handleCreateAccount}>
-            <AppInput
-              type="email"
+          <form
+            method="post"
+            className="grid gap-sm"
+            noValidate
+            onSubmit={(event) => void handleCreateAccount(event)}
+          >
+            <Controller
+              control={signUpForm.control}
               name="email"
-              value={email}
-              onChangeText={setEmail}
-              label={t('account.signIn.email')}
-              placeholder={t('account.signIn.emailPlaceholder')}
-              autoComplete="email"
-              spellCheck={false}
-              required
-              error={isInvalid('email')}
-              aria-describedby={describedBy('email')}
+              render={({ field }) => (
+                <AppInput
+                  type="email"
+                  name="email"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  label={t('account.signIn.email')}
+                  placeholder={t('account.signIn.emailPlaceholder')}
+                  autoComplete="email"
+                  spellCheck={false}
+                  required
+                  error={isInvalid('email')}
+                  aria-describedby={describedBy('email')}
+                />
+              )}
             />
-            <AppInput
-              type="password"
+            <Controller
+              control={signUpForm.control}
               name="password"
-              value={password}
-              onChangeText={(value) => {
-                setPassword(value);
-                clearMismatch();
-              }}
-              label={t('account.signIn.password')}
-              placeholder={t('account.signUp.passwordPlaceholder')}
-              autoComplete="new-password"
-              required
-              error={isInvalid('password')}
-              aria-describedby={describedBy('password', PASSWORD_HINT_ID)}
+              render={({ field }) => (
+                <AppInput
+                  type="password"
+                  name="password"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  label={t('account.signIn.password')}
+                  placeholder={t('account.signUp.passwordPlaceholder')}
+                  autoComplete="new-password"
+                  required
+                  error={isInvalid('password')}
+                  aria-describedby={describedBy('password', PASSWORD_HINT_ID)}
+                />
+              )}
             />
             <p id={PASSWORD_HINT_ID} className="m-0 -mt-[4px] text-sm leading-[1.4] text-muted">
               {t('account.signUp.passwordHint')}
             </p>
-            <AppInput
-              type="password"
+            <Controller
+              control={signUpForm.control}
               name="confirmPassword"
-              value={confirmPassword}
-              onChangeText={(value) => {
-                setConfirmPassword(value);
-                clearMismatch();
-              }}
-              onBlur={handleConfirmBlur}
-              label={t('account.signUp.confirm')}
-              placeholder={t('account.signUp.confirmPlaceholder')}
-              autoComplete="new-password"
-              required
-              error={isInvalid('confirmPassword')}
-              aria-describedby={describedBy('confirmPassword')}
+              render={({ field }) => (
+                <AppInput
+                  type="password"
+                  name="confirmPassword"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  label={t('account.signUp.confirm')}
+                  placeholder={t('account.signUp.confirmPlaceholder')}
+                  autoComplete="new-password"
+                  required
+                  error={isInvalid('confirmPassword')}
+                  aria-describedby={describedBy('confirmPassword')}
+                />
+              )}
             />
             {/* Mismatch shows right under its field; other errors stay at the form end.
                 The line is reserved: an error appearing on blur would move the control
                 being tapped and swallow that tap. */}
             <div className="-my-[4px] min-h-[18px]">
-              {isInvalid('confirmPassword') ? (
-                <AuthFormError id={ERROR_ID} message={error} />
-              ) : null}
+              {mismatchText ? <AuthFormError id={ERROR_ID} message={mismatchText} /> : null}
             </div>
             <AppButton type="submit" compact disabled={isSubmitting || isGooglePending}>
               {isSubmitting ? t('account.signUp.submitting') : t('account.signUp.submit')}
@@ -304,7 +315,9 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
               .
             </p>
             <div id="clerk-captcha" />
-            {isInvalid('confirmPassword') ? null : <AuthFormError id={ERROR_ID} message={error} />}
+            {mismatchText ? null : (
+              <AuthFormError id={ERROR_ID} message={signUpFieldError ?? error} />
+            )}
           </form>
         ) : (
           <div className="grid gap-sm">
@@ -318,25 +331,37 @@ export function SignUpClient({ redirectTarget, productContext }: SignUpClientPro
         )}
 
         {needsVerification ? (
-          <form method="post" className="grid gap-sm" onSubmit={handleVerifyEmail}>
-            <AppInput
-              type="text"
+          <form
+            method="post"
+            className="grid gap-sm"
+            noValidate
+            onSubmit={(event) => void handleVerifyEmail(event)}
+          >
+            <Controller
+              control={verifyForm.control}
               name="code"
-              value={code}
-              onChangeText={setCode}
-              label={t('account.signUp.code')}
-              placeholder="123456"
-              autoComplete="one-time-code"
-              inputMode="numeric"
-              spellCheck={false}
-              required
-              error={isInvalid('code')}
-              aria-describedby={describedBy('code')}
+              render={({ field }) => (
+                <AppInput
+                  type="text"
+                  name="code"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  onBlur={field.onBlur}
+                  label={t('account.signUp.code')}
+                  placeholder="123456"
+                  autoComplete="one-time-code"
+                  inputMode="numeric"
+                  spellCheck={false}
+                  required
+                  error={isInvalid('code')}
+                  aria-describedby={describedBy('code')}
+                />
+              )}
             />
             <AppButton type="submit" compact disabled={isSubmitting}>
               {isSubmitting ? t('account.signUp.verifying') : t('account.signUp.verify')}
             </AppButton>
-            <AuthFormError id={ERROR_ID} message={error} />
+            <AuthFormError id={ERROR_ID} message={codeFieldError ?? error} />
             <p
               aria-live="polite"
               className="m-0 min-h-0 text-sm leading-[18px] text-muted empty:hidden"
