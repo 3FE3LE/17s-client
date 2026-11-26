@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiClient, TRACE_ID_HEADER } from './api-client';
+import { ApiClient, ApiError, TRACE_ID_HEADER } from './api-client';
 
 const MOCK_TRACE_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -87,5 +87,53 @@ describe('ApiClient x-trace-id propagation', () => {
     // they need to correlate. Here we just verify the body parsed cleanly and
     // the client didn't throw trying to "fix" the trace id.
     expect(result.ok).toBe(true);
+  });
+});
+
+describe('ApiClient error contract', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('exposes errorKey, params, fields and traceId from the server error body', async () => {
+    stubFetch(
+      jsonResponse(
+        {
+          statusCode: 409,
+          code: 'CONFLICT',
+          errorKey: 'conflict',
+          params: { hour: 21 },
+          fields: { slot: ['slot taken'] },
+          message: 'Slot already booked',
+          traceId: 'trace-1',
+        },
+        { status: 409 },
+      ),
+    );
+
+    const error = await new ApiClient({ baseUrl: 'https://api.example.test' })
+      .request('/things')
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 409,
+      message: 'Slot already booked',
+      errorKey: 'conflict',
+      params: { hour: 21 },
+      fields: { slot: ['slot taken'] },
+      traceId: 'trace-1',
+    });
+  });
+
+  it('leaves the contract fields unset for a legacy error body', async () => {
+    stubFetch(jsonResponse({ statusCode: 500, message: 'Internal server error' }, { status: 500 }));
+
+    const error = await new ApiClient({ baseUrl: 'https://api.example.test' })
+      .request('/things')
+      .catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ status: 500, message: 'Internal server error' });
+    expect((error as ApiError).errorKey).toBeUndefined();
   });
 });

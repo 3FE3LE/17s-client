@@ -34,6 +34,22 @@ public, and so are those notes.
 Both rulesets must require the check named `quality` (GitHub Actions). `CI / quality` is only how
 the UI displays it, and a rule with that name can never pass.
 
+## Vercel deployments
+
+Vercel Hobby rate-limits deployments, so only intentional branches build. The filter lives in
+`tooling/scripts/vercel-ignore.sh`, referenced by `ignoreCommand` in each `apps/<app>/vercel.json`
+(`landing`, `admin`, `seven-rc-web`).
+
+- Builds: `development`, `production` and `deploy/*` only. `preview` is a CI gate and does not
+  deploy on Vercel. `feat/*`, `fix/*`, `chore/*`, `ci/*`, `test/*`, `docs/*` and `release/*`
+  never build.
+- Preview of one PR: push its head to `deploy/<name>`.
+- Per app: `turbo-ignore` skips the build when the app and its workspace dependencies
+  (including `packages/modules/*`) did not change since the last successful deployment.
+- Force a build: set `VERCEL_IGNORE_FORCE_BUILD=1` on the project, redeploy, then remove it.
+- Test locally: `cd apps/landing && VERCEL_GIT_COMMIT_REF=feat/x bash ../../tooling/scripts/vercel-ignore.sh @17suit/landing; echo $?`
+  (0 = skip, 1 = build).
+
 ## Hotfixes
 
 1. Branch off `production`, open a PR to `production`, squash-merge it.

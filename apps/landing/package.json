@@ -8,6 +8,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "lint:i18n": "eslint -c eslint.i18n.config.cjs .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -17,6 +18,7 @@
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
+    "@17suit/i18n": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@clerk/nextjs": "^6.30.5",
     "next": "^16.0.0",

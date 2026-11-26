@@ -2,6 +2,7 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useCallback } from 'react';
+import { E2E_SESSION_COOKIE, isFakeAuthEnabledInBrowser, parseFakeSession } from './fake-auth';
 
 export const NO_ACTIVE_SESSION = 'No active session';
 
@@ -28,5 +29,17 @@ export async function requireAccessToken(getToken: GetToken): Promise<string> {
  */
 export function useAccessToken(): () => Promise<string | null> {
   const { getToken } = useAuth();
-  return useCallback(() => requireAccessToken(getToken), [getToken]);
+  return useCallback(
+    () => (isFakeAuthEnabledInBrowser() ? readFakeToken() : requireAccessToken(getToken)),
+    [getToken],
+  );
+}
+
+function readFakeToken(): Promise<string> {
+  const raw = document.cookie
+    .split('; ')
+    .find((entry) => entry.startsWith(`${E2E_SESSION_COOKIE}=`))
+    ?.slice(E2E_SESSION_COOKIE.length + 1);
+  const token = parseFakeSession(raw);
+  return token ? Promise.resolve(token) : Promise.reject(new Error(NO_ACTIVE_SESSION));
 }

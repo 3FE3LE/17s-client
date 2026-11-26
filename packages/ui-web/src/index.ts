@@ -67,20 +67,26 @@ export {
   Ban,
   Banknote,
   CalendarClock,
+  Check,
   CheckCircle2,
+  ChevronDown,
   CreditCard,
   Gauge,
   Inbox,
+  Languages,
   Link2,
   ListChecks,
+  Monitor,
+  Moon,
   PauseCircle,
   ReceiptText,
   RefreshCcw,
   Repeat2,
   Search,
+  Sun,
   Trash2,
-} from 'lucide-react';
-export type { LucideIcon } from 'lucide-react';
+} from './icons';
+export type { LucideIcon } from './icons';
 export { suitTheme } from '@17suit/design-system';
 export {
   buttonLabelRecipe,
@@ -108,3 +114,7 @@ export type { ThemeSnapshot } from './theme/theme-store';
 export { AppThemeToggle } from './components/AppThemeToggle';
 export type { AppThemeToggleProps } from './components/AppThemeToggle';
 export type { ThemeModePreference } from './theme/theme-context';
+export { ProductLanguageSelect } from './components/ProductLanguageSelect';
+export type { ProductLanguageSelectProps } from './components/ProductLanguageSelect';
+export { LanguageSelect } from './components/LanguageSelect';
+export type { LanguageSelectProps } from './components/LanguageSelect';

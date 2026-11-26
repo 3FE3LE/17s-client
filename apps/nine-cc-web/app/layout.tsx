@@ -1,3 +1,4 @@
+import { getProductLocale } from '@17suit/i18n/next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import {
   AppProductFooter,
@@ -50,6 +51,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getProductLocale();
   const { userId } = await auth();
   const isSignedIn = Boolean(userId);
   const productLinks = [
@@ -59,7 +61,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html
-      lang="es"
+      lang={locale}
       className={`${amaranth.variable} ${arvo.variable} ${zillaSlab.variable}`}
       // ThemeScript sets the `dark` class before hydration.
       suppressHydrationWarning
@@ -69,7 +71,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <WebAuthProvider>
-          <AppProviders>
+          <AppProviders locale={locale}>
             {children}
             <AppProductFooter
               productName="Nine Care Companion"

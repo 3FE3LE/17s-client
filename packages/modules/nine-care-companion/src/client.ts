@@ -97,39 +97,31 @@ export function createBffNineCcDataSource(baseUrl = ''): NineCcDataSource {
 
   return {
     async getMyCareCircle() {
-      return (
-        (await get('/api/nine-cc/care-circles/me', CareCircleSummarySchema, {
-          allowNull: true,
-        }))
-      );
+      return await get('/api/nine-cc/care-circles/me', CareCircleSummarySchema, {
+        allowNull: true,
+      });
     },
     async getDailyTimeline(patientId, dateIso) {
       const qs = dateIso ? `?date=${encodeURIComponent(dateIso)}` : '';
-      return (
-        (await get(
-          `/api/nine-cc/patients/${patientId}/daily-timeline${qs}`,
-          DailyTimelineSchema,
-        )) as DailyTimeline
-      );
+      return (await get(
+        `/api/nine-cc/patients/${patientId}/daily-timeline${qs}`,
+        DailyTimelineSchema,
+      )) as DailyTimeline;
     },
     async getNextMedicationBlock(patientId) {
-      return (
-        (await get(
-          `/api/nine-cc/patients/${patientId}/medication-blocks/next`,
-          MedicationBlockSummarySchema,
-          { allowNull: true },
-        ))
+      return await get(
+        `/api/nine-cc/patients/${patientId}/medication-blocks/next`,
+        MedicationBlockSummarySchema,
+        { allowNull: true },
       );
     },
     async getMedicationBlockBySlot(patientId, slot, dateIso) {
       SlotNameSchema.parse(slot); // throws on bad slot
       const qs = dateIso ? `&date=${encodeURIComponent(dateIso)}` : '';
-      return (
-        (await get(
-          `/api/nine-cc/patients/${patientId}/medication-blocks/by-slot?slot=${encodeURIComponent(slot)}${qs}`,
-          MedicationBlockSummarySchema,
-          { allowNull: true },
-        ))
+      return await get(
+        `/api/nine-cc/patients/${patientId}/medication-blocks/by-slot?slot=${encodeURIComponent(slot)}${qs}`,
+        MedicationBlockSummarySchema,
+        { allowNull: true },
       );
     },
     async getMedicationInstructions(blockId) {

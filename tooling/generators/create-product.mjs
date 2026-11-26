@@ -320,6 +320,7 @@ function appendRegistryEntries() {
   const memoryFile = `memory/project/${appSlug}.md`;
   reg.apps[`${appSlug}-web`] = {
     kind: 'web',
+    i18nProfile: 'product',
     product: appSlug,
     appDir: `17s-client/apps/${appSlug}-web`,
     vercelProject: `17s-${appSlug}-web`,
@@ -337,6 +338,7 @@ function appendRegistryEntries() {
   };
   reg.apps[`${appSlug}-mobile`] = {
     kind: 'mobile',
+    i18nProfile: 'product',
     product: appSlug,
     appDir: `17s-client/apps/${appSlug}-mobile`,
     vercelProject: `17s-${appSlug}-mobile`,

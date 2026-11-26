@@ -8,11 +8,11 @@ import { SignOutButton } from '@clerk/nextjs';
  * React outlines the payload (over 3200 bytes), which throws during SSR. The
  * button therefore has to be created here, on the client side of the boundary.
  */
-export function SignOutControl({ className }: { className: string }) {
+export function SignOutControl({ className, label }: { className: string; label: string }) {
   return (
     <SignOutButton redirectUrl="/">
       <button type="button" className={className}>
-        Cerrar sesión
+        {label}
       </button>
     </SignOutButton>
   );

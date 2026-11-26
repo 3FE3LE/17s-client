@@ -25,6 +25,8 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL: WEB_URL,
+    // Specs assert Spanish copy: pin the locale so they never depend on the runner.
+    locale: 'es-ES',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // Same Clerk dev-browser cookie trick as the stub suite: no real Clerk host in CI.
@@ -57,6 +59,9 @@ export default defineConfig({
       API_BASE_URL,
       NEXT_PUBLIC_API_BASE_URL: API_BASE_URL,
       SENTRY_DSN: '',
+      // Auth seam for owner/player journeys; the server runs the same flag (e2e-real.yml).
+      E2E_FAKE_AUTH: '1',
+      NEXT_PUBLIC_E2E_FAKE_AUTH: '1',
     },
   },
 });

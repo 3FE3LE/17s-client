@@ -1,6 +1,10 @@
+'use client';
+
+import { useTranslation } from '@17suit/i18n/react';
 import type { CSSProperties, ReactNode } from 'react';
 
 import { AppThemeToggle } from './AppThemeToggle';
+import { ProductLanguageSelect } from './ProductLanguageSelect';
 
 export interface AppProductFooterLink {
   label: string;
@@ -25,6 +29,8 @@ export interface AppProductFooterProps {
   legalLinkControls?: ReactNode;
   /** Theme control rendered in the footer; defaults to AppThemeToggle, `false` hides it. */
   themeControl?: ReactNode | false;
+  /** Language control; defaults to ProductLanguageSelect, `false` hides it. */
+  languageControl?: ReactNode | false;
 }
 
 const containerStyle: CSSProperties = {
@@ -117,7 +123,9 @@ export function AppProductFooter({
   legalLinks = [],
   legalLinkControls,
   themeControl,
+  languageControl,
 }: AppProductFooterProps) {
+  const { t } = useTranslation('common');
   const year = new Date().getFullYear();
 
   return (
@@ -147,7 +155,7 @@ export function AppProductFooter({
               }}
             >
               {productTagline ??
-                `Producto de ${suiteName}${productSlug ? ` · ${productSlug}` : ''}`}
+                `${t('footer.tagline', { suite: suiteName })}${productSlug ? ` · ${productSlug}` : ''}`}
             </p>
           </div>
 
@@ -158,7 +166,7 @@ export function AppProductFooter({
                   href={homeHref}
                   style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
                 >
-                  Ir al inicio
+                  {t('footer.home')}
                 </a>
                 {isSignedIn ? (
                   signOutControl
@@ -168,7 +176,7 @@ export function AppProductFooter({
                       href={signInHref}
                       style={{ ...baseButtonStyle, color: 'var(--color-brand-dark, #00171f)' }}
                     >
-                      Iniciar sesión
+                      {t('footer.signIn')}
                     </a>
                     <a
                       href={signUpHref}
@@ -181,7 +189,7 @@ export function AppProductFooter({
                         boxShadow: '0 10px 22px rgba(0, 145, 110, 0.24)',
                       }}
                     >
-                      Crear cuenta
+                      {t('footer.signUp')}
                     </a>
                   </>
                 )}
@@ -224,9 +232,12 @@ export function AppProductFooter({
               lineHeight: 1.5,
             }}
           >
-            © {year} {suiteName}. Todos los derechos reservados.
+            © {year} {suiteName}. {t('footer.rights')}
           </p>
-          {themeControl === false ? null : (themeControl ?? <AppThemeToggle />)}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+            {languageControl === false ? null : (languageControl ?? <ProductLanguageSelect />)}
+            {themeControl === false ? null : (themeControl ?? <AppThemeToggle />)}
+          </div>
         </div>
       </div>
     </footer>

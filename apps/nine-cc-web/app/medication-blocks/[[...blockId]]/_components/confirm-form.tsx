@@ -58,9 +58,7 @@ export function ConfirmForm({ blockId }: Props) {
   return (
     <form onSubmit={onSubmit} className="grid gap-[var(--spacing-md)]">
       <fieldset className="grid gap-[var(--spacing-sm)]">
-        <legend className="font-arvo text-md text-text">
-          ¿Cómo registramos esta toma?
-        </legend>
+        <legend className="font-arvo text-md text-text">¿Cómo registramos esta toma?</legend>
         {OPTIONS.map((opt) => {
           const checked = status === opt.value;
           return (

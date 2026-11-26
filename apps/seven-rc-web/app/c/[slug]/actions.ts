@@ -41,6 +41,7 @@ export async function reserveAction(
   };
   const pitchId = text(data, 'pitchId');
   const startAt = text(data, 'startAt');
+  const seenPolicy = Number.parseInt(text(data, 'policyVersion'), 10);
   const date = text(data, 'fecha');
   const back = `/c/${encodeURIComponent(slug)}${DATE_KEY.test(date) ? `?fecha=${date}` : ''}`;
 
@@ -67,6 +68,7 @@ export async function reserveAction(
       startAt,
       customerName: values.name,
       customerPhone: phone,
+      ...(seenPolicy > 0 ? { policyVersion: seenPolicy } : {}),
       ...(values.notes ? { notes: values.notes } : {}),
     });
   } catch {
@@ -78,6 +80,11 @@ export async function reserveAction(
 
   if (result.ok) {
     redirect(`/c/${encodeURIComponent(slug)}/reserva/${result.reservation.token}`);
+  }
+  if (result.status === 409 && result.code === 'POLICY_CHANGED') {
+    // The cached venue still holds the old terms: drop it so the redirect shows the new ones.
+    revalidatePath(`/c/${encodeURIComponent(slug)}`);
+    redirect(`${back}${back.includes('?') ? '&' : '?'}condiciones=1`);
   }
   if (result.status === 409) {
     // Availability is re-fetched by the redirect, so the taken slot disappears from the list.

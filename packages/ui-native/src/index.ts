@@ -39,6 +39,8 @@ export { AppLinkAction } from './components/AppLinkAction';
 export type { AppLinkActionProps } from './components/AppLinkAction';
 export { AppProfile } from './components/AppProfile';
 export type { AppProfileProps } from './components/AppProfile';
+export { AppLanguageSelect } from './components/AppLanguageSelect';
+export { useLocale } from './i18n/use-locale';
 export { AppSelect } from './components/AppSelect';
 export type { AppSelectProps, AppSelectOption } from './components/AppSelect';
 export { AppThemeToggle } from './components/AppThemeToggle';
