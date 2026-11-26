@@ -12,8 +12,8 @@ name: E2E
 # - Runs in GitHub Actions, never on Vercel, so it adds no deploys.
 # - Clerk keys below are placeholders, not credentials. Declare a flow: docs/e2e-selection.md.
 on:
-  pull_request:
-    branches: [development, preview]
+  # PR trigger paused 2026-11-24 (workspace#90, #95): 7rc flows are not defined yet.
+  # Restore `pull_request: branches: [development, preview]` once the MVP is consolidated.
   workflow_dispatch:
 
 env:
