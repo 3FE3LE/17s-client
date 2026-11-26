@@ -357,6 +357,15 @@ export const landing: CatalogShape<typeof en> = {
       contactLink: 'Ir a la página de contacto',
       mismatch: 'Las contraseñas no coinciden.',
     },
+    validation: {
+      emailRequired: 'Ingresa tu correo.',
+      emailInvalid: 'Escribe un correo válido, p. ej. nombre@correo.com.',
+      passwordRequired: 'Ingresa tu contraseña.',
+      passwordTooShort: 'Usa al menos 8 caracteres.',
+      confirmRequired: 'Repite la contraseña.',
+      passwordMismatch: 'Las contraseñas no coinciden.',
+      codeRequired: 'Ingresa el código que te enviamos.',
+    },
     apps: {
       title: 'Elige tu app',
       introSignedIn: 'Tu cuenta 17Suit ya abre estas apps. Elige con cuál empezar.',

@@ -360,6 +360,15 @@ export const landing = {
       contactLink: 'Go to the contact page',
       mismatch: 'The passwords do not match.',
     },
+    validation: {
+      emailRequired: 'Enter your email.',
+      emailInvalid: 'Enter a valid email, e.g. name@mail.com.',
+      passwordRequired: 'Enter your password.',
+      passwordTooShort: 'Use at least 8 characters.',
+      confirmRequired: 'Repeat the password.',
+      passwordMismatch: 'The passwords do not match.',
+      codeRequired: 'Enter the code we sent you.',
+    },
     apps: {
       title: 'Choose your app',
       introSignedIn:
