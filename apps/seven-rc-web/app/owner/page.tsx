@@ -26,13 +26,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
-import {
-  asDepositPolicy,
-  DEPOSIT_OUTCOME_LABEL,
-  DEPOSIT_POLICY_LABEL,
-  DEPOSIT_POLICY_OPTIONS,
-  type DepositPolicy,
-} from '@/lib/deposit-policy';
+import { asDepositPolicy, DEPOSIT_OUTCOME_LABEL, DEPOSIT_POLICY_LABEL } from '@/lib/deposit-policy';
 import { CustomerHistoryNote } from '@/components/customer-history-note';
 import { PitchPolicyForm } from '@/components/pitch-policy-form';
 import { PitchPriceRules } from '@/components/pitch-price-rules';
@@ -40,6 +34,7 @@ import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
 import { PaymentForm } from '@/components/payment-form';
+import { VenueSettingsForm } from '@/components/venue-settings-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { customerLabel, PAYABLE_STATUSES } from '@/lib/owner-reservation-view';
 import { CreatePitchForm } from '@/components/create-pitch-form';
@@ -55,7 +50,6 @@ import {
   RefreshControl,
   SectionHeader,
   SelectField,
-  TextAreaField,
 } from '@/components/seven-rc-ui';
 import { describeError } from '@/lib/seven-rc-errors';
 import {
@@ -89,7 +83,6 @@ import {
   useOwnerVenuesQuery,
   useRecordReservationPaymentMutation,
   useRejectVenueReservationMutation,
-  useUpdateVenueSettingsMutation,
   type OwnerVenue,
   type PitchWithPricing,
   type ReservationPaymentMethod,
@@ -101,7 +94,6 @@ import {
   formatAmountInput,
   parseAmount,
 } from '@/lib/owner-payment';
-import { normalizePhone } from '@/lib/phone';
 import { useNow } from '@/lib/use-now';
 
 const DEFAULT_RANGE_DAYS = 7;
@@ -112,7 +104,6 @@ const PENDING_HEADING_ID = 'pendientes-title';
 const TODAY_HEADING_ID = 'hoy-title';
 const VENUE_NAME_INPUT_ID = 'nuevo-complejo-nombre';
 const INACTIVE_STATUSES = new Set(['cancelled', 'rejected', 'expired']);
-const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 
 type SettledOutcome = 'confirmed' | 'rejected';
 type OwnerActionKind = 'confirm' | 'reject' | 'complete' | 'no_show' | 'cancel' | 'cancel_series';
@@ -1447,210 +1438,6 @@ function defaultNoShowOutcome(
   if (kind !== 'no_show') return '';
   const policy = reservation.policySnapshot.noShowDeposit;
   return policy === 'refund' ? 'refunded' : policy === 'retain' ? 'retained' : '';
-}
-
-function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
-  const mutation = useUpdateVenueSettingsMutation(venue.id);
-  const [phone, setPhone] = useState(venue.contactPhone ?? '');
-  const [instructions, setInstructions] = useState(venue.paymentInstructions ?? '');
-  const [deposit, setDeposit] = useState(String(venue.depositPercent));
-  const [hold, setHold] = useState(String(venue.holdMinutes));
-  const [cancelWindow, setCancelWindow] = useState(String(venue.cancellationWindowHours));
-  const [horizon, setHorizon] = useState(String(venue.bookingHorizonDays));
-  const [lateCancel, setLateCancel] = useState<DepositPolicy>(venue.lateCancelDeposit);
-  const [noShow, setNoShow] = useState<DepositPolicy>(venue.noShowDeposit);
-  const [conditionsText, setConditionsText] = useState(venue.conditionsText ?? '');
-  const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const depositValue = parseIntInRange(deposit, 0, 100);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(null);
-    setNotice(null);
-    const next: Partial<Record<string, string>> = {};
-    const normalizedPhone = normalizePhone(phone, venue.countryCode);
-    if (normalizedPhone && !E164_PATTERN.test(normalizedPhone)) {
-      next.phone = 'Escribe el número con indicativo, p. ej. +57 300 123 4567.';
-    }
-    if (!normalizedPhone && venue.contactPhone) {
-      next.phone = 'Deja un teléfono: los jugadores lo usan para pagar o avisar.';
-    }
-    const parsedDeposit = parseIntInRange(deposit, 0, 100);
-    if (parsedDeposit === null) next.deposit = 'Usa un número entero entre 0 y 100.';
-    const parsedHold = parseIntInRange(hold, 5, 1440);
-    if (parsedHold === null) next.hold = 'Usa entre 5 y 1440 minutos (24 h).';
-    const parsedWindow = parseIntInRange(cancelWindow, 0, 168);
-    if (parsedWindow === null) next.cancelWindow = 'Usa entre 0 y 168 horas (7 días).';
-    const parsedHorizon = parseIntInRange(horizon, 1, 180);
-    if (parsedHorizon === null) next.horizon = 'Usa entre 1 y 180 días.';
-    setErrors(next);
-    if (
-      Object.keys(next).length > 0 ||
-      parsedDeposit === null ||
-      parsedHold === null ||
-      parsedWindow === null ||
-      parsedHorizon === null
-    ) {
-      setFormError('Revisa los campos marcados.');
-      return;
-    }
-    try {
-      const saved = await mutation.mutateAsync({
-        ...(normalizedPhone ? { contactPhone: normalizedPhone } : {}),
-        paymentInstructions: instructions.trim(),
-        depositPercent: parsedDeposit,
-        holdMinutes: parsedHold,
-        cancellationWindowHours: parsedWindow,
-        lateCancelDeposit: lateCancel,
-        noShowDeposit: noShow,
-        conditionsText: conditionsText.trim(),
-        bookingHorizonDays: parsedHorizon,
-      });
-      if (normalizedPhone) setPhone(normalizedPhone);
-      const keeping = saved.reservationsKeepingPolicy ?? 0;
-      setNotice(
-        keeping > 0
-          ? `Guardaste los ajustes. Las próximas reservas usan las reglas nuevas; ${keeping} ${
-              keeping === 1 ? 'reserva activa conserva' : 'reservas activas conservan'
-            } las condiciones con que se hicieron.`
-          : 'Guardaste los ajustes. Las próximas reservas ya usan estas reglas.',
-      );
-    } catch (caught) {
-      setFormError(describeError(caught, 'No se pudieron guardar los ajustes.'));
-    }
-  }
-
-  return (
-    <form
-      onSubmit={(event) => void onSubmit(event)}
-      aria-labelledby="ajustes-title"
-      noValidate
-      className="grid gap-md"
-    >
-      <div className="grid gap-xs">
-        <h3 id="ajustes-title" className="m-0 font-arvo text-md text-text">
-          Ajustes del complejo
-        </h3>
-        <p className="m-0 max-w-[var(--container-measure)] text-sm leading-[18px] text-muted">
-          Reglas que ven los jugadores al reservar en {venue.name}.
-        </p>
-      </div>
-      <div className="grid gap-md md:grid-cols-2">
-        <HintedInput
-          type="tel"
-          name="contactPhone"
-          label="Teléfono o WhatsApp de contacto"
-          autoComplete="tel"
-          inputMode="tel"
-          spellCheck={false}
-          placeholder="+57 300 123 4567"
-          errorMessage={errors.phone ?? null}
-          value={phone}
-          onChangeText={setPhone}
-          hint="Aparece en las reservas pendientes para que el jugador pague o avise."
-        />
-        <TextAreaField
-          label="Instrucciones de pago"
-          name="paymentInstructions"
-          value={instructions}
-          onChangeValue={setInstructions}
-          maxLength={500}
-          placeholder="Ej.: Llave Bre-B @micancha · Nequi 300 123 4567"
-          hint="El jugador las ve mientras su reserva espera el anticipo."
-        />
-        <HintedInput
-          type="number"
-          name="depositPercent"
-          label="Anticipo (% del precio)"
-          inputMode="numeric"
-          min={0}
-          max={100}
-          step={1}
-          errorMessage={errors.deposit ?? null}
-          value={deposit}
-          onChangeText={setDeposit}
-          hint={
-            depositValue === 0
-              ? 'Con 0 %, cada reserva se confirma al instante, sin pasar por ti.'
-              : 'La reserva queda pendiente hasta que registres el anticipo o la confirmes.'
-          }
-        />
-        <HintedInput
-          type="number"
-          name="holdMinutes"
-          label="Minutos para pagar el anticipo"
-          inputMode="numeric"
-          min={5}
-          max={1440}
-          step={5}
-          errorMessage={errors.hold ?? null}
-          value={hold}
-          onChangeText={setHold}
-          hint="El turno queda apartado este tiempo. Si vence sin anticipo, el horario se libera."
-        />
-        <HintedInput
-          type="number"
-          name="cancellationWindowHours"
-          label="Cancelación en línea (horas antes)"
-          inputMode="numeric"
-          min={0}
-          max={168}
-          step={1}
-          errorMessage={errors.cancelWindow ?? null}
-          value={cancelWindow}
-          onChangeText={setCancelWindow}
-          hint="Hasta cuántas horas antes del turno el jugador puede cancelar sin escribirte."
-        />
-        <SelectField
-          label="Cancelación tardía: anticipo"
-          name="lateCancelDeposit"
-          value={lateCancel}
-          onChangeValue={(value) => setLateCancel(asDepositPolicy(value))}
-          options={DEPOSIT_POLICY_OPTIONS}
-          hint="Lo que el jugador lee antes de reservar. La plataforma no mueve dinero: tú lo resuelves."
-        />
-        <SelectField
-          label="No asistencia: anticipo"
-          name="noShowDeposit"
-          value={noShow}
-          onChangeValue={(value) => setNoShow(asDepositPolicy(value))}
-          options={DEPOSIT_POLICY_OPTIONS}
-          hint="Aplica cuando el jugador no llega y no cancela."
-        />
-        <TextAreaField
-          label="Condiciones adicionales"
-          name="conditionsText"
-          value={conditionsText}
-          onChangeValue={setConditionsText}
-          maxLength={1000}
-          placeholder="Ej.: Llegar 10 min antes. Si llueve, se reprograma sin costo."
-          hint="Texto libre que el jugador ve antes de confirmar."
-        />
-        <HintedInput
-          type="number"
-          name="bookingHorizonDays"
-          label="Reservas con anticipación (días)"
-          inputMode="numeric"
-          min={1}
-          max={180}
-          step={1}
-          errorMessage={errors.horizon ?? null}
-          value={horizon}
-          onChangeText={setHorizon}
-          hint="Hasta cuántos días adelante pueden reservar los jugadores."
-        />
-      </div>
-      <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Guardando…' : 'Guardar ajustes'}
-        </AppButton>
-      </div>
-      <InlineError message={formError} />
-      <InlineStatus message={notice} />
-    </form>
-  );
 }
 
 /** One pitch picker drives price, weekly hours and slot length, each saved on its own. */
