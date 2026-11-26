@@ -346,7 +346,7 @@ importers:
         specifier: ^7.71.2
         version: 7.71.2(react@19.3.0)
       zod:
-        specifier: ^4.4.3
+        specifier: 4.4.3
         version: 4.4.3
     devDependencies:
       '@17suit/eslint-config':
