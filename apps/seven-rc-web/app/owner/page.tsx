@@ -4,14 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type FormEvent, type MouseEvent, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
-import {
-  EMPTY_CO_ADDRESS_DRAFT,
-  coAddressFromDraft,
-  validateCoAddressDraft,
-  type CoAddressDraft,
-  type CoAddressErrorKey,
-  type CoAddressField,
-} from '@17suit/core';
+import {} from '@17suit/core';
 import {
   useCurrentUserRoleQuery,
   useRoleGate,
@@ -33,12 +26,15 @@ import { PitchPriceRules } from '@/components/pitch-price-rules';
 import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
 import { OwnerReservationSection } from '@/components/owner-reservation-form';
+import { CreateVenueForm, VENUE_NAME_INPUT_ID } from '@/components/create-venue-form';
 import { PaymentForm } from '@/components/payment-form';
+import { PitchPriceForm } from '@/components/pitch-price-form';
+import { SlotDurationForm } from '@/components/slot-duration-form';
+import { weekPayload } from '@/lib/opening-hours';
 import { VenueSettingsForm } from '@/components/venue-settings-form';
 import { PitchBlocksSection } from '@/components/pitch-blocks';
 import { customerLabel, PAYABLE_STATUSES } from '@/lib/owner-reservation-view';
 import { CreatePitchForm } from '@/components/create-pitch-form';
-import { CoAddressFields } from '@/components/co-address-fields';
 import { PublishVenueForm } from '@/components/publish-venue-form';
 import { VenueIdentityForm } from '@/components/venue-identity-form';
 import {
@@ -53,8 +49,6 @@ import {
 } from '@/components/seven-rc-ui';
 import { describeError } from '@/lib/seven-rc-errors';
 import {
-  DEFAULT_TIMEZONE,
-  VENUE_TIMEZONE_OPTIONS,
   WEEKDAYS,
   addDaysToDateKey,
   dateKeyInTimeZone,
@@ -70,10 +64,8 @@ import {
 } from '@/lib/seven-rc-format';
 import {
   useCompleteReservationMutation,
-  useConfigurePitchPricingMutation,
   useConfigurePitchSlotsMutation,
   useConfirmVenueReservationMutation,
-  useCreateVenueMutation,
   useIntegrationsQuery,
   useMarkNoShowMutation,
   useCancelReservationSeriesMutation,
@@ -88,12 +80,7 @@ import {
   type ReservationPaymentMethod,
   type VenueReservation,
 } from '@/lib/owner-queries';
-import {
-  PAYMENT_KIND_OPTIONS,
-  PAYMENT_METHOD_OPTIONS,
-  formatAmountInput,
-  parseAmount,
-} from '@/lib/owner-payment';
+import { PAYMENT_KIND_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@/lib/owner-payment';
 import { useNow } from '@/lib/use-now';
 
 const DEFAULT_RANGE_DAYS = 7;
@@ -102,7 +89,6 @@ const PENDING_POLL_MS = 30_000;
 const SETTLED_ROW_MS = 2_500;
 const PENDING_HEADING_ID = 'pendientes-title';
 const TODAY_HEADING_ID = 'hoy-title';
-const VENUE_NAME_INPUT_ID = 'nuevo-complejo-nombre';
 const INACTIVE_STATUSES = new Set(['cancelled', 'rejected', 'expired']);
 
 type SettledOutcome = 'confirmed' | 'rejected';
@@ -203,12 +189,6 @@ function holdExpired(reservation: VenueReservation, now: number): boolean {
 /** Focus target for content that replaces what the owner was using. */
 function focusOnMount(node: HTMLElement | null) {
   node?.focus();
-}
-
-function parseIntInRange(value: string, min: number, max: number): number | null {
-  if (!/^\d+$/.test(value.trim())) return null;
-  const parsed = Number(value);
-  return parsed >= min && parsed <= max ? parsed : null;
 }
 
 export default function OwnerPage() {
@@ -1524,257 +1504,6 @@ function PitchConfig({
       <OpeningHoursForm key={`horas-${pitch.id}`} venueId={venueId} pitch={pitch} />
       <SlotDurationForm key={`turno-${pitch.id}`} venueId={venueId} pitch={pitch} />
     </div>
-  );
-}
-
-function PitchPriceForm({
-  venueId,
-  currency,
-  pitch,
-}: {
-  venueId: string;
-  currency: string;
-  pitch: PitchWithPricing;
-}) {
-  const mutation = useConfigurePitchPricingMutation(pitch.id, venueId);
-  const [amount, setAmount] = useState(
-    pitch.basePriceMinor > 0 ? formatAmountInput(pitch.basePriceMinor) : '',
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const preview = parseAmount(amount);
-  const ruleCount = pitch.priceRules.length;
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setNotice(null);
-    const basePriceMinor = amount.trim() ? preview : 0;
-    if (basePriceMinor === null) {
-      setError('Escribe un precio válido, p. ej. 120.000 (máximo 21.474.836).');
-      return;
-    }
-    try {
-      // The endpoint replaces base price and rules together; carry the rules over.
-      await mutation.mutateAsync({
-        basePriceMinor,
-        rules: pitch.priceRules.map((rule) => ({
-          daysOfWeek: rule.daysOfWeek,
-          startTime: rule.startTime,
-          endTime: rule.endTime,
-          priceMinor: rule.priceMinor,
-        })),
-      });
-      setNotice(
-        basePriceMinor > 0
-          ? `${pitch.name} cuesta ${formatMoneyMinor(basePriceMinor, currency)} por turno.`
-          : ruleCount > 0
-            ? `${pitch.name} quedó sin precio base: fuera de las tarifas por horario, los jugadores verán “Precio a confirmar con el complejo”.`
-            : `${pitch.name} quedó sin precio: los jugadores verán “Precio a confirmar con el complejo”.`,
-      );
-    } catch (caught) {
-      setError(describeError(caught, 'No se pudo guardar el precio.'));
-    }
-  }
-
-  return (
-    <form
-      onSubmit={(event) => void onSubmit(event)}
-      aria-labelledby="precio-title"
-      className="grid gap-sm"
-    >
-      <h3 id="precio-title" className="m-0 font-arvo text-md text-text">
-        Precio por turno
-      </h3>
-      <div className="grid gap-sm md:grid-cols-2">
-        <HintedInput
-          name="basePrice"
-          label={`Precio de un turno de ${formatDuration(pitch.slotDurationMinutes)} (${currency})`}
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="120.000"
-          value={amount}
-          onChangeText={setAmount}
-          hint={
-            preview
-              ? `Los jugadores verán ${formatMoneyMinor(preview, currency)}. El anticipo se calcula sobre este valor.`
-              : 'Sin precio, los jugadores ven “Precio a confirmar con el complejo” y la reserva se confirma sin anticipo.'
-          }
-        />
-      </div>
-      {ruleCount > 0 ? (
-        <p className="m-0 text-sm leading-[18px] text-muted">
-          Esta cancha tiene {ruleCount === 1 ? '1 tarifa' : `${ruleCount} tarifas`} por horario
-          (hora pico). Se conservan al guardar.
-        </p>
-      ) : null}
-      <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Guardando…' : 'Guardar precio'}
-        </AppButton>
-      </div>
-      <InlineError message={error} />
-      <InlineStatus message={notice} />
-    </form>
-  );
-}
-
-function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) => void }) {
-  const createVenueMutation = useCreateVenueMutation();
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState<CoAddressDraft>({ ...EMPTY_CO_ADDRESS_DRAFT });
-  const [addressErrors, setAddressErrors] = useState<
-    Partial<Record<CoAddressField, CoAddressErrorKey>>
-  >({});
-  const [timezone, setTimezone] = useState(DEFAULT_TIMEZONE);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setNotice(null);
-    if (name.trim().length < 3) {
-      setError('El nombre del complejo necesita al menos 3 caracteres.');
-      return;
-    }
-    const nextAddressErrors = validateCoAddressDraft(address);
-    setAddressErrors(nextAddressErrors);
-    if (Object.keys(nextAddressErrors).length > 0) {
-      setError('Revisa los campos de la dirección.');
-      return;
-    }
-    const addressParts = coAddressFromDraft(address);
-    try {
-      const created = await createVenueMutation.mutateAsync({
-        name: name.trim(),
-        ...(addressParts ? { addressParts } : {}),
-        timezone,
-      });
-      setName('');
-      setAddress({ ...EMPTY_CO_ADDRESS_DRAFT });
-      setNotice(`Creaste “${created.name}”. Ahora agrega sus canchas.`);
-      onCreated(created.id);
-    } catch (caught) {
-      setError(describeError(caught, 'No se pudo crear el complejo.'));
-    }
-  }
-
-  return (
-    <form
-      onSubmit={(event) => void onSubmit(event)}
-      aria-labelledby="crear-complejo-title"
-      className="grid gap-sm"
-    >
-      <h3 id="crear-complejo-title" className="m-0 font-arvo text-md text-text">
-        Nuevo complejo
-      </h3>
-      <div className="grid gap-sm md:grid-cols-2">
-        <AppInput
-          id={VENUE_NAME_INPUT_ID}
-          name="name"
-          label="Nombre del complejo"
-          autoComplete="organization"
-          required
-          minLength={3}
-          maxLength={120}
-          value={name}
-          onChangeText={setName}
-        />
-        <SelectField
-          label="Zona horaria del complejo"
-          name="timezone"
-          value={timezone}
-          onChangeValue={setTimezone}
-          options={VENUE_TIMEZONE_OPTIONS}
-          hint="Los horarios de las canchas se muestran en esta hora."
-        />
-      </div>
-      <CoAddressFields value={address} onChange={setAddress} errors={addressErrors} />
-      <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={createVenueMutation.isPending}>
-          {createVenueMutation.isPending ? 'Creando…' : 'Crear complejo'}
-        </AppButton>
-      </div>
-      <InlineError message={error} />
-      <InlineStatus message={notice} />
-    </form>
-  );
-}
-
-/** Current week as the slots endpoint expects it (it replaces the whole week). */
-function weekPayload(openingHours: PitchWithPricing['openingHours']) {
-  return Object.entries(openingHours ?? {})
-    .filter(([, hours]) => hours.openTime && hours.closeTime)
-    .map(([day, hours]) => ({
-      dayOfWeek: Number(day),
-      openTime: hours.openTime as string,
-      closeTime: hours.closeTime as string,
-    }));
-}
-
-function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: PitchWithPricing }) {
-  const mutation = useConfigurePitchSlotsMutation(pitch.id, venueId);
-  const [duration, setDuration] = useState(String(pitch.slotDurationMinutes));
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(null);
-    setNotice(null);
-    const parsed = parseIntInRange(duration, 30, 240);
-    if (parsed === null) {
-      setError('La duración del turno debe estar entre 30 y 240 minutos.');
-      return;
-    }
-    if (parsed === pitch.slotDurationMinutes) {
-      setNotice('La duración ya era esa. No hubo cambios.');
-      return;
-    }
-    try {
-      await mutation.mutateAsync({
-        openingHours: weekPayload(pitch.openingHours),
-        slotDurationMinutes: parsed,
-      });
-      setNotice(`Los turnos de ${pitch.name} ahora duran ${formatDuration(parsed)}.`);
-    } catch (caught) {
-      setError(describeError(caught, 'No se pudo guardar la duración del turno.'));
-    }
-  }
-
-  return (
-    <form
-      onSubmit={(event) => void onSubmit(event)}
-      aria-labelledby="duracion-title"
-      className="grid gap-sm"
-    >
-      <h3 id="duracion-title" className="m-0 font-arvo text-md text-text">
-        Duración del turno
-      </h3>
-      <div className="grid gap-sm md:grid-cols-2">
-        <HintedInput
-          type="number"
-          name="slotDurationMinutes"
-          label="Minutos por turno"
-          inputMode="numeric"
-          min={30}
-          max={240}
-          step={15}
-          required
-          value={duration}
-          onChangeText={setDuration}
-          hint="Cada reserva dura esto. Las reservas ya hechas conservan su horario."
-        />
-      </div>
-      <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? 'Guardando…' : 'Guardar duración'}
-        </AppButton>
-      </div>
-      <InlineError message={error} />
-      <InlineStatus message={notice} />
-    </form>
   );
 }
 

@@ -5,8 +5,6 @@ import {
   coAddressFromDraft,
   draftFromCoAddress,
   parseCoAddress,
-  type CoAddressErrorKey,
-  type CoAddressField,
 } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
@@ -14,7 +12,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { AppButton } from '@17suit/ui';
 import { runAction } from '@17suit/ui/feedback';
-import { CoAddressFields } from '@/components/co-address-fields';
+import { addressErrorKeys, CoAddressFields } from '@/components/co-address-fields';
 import { HintedInput, InlineError, InlineStatus } from '@/components/seven-rc-ui';
 import { useUpdateVenueSettingsMutation, type OwnerVenue } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
@@ -118,14 +116,4 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
       <InlineStatus message={notice} />
     </form>
   );
-}
-
-function addressErrorKeys(
-  errors: Partial<Record<CoAddressField, { message?: string }>> | undefined,
-): Partial<Record<CoAddressField, CoAddressErrorKey>> {
-  const out: Partial<Record<CoAddressField, CoAddressErrorKey>> = {};
-  for (const [field, error] of Object.entries(errors ?? {})) {
-    if (error?.message) out[field as CoAddressField] = error.message as CoAddressErrorKey;
-  }
-  return out;
 }
