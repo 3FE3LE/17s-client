@@ -100,3 +100,13 @@ export function CoAddressFields({ value, onChange, errors }: Props) {
     </GapView>
   );
 }
+
+export function addressErrorKeys(
+  errors: Partial<Record<CoAddressField, { message?: string }>> | undefined,
+): Partial<Record<CoAddressField, CoAddressErrorKey>> {
+  const out: Partial<Record<CoAddressField, CoAddressErrorKey>> = {};
+  for (const [field, error] of Object.entries(errors ?? {})) {
+    if (error?.message) out[field as CoAddressField] = error.message as CoAddressErrorKey;
+  }
+  return out;
+}

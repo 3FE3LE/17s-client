@@ -7,7 +7,10 @@ import {
   GapView,
   useAppTheme,
 } from '@17suit/ui-native';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { KeyboardAvoidingView, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { confirmAction } from '../lib/confirm';
@@ -172,37 +175,64 @@ function dueAmount(reservation: VenueReservation, kind: ReservationPaymentKind):
   return due > 0 ? String(due / 100) : '';
 }
 
+function buildPaymentSchema(paidMinor: number) {
+  return z
+    .object({
+      kind: z.enum(['deposit', 'balance', 'refund']),
+      method: z.string().min(1),
+      amount: z.string(),
+    })
+    .superRefine((values, ctx) => {
+      const amountMinor = parseMoneyMinor(values.amount);
+      if (!amountMinor) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['amount'],
+          message: 'Escribe un monto mayor que cero, por ejemplo 30000.',
+        });
+      } else if (values.kind === 'refund' && amountMinor > paidMinor) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['amount'],
+          message: 'La devolución supera lo que pagó el jugador.',
+        });
+      }
+    });
+}
+type PaymentValues = z.infer<ReturnType<typeof buildPaymentSchema>>;
+
 function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
   const { theme } = useAppTheme();
   const kinds = paymentKindsFor(reservation, now);
-  const [kind, setKind] = useState<ReservationPaymentKind>(() => {
-    if (!kinds.includes('deposit')) return 'refund';
-    return reservation.depositMinor > reservation.paidMinor ? 'deposit' : 'balance';
-  });
-  const [method, setMethod] = useState<ReservationPaymentMethod>('transfer');
-  const [amount, setAmount] = useState(() => dueAmount(reservation, kind));
   const [error, setError] = useState<string | null>(null);
+  const initialKind: ReservationPaymentKind = !kinds.includes('deposit')
+    ? 'refund'
+    : reservation.depositMinor > reservation.paidMinor
+      ? 'deposit'
+      : 'balance';
+  const { control, handleSubmit, setValue, watch, formState } = useForm<PaymentValues>({
+    resolver: zodResolver(buildPaymentSchema(reservation.paidMinor)),
+    defaultValues: {
+      kind: initialKind,
+      method: 'transfer',
+      amount: dueAmount(reservation, initialKind),
+    },
+  });
+  const kind = watch('kind');
+  const amount = watch('amount');
 
   const confirmsHold =
     kind !== 'refund' &&
     reservation.status === 'pending_confirmation' &&
     reservation.paidMinor + (parseMoneyMinor(amount) ?? 0) >= reservation.depositMinor;
 
-  const submit = () => {
+  const submit = handleSubmit((values) => {
     setError(null);
-    const amountMinor = parseMoneyMinor(amount);
-    if (!amountMinor) {
-      setError('Escribe un monto mayor que cero, por ejemplo 30000.');
-      return;
-    }
-    if (kind === 'refund' && amountMinor > reservation.paidMinor) {
-      setError('La devolución supera lo que pagó el jugador.');
-      return;
-    }
-    const money = formatMoney(amountMinor, reservation.currency) ?? amount;
+    const amountMinor = parseMoneyMinor(values.amount) ?? 0;
+    const money = formatMoney(amountMinor, reservation.currency) ?? values.amount;
     confirmAction(
       {
-        title: `¿Registrar ${KIND_LABELS[kind].toLowerCase()} de ${money}?`,
+        title: `¿Registrar ${KIND_LABELS[values.kind].toLowerCase()} de ${money}?`,
         message: `La app no mueve dinero, solo lo anota.${
           confirmsHold ? ' Este monto cubre el anticipo y confirma la reserva.' : ''
         } El registro no se puede borrar.`,
@@ -210,10 +240,16 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
         cancelText: 'Volver',
       },
       () => {
-        void actions.recordPayment(reservation, { kind, method, amountMinor }).then(setError);
+        void actions
+          .recordPayment(reservation, {
+            kind: values.kind,
+            method: values.method as ReservationPaymentMethod,
+            amountMinor,
+          })
+          .then(setError);
       },
     );
-  };
+  });
 
   return (
     <>
@@ -228,8 +264,8 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
             label={KIND_LABELS[option]}
             selected={option === kind}
             onPress={() => {
-              setKind(option);
-              setAmount(dueAmount(reservation, option));
+              setValue('kind', option);
+              setValue('amount', dueAmount(reservation, option));
               setError(null);
             }}
           />
@@ -244,24 +280,34 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
           <ChoiceChip
             key={option.value}
             label={option.label}
-            selected={option.value === method}
-            onPress={() => setMethod(option.value)}
+            selected={option.value === watch('method')}
+            onPress={() => setValue('method', option.value)}
           />
         ))}
       </View>
-      <AppInput
-        value={amount}
-        onChangeText={(value) => {
-          setAmount(value);
-          setError(null);
-        }}
-        label={`Monto (${reservation.currency})`}
-        placeholder="30000"
-        keyboardType="decimal-pad"
-        error={Boolean(error)}
+      <Controller
+        control={control}
+        name="amount"
+        render={({ field }) => (
+          <AppInput
+            value={field.value}
+            onChangeText={(value) => {
+              field.onChange(value);
+              setError(null);
+            }}
+            label={`Monto (${reservation.currency})`}
+            placeholder="30000"
+            keyboardType="decimal-pad"
+            error={Boolean(formState.errors.amount ?? error)}
+          />
+        )}
       />
-      <FormError message={error} />
-      <AppButton onPress={submit} disabled={actions.isPending} busy={actions.isPending}>
+      <FormError message={formState.errors.amount?.message ?? error} />
+      <AppButton
+        onPress={() => void submit()}
+        disabled={actions.isPending}
+        busy={actions.isPending}
+      >
         {actions.isPending ? 'Registrando…' : 'Registrar pago'}
       </AppButton>
       <AppButton variant="neutral" onPress={onBack} disabled={actions.isPending}>
