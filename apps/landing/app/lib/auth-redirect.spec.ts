@@ -6,12 +6,7 @@ import { resolveRedirectTarget } from './auth-redirect';
 // and reset it, so we cast to a mutable record and use bracket assignment.
 const env = process.env as Record<string, string | undefined>;
 
-const trackedKeys = [
-  'NEXT_PUBLIC_FIFTEEN_AC_WEB_URL',
-  'NEXT_PUBLIC_SEVEN_RC_WEB_URL',
-  'NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS',
-  'NODE_ENV',
-] as const;
+const trackedKeys = ['NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS', 'NODE_ENV'] as const;
 
 describe('resolveRedirectTarget', () => {
   const originalValues: Record<string, string | undefined> = {};
@@ -73,29 +68,34 @@ describe('resolveRedirectTarget', () => {
   });
 
   describe('allowed origins', () => {
-    it('accepts an absolute URL matching NEXT_PUBLIC_FIFTEEN_AC_WEB_URL', () => {
-      process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL = 'https://15ac.example.com';
-      expect(resolveRedirectTarget('https://15ac.example.com/inbox')).toBe(
-        'https://15ac.example.com/inbox',
-      );
+    beforeEach(() => {
+      env.NODE_ENV = 'production';
+    });
+
+    it.each([
+      'https://seven-rc.17suit.com/play',
+      'https://fifteen-ac.17suit.com/inbox',
+      'https://nine-cc.17suit.com/',
+      'https://www.17suit.com/apps',
+    ])('accepts the canonical origin %s with no env var configured', (url) => {
+      expect(resolveRedirectTarget(url)).toBe(url);
+    });
+
+    it('rejects a vercel.app host unless it is listed explicitly', () => {
+      const url = 'https://17s-client-seven-rc-web.vercel.app/';
+      expect(resolveRedirectTarget(url)).toBe('/');
+      env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS = 'https://17s-client-seven-rc-web.vercel.app/';
+      expect(resolveRedirectTarget(url)).toBe(url);
     });
 
     it('accepts an origin listed in NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS (comma list)', () => {
-      process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS =
-        'https://a.example.com,https://b.example.com';
+      env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS = 'https://a.example.com,https://b.example.com';
       expect(resolveRedirectTarget('https://b.example.com/x')).toBe('https://b.example.com/x');
     });
 
-    it('strips trailing slashes from configured origins before comparing', () => {
-      process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL = 'https://15ac.example.com/';
-      expect(resolveRedirectTarget('https://15ac.example.com/inbox')).toBe(
-        'https://15ac.example.com/inbox',
-      );
-    });
-
     it('rejects an absolute URL whose origin is not allow-listed', () => {
-      process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL = 'https://15ac.example.com';
       expect(resolveRedirectTarget('https://evil.example.com/x')).toBe('/');
+      expect(resolveRedirectTarget('https://seven-rc.17suit.com.evil.example.com/')).toBe('/');
     });
   });
 
@@ -108,7 +108,6 @@ describe('resolveRedirectTarget', () => {
 
     it('rejects localhost in production even when other origins are configured', () => {
       env.NODE_ENV = 'production';
-      env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL = 'https://15ac.example.com';
       expect(resolveRedirectTarget('http://localhost:3000/app')).toBe('/');
     });
   });

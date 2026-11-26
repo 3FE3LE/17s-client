@@ -92,11 +92,13 @@ Use app-level `.env` files with shared keys:
 - `API_BASE_URL=...`
 - `FEATURE_FLAG_PROVIDER=memory|launchdarkly|...`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_CLERK_SIGN_IN_URL`
-- `NEXT_PUBLIC_CLERK_SIGN_UP_URL`
-- `NEXT_PUBLIC_FIFTEEN_AC_WEB_URL`
-- `NEXT_PUBLIC_SEVEN_RC_WEB_URL`
-- `NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS`
+- `NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS` (optional, previews only)
+- `NEXT_PUBLIC_SITE_ORIGIN_<KEY>` (optional, previews only, e.g. `..._SEVEN_RC`)
+
+Site origins (landing, products, admin) are not env vars: they live in
+`packages/core/src/site-origins.ts`. Add a product there once; auth redirects,
+the redirect allow-list and landing links all read it.
+
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `EXPO_PUBLIC_CLERK_JWT_TEMPLATE`
 - `EXPO_PUBLIC_API_BASE_URL`

@@ -1,17 +1,13 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { landingAuthUrl } from '@17suit/core/site-origins';
 
 interface RedirectPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 function resolveLandingForgotPasswordUrl(): string {
-  const configuredSignIn = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL;
-  const signInUrl =
-    configuredSignIn && configuredSignIn.trim().length > 0
-      ? configuredSignIn
-      : 'http://localhost:3000/sign-in';
-  return signInUrl.replace(/\/sign-in\/?$/, '/forgot-password');
+  return landingAuthUrl('forgot-password');
 }
 
 function resolveAppRootFromHeaders(headerList: Headers): string {

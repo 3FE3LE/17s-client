@@ -1,3 +1,5 @@
+import { allowedRedirectOrigins } from '@17suit/core/site-origins';
+
 const RELATIVE_BASE = 'https://relative.invalid';
 
 function staysOnSite(path: string): boolean {
@@ -17,8 +19,8 @@ function staysOnSite(path: string): boolean {
  * - Relative paths starting with a single `/` are allowed only if they still
  *   resolve to this site after URL normalization.
  * - Absolute URLs are allowed only if their origin is in the allow-list
- *   (env: NEXT_PUBLIC_FIFTEEN_AC_WEB_URL, NEXT_PUBLIC_SEVEN_RC_WEB_URL,
- *    NEXT_PUBLIC_NINE_CC_WEB_URL, NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS)
+ *   (`allowedRedirectOrigins` from `@17suit/core/site-origins`: every site of
+ *   the catalog, plus optional NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS for previews)
  *   OR, in development, if they point to localhost/127.0.0.1 (so cross-port
  *   product apps work without env setup).
  * - Anything else falls back to `/`.
@@ -32,15 +34,16 @@ export function resolveRedirectTarget(rawValue: string | string[] | null | undef
     return staysOnSite(value) ? value : '/';
   }
 
-  const allowedOrigins = [
-    process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL,
-    process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL,
-    process.env.NEXT_PUBLIC_NINE_CC_WEB_URL,
-    process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
-  ]
-    .flatMap((entry) => entry?.split(',') ?? [])
-    .map((entry) => entry.trim().replace(/\/+$/, ''))
-    .filter(Boolean);
+  const allowedOrigins = allowedRedirectOrigins({
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS: process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
+    NEXT_PUBLIC_SITE_ORIGIN_LANDING: process.env.NEXT_PUBLIC_SITE_ORIGIN_LANDING,
+    NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC: process.env.NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC,
+    NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC: process.env.NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC,
+    NEXT_PUBLIC_SITE_ORIGIN_NINE_CC: process.env.NEXT_PUBLIC_SITE_ORIGIN_NINE_CC,
+    NEXT_PUBLIC_SITE_ORIGIN_ADMIN: process.env.NEXT_PUBLIC_SITE_ORIGIN_ADMIN,
+  });
 
   try {
     const url = new URL(value);
