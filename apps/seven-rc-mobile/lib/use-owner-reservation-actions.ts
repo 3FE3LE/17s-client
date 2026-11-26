@@ -137,10 +137,10 @@ export function useOwnerReservationActions() {
         await completeMutation.mutateAsync(reservation.id);
         feedback.success('Reserva completada');
       } else if (action === 'no_show') {
-        await noShowMutation.mutateAsync(reservation.id);
+        await noShowMutation.mutateAsync({ reservationId: reservation.id });
         feedback.success('Marcada como "No asistió"');
       } else {
-        await cancelMutation.mutateAsync(reservation.id);
+        await cancelMutation.mutateAsync({ reservationId: reservation.id });
         feedback.success('Reserva cancelada', 'El horario quedó libre.');
       }
     } catch (error) {
@@ -180,14 +180,19 @@ export function useOwnerReservationActions() {
         onConfirm,
       );
     } else {
-      const refundNote =
-        reservation.paidMinor > 0
-          ? ' Si devuelves dinero, regístralo después en "Registrar pago".'
-          : '';
+      if (reservation.paidMinor > 0) {
+        // The server requires a refund decision for paid reservations; the mobile
+        // form for it is not built yet, so it is done from the web app.
+        feedback.error(
+          'Esta reserva tiene dinero pagado',
+          'Cancélala desde la web para registrar la devolución.',
+        );
+        return;
+      }
       confirmDestructive(
         {
           title: '¿Cancelar esta reserva?',
-          message: `${slot}. El horario quedará libre y no se puede deshacer.${refundNote}`,
+          message: `${slot}. El horario quedará libre y no se puede deshacer.`,
           confirmText: 'Cancelar reserva',
           cancelText: 'Volver',
         },

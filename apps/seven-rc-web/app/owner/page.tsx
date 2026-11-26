@@ -18,6 +18,15 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
+import {
+  asDepositPolicy,
+  DEPOSIT_OUTCOME_LABEL,
+  DEPOSIT_POLICY_LABEL,
+  DEPOSIT_POLICY_OPTIONS,
+  type DepositPolicy,
+} from '@/lib/deposit-policy';
+import { CustomerHistoryNote } from '@/components/customer-history-note';
+import { PitchPolicyForm } from '@/components/pitch-policy-form';
 import { PitchPriceRules } from '@/components/pitch-price-rules';
 import { IntegrationNotice } from '@/components/integration-notice';
 import { OwnerBalances } from '@/components/owner-balances';
@@ -304,6 +313,12 @@ function OwnerWorkspace() {
     area: NoticeArea;
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // Paid reservations: the server requires a refund decision before cancelling.
+  const [refundDecision, setRefundDecision] = useState<'' | 'refund' | 'none_due'>('');
+  const [refundMethod, setRefundMethod] = useState<ReservationPaymentMethod>('cash');
+  const [refundNote, setRefundNote] = useState('');
+  // No-show on a paid reservation: what the owner did with the deposit.
+  const [noShowOutcome, setNoShowOutcome] = useState<'' | 'refunded' | 'retained'>('');
 
   const paymentDialogRef = useRef<HTMLDialogElement | null>(null);
   const [paymentTarget, setPaymentTarget] = useState<{
@@ -482,6 +497,9 @@ function OwnerWorkspace() {
     flushSync(() => {
       setAction({ kind, reservation, area });
       setActionError(null);
+      setRefundDecision('');
+      setRefundNote('');
+      setNoShowOutcome(defaultNoShowOutcome(kind, reservation));
       setNotice(null);
     });
     actionDialogRef.current?.showModal();
@@ -495,6 +513,34 @@ function OwnerWorkspace() {
       if (kind === 'cancel_series') {
         if (!reservation.seriesId) throw new Error('La reserva no pertenece a una serie.');
         await mutations.cancel_series.mutateAsync(reservation.seriesId);
+      } else if (kind === 'cancel') {
+        const paid = reservation.paidMinor > 0;
+        if (paid && !refundDecision) {
+          setActionError('Indica si devuelves el dinero o si no corresponde devolución.');
+          return;
+        }
+        if (paid && refundDecision === 'none_due' && !refundNote.trim()) {
+          setActionError('Anota por qué no corresponde devolución.');
+          return;
+        }
+        await mutations.cancel.mutateAsync({
+          reservationId: reservation.id,
+          input: paid
+            ? refundDecision === 'refund'
+              ? { refundDecision, method: refundMethod }
+              : { refundDecision: 'none_due', note: refundNote.trim() }
+            : undefined,
+        });
+      } else if (kind === 'no_show') {
+        const paid = reservation.paidMinor > 0;
+        if (paid && !noShowOutcome) {
+          setActionError('Indica si devolviste o conservaste el anticipo.');
+          return;
+        }
+        await mutations.no_show.mutateAsync({
+          reservationId: reservation.id,
+          ...(paid ? { input: { depositOutcome: noShowOutcome as 'refunded' | 'retained' } } : {}),
+        });
       } else {
         await mutations[kind].mutateAsync(reservation.id);
       }
@@ -878,6 +924,7 @@ function OwnerWorkspace() {
               />
               <PitchConfig
                 venueId={selectedVenue.id}
+                venue={selectedVenue}
                 currency={selectedVenue.currency}
                 pitches={pitches}
                 selectedId={configPitchId}
@@ -924,15 +971,82 @@ function OwnerWorkspace() {
               {formatSlotWhen(action.reservation.startAt, action.reservation.endAt, timeZone)}
             </p>
             <p className="m-0">{currentAction.body}</p>
-            {(action.kind === 'cancel' || action.kind === 'reject') &&
-            action.reservation.paidMinor > 0 ? (
+            {action.kind === 'confirm' || action.kind === 'no_show' || action.kind === 'cancel' ? (
+              <CustomerHistoryNote venueId={venueId} phone={action.reservation.customerPhone} />
+            ) : null}
+            {action.kind === 'no_show' && action.reservation.paidMinor > 0 ? (
+              <div className="grid gap-sm">
+                <p className="m-0 text-text">
+                  Esta reserva tiene{' '}
+                  {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}{' '}
+                  pagados. Solo queda anotado lo que decidas: la plataforma no mueve dinero.
+                </p>
+                <SelectField
+                  label="Anticipo"
+                  name="noShowOutcome"
+                  value={noShowOutcome}
+                  onChangeValue={(value) =>
+                    setNoShowOutcome(value === 'refunded' || value === 'retained' ? value : '')
+                  }
+                  options={[
+                    { value: '', label: 'Elige una opción' },
+                    { value: 'retained', label: DEPOSIT_OUTCOME_LABEL.retained },
+                    { value: 'refunded', label: DEPOSIT_OUTCOME_LABEL.refunded },
+                  ]}
+                  hint={`Política con que reservó: ${DEPOSIT_POLICY_LABEL[
+                    asDepositPolicy(action.reservation.policySnapshot.noShowDeposit)
+                  ].toLowerCase()}.`}
+                />
+              </div>
+            ) : null}
+            {action.kind === 'reject' && action.reservation.paidMinor > 0 ? (
               <p className="m-0 text-text">
                 Registraste pagos por{' '}
                 {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}. Si
-                los vas a devolver, anota la devolución con “
-                {action.kind === 'reject' ? 'Registrar anticipo' : 'Registrar pago'}” antes de
-                continuar: después la reserva sale de la agenda.
+                los vas a devolver, anota la devolución con “Registrar anticipo” antes de continuar:
+                después la reserva sale de la agenda.
               </p>
+            ) : null}
+            {action.kind === 'cancel' && action.reservation.paidMinor > 0 ? (
+              <div className="grid gap-sm">
+                <p className="m-0 text-text">
+                  Esta reserva tiene{' '}
+                  {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}{' '}
+                  pagados. Antes de cancelar, indica qué pasa con ese dinero.
+                </p>
+                <SelectField
+                  label="Dinero pagado"
+                  name="refundDecision"
+                  value={refundDecision}
+                  onChangeValue={(value) => setRefundDecision(value as '' | 'refund' | 'none_due')}
+                  options={[
+                    { value: '', label: 'Elige una opción' },
+                    { value: 'refund', label: 'Lo devuelvo todo' },
+                    { value: 'none_due', label: 'No corresponde devolución' },
+                  ]}
+                />
+                {refundDecision === 'refund' ? (
+                  <SelectField
+                    label="Medio de la devolución"
+                    name="refundMethod"
+                    value={refundMethod}
+                    onChangeValue={(value) => setRefundMethod(value as ReservationPaymentMethod)}
+                    options={PAYMENT_METHOD_OPTIONS}
+                  />
+                ) : null}
+                {refundDecision === 'none_due' ? (
+                  <HintedInput
+                    name="refundNote"
+                    label="Motivo"
+                    autoComplete="off"
+                    required
+                    maxLength={300}
+                    value={refundNote}
+                    onChangeText={setRefundNote}
+                    hint="Queda anotado en la reserva."
+                  />
+                ) : null}
+              </div>
             ) : null}
             {action.kind === 'confirm' &&
             owesDeposit(action.reservation) &&
@@ -1468,6 +1582,16 @@ function PaymentForm({
   );
 }
 
+/** The booked policy preselects the outcome; owner-decides leaves it empty so it is a conscious choice. */
+function defaultNoShowOutcome(
+  kind: OwnerActionKind,
+  reservation: VenueReservation,
+): '' | 'refunded' | 'retained' {
+  if (kind !== 'no_show') return '';
+  const policy = reservation.policySnapshot.noShowDeposit;
+  return policy === 'refund' ? 'refunded' : policy === 'retain' ? 'retained' : '';
+}
+
 function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
   const mutation = useUpdateVenueSettingsMutation(venue.id);
   const [phone, setPhone] = useState(venue.contactPhone ?? '');
@@ -1476,6 +1600,9 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
   const [hold, setHold] = useState(String(venue.holdMinutes));
   const [cancelWindow, setCancelWindow] = useState(String(venue.cancellationWindowHours));
   const [horizon, setHorizon] = useState(String(venue.bookingHorizonDays));
+  const [lateCancel, setLateCancel] = useState<DepositPolicy>(venue.lateCancelDeposit);
+  const [noShow, setNoShow] = useState<DepositPolicy>(venue.noShowDeposit);
+  const [conditionsText, setConditionsText] = useState(venue.conditionsText ?? '');
   const [errors, setErrors] = useState<Partial<Record<string, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1513,16 +1640,26 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
       return;
     }
     try {
-      await mutation.mutateAsync({
+      const saved = await mutation.mutateAsync({
         ...(normalizedPhone ? { contactPhone: normalizedPhone } : {}),
         paymentInstructions: instructions.trim(),
         depositPercent: parsedDeposit,
         holdMinutes: parsedHold,
         cancellationWindowHours: parsedWindow,
+        lateCancelDeposit: lateCancel,
+        noShowDeposit: noShow,
+        conditionsText: conditionsText.trim(),
         bookingHorizonDays: parsedHorizon,
       });
       if (normalizedPhone) setPhone(normalizedPhone);
-      setNotice('Guardaste los ajustes. Las próximas reservas ya usan estas reglas.');
+      const keeping = saved.reservationsKeepingPolicy ?? 0;
+      setNotice(
+        keeping > 0
+          ? `Guardaste los ajustes. Las próximas reservas usan las reglas nuevas; ${keeping} ${
+              keeping === 1 ? 'reserva activa conserva' : 'reservas activas conservan'
+            } las condiciones con que se hicieron.`
+          : 'Guardaste los ajustes. Las próximas reservas ya usan estas reglas.',
+      );
     } catch (caught) {
       setFormError(describeError(caught, 'No se pudieron guardar los ajustes.'));
     }
@@ -1609,6 +1746,31 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
           onChangeText={setCancelWindow}
           hint="Hasta cuántas horas antes del turno el jugador puede cancelar sin escribirte."
         />
+        <SelectField
+          label="Cancelación tardía: anticipo"
+          name="lateCancelDeposit"
+          value={lateCancel}
+          onChangeValue={(value) => setLateCancel(asDepositPolicy(value))}
+          options={DEPOSIT_POLICY_OPTIONS}
+          hint="Lo que el jugador lee antes de reservar. La plataforma no mueve dinero: tú lo resuelves."
+        />
+        <SelectField
+          label="No asistencia: anticipo"
+          name="noShowDeposit"
+          value={noShow}
+          onChangeValue={(value) => setNoShow(asDepositPolicy(value))}
+          options={DEPOSIT_POLICY_OPTIONS}
+          hint="Aplica cuando el jugador no llega y no cancela."
+        />
+        <TextAreaField
+          label="Condiciones adicionales"
+          name="conditionsText"
+          value={conditionsText}
+          onChangeValue={setConditionsText}
+          maxLength={1000}
+          placeholder="Ej.: Llegar 10 min antes. Si llueve, se reprograma sin costo."
+          hint="Texto libre que el jugador ve antes de confirmar."
+        />
         <HintedInput
           type="number"
           name="bookingHorizonDays"
@@ -1637,6 +1799,7 @@ function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
 /** One pitch picker drives price, weekly hours and slot length, each saved on its own. */
 function PitchConfig({
   venueId,
+  venue,
   currency,
   pitches,
   selectedId,
@@ -1646,6 +1809,7 @@ function PitchConfig({
   onRetry,
 }: {
   venueId: string;
+  venue: OwnerVenue;
   currency: string;
   pitches: PitchWithPricing[];
   selectedId: string | null;
@@ -1705,6 +1869,12 @@ function PitchConfig({
         key={`tarifas-${pitch.id}-${JSON.stringify(pitch.priceRules)}-${pitch.basePriceMinor}`}
         venueId={venueId}
         currency={currency}
+        pitch={pitch}
+      />
+      <PitchPolicyForm
+        key={`condiciones-${pitch.id}-${pitch.depositPercent}-${pitch.holdMinutes}-${pitch.cancellationWindowHours}-${pitch.paymentInstructions}-${pitch.lateCancelDeposit}-${pitch.noShowDeposit}-${pitch.conditionsText}`}
+        venueId={venueId}
+        venue={venue}
         pitch={pitch}
       />
       <OpeningHoursForm key={`horas-${pitch.id}`} venueId={venueId} pitch={pitch} />

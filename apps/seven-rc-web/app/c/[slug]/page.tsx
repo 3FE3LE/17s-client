@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
 import { GuestBookingForm } from '@/components/guest-booking-form';
+import { asDepositPolicy } from '@/lib/deposit-policy';
 import { fetchPublicVenue, fetchPublicVenueAvailability } from '@/lib/public-venue-api';
 import {
   addDaysToDateKey,
@@ -34,6 +35,7 @@ interface PageProps {
     fecha?: string | string[];
     turno?: string | string[];
     conflicto?: string | string[];
+    condiciones?: string | string[];
   }>;
 }
 
@@ -61,7 +63,7 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
   const venue = await fetchPublicVenue(slug);
   if (!venue) notFound();
 
-  const { fecha, turno, conflicto } = await searchParams;
+  const { fecha, turno, conflicto, condiciones } = await searchParams;
   const date = resolveDate(fecha, venue.today, venue.bookingHorizonDays);
   const maxDate = addDaysToDateKey(venue.today, venue.bookingHorizonDays);
   const availability = await fetchPublicVenueAvailability(slug, date);
@@ -76,7 +78,18 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
   const selectedSlot = selectedPitch?.slots.find(
     (slot) => slot.startAt === turnoStartAt && slot.status === 'AVAILABLE',
   );
+  // Conditions resolve per pitch (pitch value ?? venue value); fall back to the venue's.
+  const policyPitch = venue.pitches.find((pitch) => pitch.id === selectedPitch?.pitchId);
+  const policy = {
+    depositPercent: policyPitch?.depositPercent ?? venue.depositPercent,
+    holdMinutes: policyPitch?.holdMinutes ?? venue.holdMinutes,
+    cancellationWindowHours: policyPitch?.cancellationWindowHours ?? venue.cancellationWindowHours,
+    lateCancelDeposit: asDepositPolicy(policyPitch?.lateCancelDeposit ?? venue.lateCancelDeposit),
+    noShowDeposit: asDepositPolicy(policyPitch?.noShowDeposit ?? venue.noShowDeposit),
+    conditionsText: policyPitch?.conditionsText ?? venue.conditionsText ?? null,
+  };
   const hadConflict = (Array.isArray(conflicto) ? conflicto[0] : conflicto) === '1';
+  const conditionsChanged = (Array.isArray(condiciones) ? condiciones[0] : condiciones) === '1';
 
   return (
     <main className="mx-auto grid w-full max-w-[var(--container-content)] gap-xl px-lg py-xl">
@@ -92,6 +105,15 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           </p>
         ) : null}
       </header>
+
+      {conditionsChanged ? (
+        <p
+          role="alert"
+          className="m-0 rounded-[var(--radius-md)] border border-destructive/50 bg-feedback-error-soft px-3 py-2 text-sm leading-[18px] text-text"
+        >
+          El complejo cambió sus condiciones mientras reservabas. Revísalas y confirma de nuevo.
+        </p>
+      ) : null}
 
       {hadConflict ? (
         <p
@@ -233,12 +255,14 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
             when={formatSlotWhen(selectedSlot.startAt, selectedSlot.endAt, timeZone)}
             pitchName={selectedPitch.pitchName}
             priceLabel={formatMoneyMinor(selectedSlot.priceMinor, availability.currency)}
-            depositPercent={venue.depositPercent}
+            depositPercent={policy.depositPercent}
             depositLabel={formatMoneyMinor(
-              Math.ceil((selectedSlot.priceMinor * venue.depositPercent) / 100),
+              Math.ceil((selectedSlot.priceMinor * policy.depositPercent) / 100),
               availability.currency,
             )}
-            holdMinutes={venue.holdMinutes}
+            holdMinutes={policy.holdMinutes}
+            policy={policy}
+            policyVersion={venue.policyVersion}
           />
         </div>
       ) : null}

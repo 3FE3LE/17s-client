@@ -19,6 +19,13 @@ const PROPS: GuestBookingFormProps = {
   depositPercent: 0,
   depositLabel: '$0',
   holdMinutes: 30,
+  policyVersion: 2,
+  policy: {
+    cancellationWindowHours: 24,
+    lateCancelDeposit: 'retain',
+    noShowDeposit: 'owner_decides',
+    conditionsText: 'Llegar 10 min antes.',
+  },
 };
 
 beforeEach(() => {
@@ -56,6 +63,9 @@ describe('GuestBookingForm', () => {
     expect((container.querySelector('input[name="fecha"]') as HTMLInputElement).value).toBe(
       PROPS.date,
     );
+    expect((container.querySelector('input[name="policyVersion"]') as HTMLInputElement).value).toBe(
+      String(PROPS.policyVersion),
+    );
   });
 
   it('submits the typed values to reserveAction bound to the slug', async () => {
@@ -87,5 +97,14 @@ describe('GuestBookingForm', () => {
     expect(screen.getByText('Escribe tu nombre.')).toBeTruthy();
     expect(screen.getByText('Número inválido.')).toBeTruthy();
     expect(screen.getByLabelText<HTMLInputElement>('Tu nombre').value).toBe('A');
+  });
+
+  it('shows the booked conditions before the player confirms', () => {
+    render(<GuestBookingForm {...PROPS} />);
+    const region = screen.getByRole('region', { name: 'Condiciones de esta reserva' });
+    const text = region.textContent ?? '';
+    expect(text).toContain('hasta 24 horas antes del turno');
+    expect(text).toContain('Si cancelas tarde: el complejo conserva el anticipo.');
+    expect(text).toContain('Llegar 10 min antes.');
   });
 });
