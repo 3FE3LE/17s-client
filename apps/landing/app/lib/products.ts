@@ -135,6 +135,7 @@ function siteEnv(): SiteEnv {
   return {
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
     NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC: process.env.NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC,
     NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC: process.env.NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC,
   };

@@ -37,6 +37,7 @@ export function resolveRedirectTarget(rawValue: string | string[] | null | undef
   const allowedOrigins = allowedRedirectOrigins({
     NODE_ENV: process.env.NODE_ENV,
     VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
     NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS: process.env.NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS,
     NEXT_PUBLIC_SITE_ORIGIN_LANDING: process.env.NEXT_PUBLIC_SITE_ORIGIN_LANDING,
     NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC: process.env.NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC,

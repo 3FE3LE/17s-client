@@ -93,7 +93,7 @@ Use app-level `.env` files with shared keys:
 - `FEATURE_FLAG_PROVIDER=memory|launchdarkly|...`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_ALLOWED_REDIRECT_ORIGINS` (optional, previews only)
-- `NEXT_PUBLIC_SITE_ORIGIN_<KEY>` (optional, previews only, e.g. `..._SEVEN_RC`)
+- `NEXT_PUBLIC_SITE_ORIGIN_<KEY>` (optional escape hatch, e.g. `..._SEVEN_RC`; previews resolve branch aliases on their own)
 
 Site origins (landing, products, admin) are not env vars: they live in
 `packages/core/src/site-origins.ts`. Add a product there once; auth redirects,

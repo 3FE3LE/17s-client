@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SITE_KEYS,
+  vercelBranchAlias,
   SITE_ORIGINS,
   allowedRedirectOrigins,
   landingAuthUrl,
@@ -30,7 +31,9 @@ describe('siteOrigin', () => {
 
   it('treats a Vercel preview build as non-production', () => {
     const env = { NODE_ENV: 'production', VERCEL_ENV: 'preview' };
-    expect(siteOrigin('seven-rc', env)).toBe('http://localhost:3007');
+    expect(siteOrigin('seven-rc', env)).toBe(
+      'https://17s-client-seven-rc-web-git-development-17-suit.vercel.app',
+    );
     expect(
       siteOrigin('seven-rc', { ...env, NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC: 'https://x.vercel.app/' }),
     ).toBe('https://x.vercel.app');
@@ -67,5 +70,40 @@ describe('allowedRedirectOrigins', () => {
     });
     expect(origins).toContain('https://p.vercel.app');
     expect(origins).not.toContain('not-a-url');
+  });
+});
+
+describe('preview origins', () => {
+  const preview = { NODE_ENV: 'production', VERCEL_ENV: 'preview' };
+
+  it('uses the branch alias of every project for the current branch', () => {
+    const env = { ...preview, VERCEL_GIT_COMMIT_REF: 'deploy/auth-fix' };
+    expect(siteOrigin('landing', env)).toBe(
+      'https://17s-client-landing-git-deploy-auth-fix-17-suit.vercel.app',
+    );
+    expect(siteOrigin('seven-rc', env)).toBe(
+      'https://17s-client-seven-rc-web-git-deploy-auth-fix-17-suit.vercel.app',
+    );
+  });
+
+  it('falls back to the development alias when the branch alias would exceed 63 chars', () => {
+    const env = { ...preview, VERCEL_GIT_COMMIT_REF: 'deploy/' + 'x'.repeat(40) };
+    expect(
+      vercelBranchAlias('17s-client-seven-rc-web', 'deploy/' + 'x'.repeat(40)),
+    ).toBeUndefined();
+    expect(siteOrigin('seven-rc', env)).toBe(
+      'https://17s-client-seven-rc-web-git-development-17-suit.vercel.app',
+    );
+  });
+
+  it('keeps localhost for sites without a Vercel project', () => {
+    expect(siteOrigin('nine-cc', preview)).toBe('http://localhost:3009');
+  });
+
+  it('allow-lists the preview origins of the current branch plus production hosts', () => {
+    const origins = allowedRedirectOrigins({ ...preview, VERCEL_GIT_COMMIT_REF: 'development' });
+    expect(origins).toContain('https://17s-client-landing-git-development-17-suit.vercel.app');
+    expect(origins).toContain('https://seven-rc.17suit.com');
+    expect(origins).not.toContain('https://evil.vercel.app');
   });
 });
