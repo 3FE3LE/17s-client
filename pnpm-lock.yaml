@@ -996,6 +996,9 @@ importers:
       '@17suit/core':
         specifier: workspace:*
         version: link:../../core
+      '@17suit/i18n':
+        specifier: workspace:*
+        version: link:../../i18n
       '@17suit/ui':
         specifier: workspace:*
         version: link:../../ui

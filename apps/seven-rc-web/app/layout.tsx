@@ -1,3 +1,4 @@
+import { sevenRcResources } from '@17suit/module-seven-reservations-club/i18n';
 import { getProductLocale } from '@17suit/i18n/next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProductFooter, buttonRecipe, ThemeScript } from '@17suit/ui';
@@ -67,7 +68,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
       </head>
       <body>
         <WebAuthProvider>
-          <AppProviders locale={locale}>
+          <AppProviders locale={locale} resources={sevenRcResources}>
             <SevenRcClientProviders>
               {isSignedIn ? (
                 <header className="bg-background px-lg pt-sm">
