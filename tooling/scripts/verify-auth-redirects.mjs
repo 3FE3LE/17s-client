@@ -39,7 +39,8 @@ const REQUIRED_STUBS = [
 
 const REQUIRED_IMPORT = /from ['"]next\/navigation['"]/;
 const REQUIRED_REDIRECT_CALL = /\bredirect\s*\(/;
-const LANDING_HINT_RE = /localhost:3000|17suit\.com|NEXT_PUBLIC_CLERK_SIGN_(IN|UP)_URL/;
+const LANDING_HINT_RE =
+  /landingAuthUrl\(|localhost:3000|17suit\.com|NEXT_PUBLIC_CLERK_SIGN_(IN|UP)_URL/;
 
 function die(msg, code = 2) {
   console.error(msg);
@@ -90,7 +91,7 @@ for (const { slug, entry } of webApps) {
     }
     if (!LANDING_HINT_RE.test(content)) {
       fileFailures.push(
-        `${rel}: must reference a landing-origin URL (NEXT_PUBLIC_CLERK_SIGN_IN_URL or NEXT_PUBLIC_CLERK_SIGN_UP_URL or localhost:3000 or *.17suit.com)`,
+        `${rel}: must reference a landing-origin URL (landingAuthUrl from @17suit/core/site-origins, or localhost:3000, or *.17suit.com)`,
       );
     }
   }

@@ -1,3 +1,5 @@
+import { siteOrigin, type SiteEnv, type SiteKey } from '@17suit/core/site-origins';
+
 /**
  * Single source of truth for the landing product catalog.
  *
@@ -28,12 +30,8 @@ export interface Product {
    * anchor only once `LEGAL_PUBLISHED` (app/lib/legal.ts) is true.
    */
   privacyAnchor?: string;
-  /** Env var holding the product web origin (only for products with an app). */
-  appUrlEnv?: string;
-  /** Production subdomain from apps-registry.json, used when the env var is missing. */
-  registrySubdomain?: string;
-  /** Local dev port, used only outside production. */
-  devPort?: number;
+  /** Key in `SITE_ORIGINS` (`@17suit/core/site-origins`); only for products with an app. */
+  siteKey?: SiteKey;
 }
 
 export const products: readonly Product[] = [
@@ -45,9 +43,7 @@ export const products: readonly Product[] = [
     shortName: 'Fifteen',
     status: 'live',
     privacyAnchor: 'gmail-access',
-    appUrlEnv: 'NEXT_PUBLIC_FIFTEEN_AC_WEB_URL',
-    registrySubdomain: 'fifteen-ac.17suit.com',
-    devPort: 3015,
+    siteKey: 'fifteen-ac',
   },
   {
     slug: 'seven-reservations-club',
@@ -56,9 +52,7 @@ export const products: readonly Product[] = [
     name: 'Seven Reservations Club',
     shortName: 'Seven',
     status: 'beta',
-    appUrlEnv: 'NEXT_PUBLIC_SEVEN_RC_WEB_URL',
-    registrySubdomain: 'seven-rc.17suit.com',
-    devPort: 3007,
+    siteKey: 'seven-rc',
   },
   {
     slug: 'one-plan-trip',
@@ -127,29 +121,22 @@ export function hasApp(product: Product): boolean {
 }
 
 /**
- * Resolves the product web app URL. Order: configured env var, then the
- * production subdomain from apps-registry.json. A localhost URL is returned
- * only outside production, so a missing env var never ships a localhost link.
+ * Resolves the product web app URL from the central origin catalog: the
+ * canonical `https://<host>/` in production, localhost elsewhere. No
+ * per-project env var, so a link can never point to a `*.vercel.app` host.
  */
 export function getProductAppUrl(product: Product): string | null {
-  if (!hasApp(product)) return null;
-
-  const fromEnv = product.appUrlEnv ? readPublicEnv(product.appUrlEnv) : undefined;
-  if (fromEnv) return fromEnv;
-
-  if (process.env.NODE_ENV !== 'production' && product.devPort) {
-    return `http://localhost:${product.devPort}/`;
-  }
-
-  return product.registrySubdomain ? `https://${product.registrySubdomain}/` : null;
+  if (!hasApp(product) || !product.siteKey) return null;
+  return `${siteOrigin(product.siteKey, siteEnv())}/`;
 }
 
 // NEXT_PUBLIC_* values must be referenced literally to be inlined at build time.
-function readPublicEnv(name: string): string | undefined {
-  const values: Record<string, string | undefined> = {
-    NEXT_PUBLIC_FIFTEEN_AC_WEB_URL: process.env.NEXT_PUBLIC_FIFTEEN_AC_WEB_URL,
-    NEXT_PUBLIC_SEVEN_RC_WEB_URL: process.env.NEXT_PUBLIC_SEVEN_RC_WEB_URL,
+function siteEnv(): SiteEnv {
+  return {
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
+    NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC: process.env.NEXT_PUBLIC_SITE_ORIGIN_FIFTEEN_AC,
+    NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC: process.env.NEXT_PUBLIC_SITE_ORIGIN_SEVEN_RC,
   };
-  const value = values[name]?.trim();
-  return value ? value : undefined;
 }
