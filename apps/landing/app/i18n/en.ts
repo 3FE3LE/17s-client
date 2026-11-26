@@ -281,7 +281,7 @@ export const landing = {
     intro:
       'Write to us if you have questions about your 17Suit account, access to an app or your data.',
     emailLabel: 'Contact email',
-    pending: 'Contact channel being set up.',
+    pending: 'November 26, 2026',
     alsoReview: 'You can also review the',
     privacyLink: 'Privacy policy',
     and: 'and the',
@@ -290,7 +290,7 @@ export const landing = {
   legal: {
     lastUpdated: 'Last updated:',
     pending: 'Pending',
-    inReview: 'Document under review.',
+    inReview: 'Basic template. The final text may change.',
     toc: 'Contents',
     pendingText: 'Text pending.',
     meanwhile: 'Meanwhile, write to us from the',
@@ -307,6 +307,22 @@ export const landing = {
         'your-rights': 'Your rights and how to revoke access',
         contact: 'Contact',
       },
+      body: {
+        'data-collected':
+          'We collect the email address and password you use to create your 17Suit account, basic sign-in data (such as the sign-in method and session information), and the information you enter in each app, for example reservations, venues and contact details.',
+        'data-use':
+          'We use your data to create and secure your account, to provide the apps you use, to send service messages such as verification codes, and to fix errors and improve the service. We do not sell your personal data.',
+        'gmail-access':
+          'Some apps can ask for access to your Gmail account. This only happens if you grant it explicitly, it is limited to what the app needs to work, and you can revoke it at any time from your Google account settings.',
+        'data-sharing':
+          'We share data only with the providers that help us run the service (for example authentication, hosting and email delivery), and only as needed. We may also share it when the law requires it.',
+        'data-retention':
+          'We keep your data while your account is active. If you ask us to delete your account, we delete or anonymize your data, except what we must keep to meet legal obligations.',
+        'your-rights':
+          'You can ask to access, correct or delete your data, and you can revoke any access you granted to third-party services. Write to us from the contact page and we will answer as soon as possible.',
+        contact:
+          'If you have questions about this policy or about your data, write to us from the contact page.',
+      },
     },
     terms: {
       title: 'Terms and conditions',
@@ -322,6 +338,27 @@ export const landing = {
         suspension: 'Suspension and cancellation of the account',
         changes: 'Changes to these terms',
         contact: 'Contact',
+      },
+      body: {
+        acceptance:
+          'By creating an account or using 17Suit you accept these terms. If you do not agree, do not use the service.',
+        service:
+          '17Suit is a suite of apps that share one account. Features may change, and some apps may be in early stages.',
+        account:
+          'You are responsible for the accuracy of your information and for keeping your password safe. Tell us if you think someone else accessed your account.',
+        'acceptable-use':
+          'Do not use 17Suit to break the law, to harm others, to attempt to access systems or data that are not yours, or to disrupt the service.',
+        'third-party':
+          'Some features depend on third-party services, such as sign-in providers. Their own terms apply to your use of them.',
+        'intellectual-property':
+          '17Suit and its content, design and software belong to their owners. You keep the rights to the content you enter, and you allow us to process it to provide the service.',
+        liability:
+          'The service is provided as is. To the extent the law allows, we are not liable for indirect damages or for interruptions of the service.',
+        suspension:
+          'You can stop using the service and ask us to delete your account at any time. We may suspend or close accounts that break these terms.',
+        changes:
+          'We may update these terms. When we do, we change the date at the top of the page. Using the service after a change means you accept it.',
+        contact: 'If you have questions about these terms, write to us from the contact page.',
       },
     },
   },

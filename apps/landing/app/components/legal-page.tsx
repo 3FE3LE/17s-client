@@ -15,6 +15,8 @@ export interface LegalSection {
   /** Stable anchor id; other pages link to it (e.g. /privacy#gmail-access). */
   id: string;
   title: string;
+  /** Section text (basic template; the owner replaces it with the final copy). */
+  body?: string;
   /** Points the reader to /contact while the section text is pending. */
   linksToContact?: boolean;
 }
@@ -134,9 +136,15 @@ export function LegalPage({ locale, title, description, sections }: LegalPagePro
                   {section.title}
                 </h2>
                 {/* TODO(legal): replace this placeholder with the owner-approved text. */}
-                <p className="m-0 mt-[var(--spacing-sm)] text-md italic leading-[1.5] text-muted">
-                  {t('legal.pendingText')}
-                </p>
+                {section.body ? (
+                  <p className="m-0 mt-[var(--spacing-sm)] text-md leading-[1.5] text-muted">
+                    {section.body}
+                  </p>
+                ) : (
+                  <p className="m-0 mt-[var(--spacing-sm)] text-md italic leading-[1.5] text-muted">
+                    {t('legal.pendingText')}
+                  </p>
+                )}
                 {section.linksToContact ? (
                   <p className="m-0 text-md leading-[1.5] text-muted">
                     {t('legal.meanwhile')}{' '}

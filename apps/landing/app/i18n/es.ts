@@ -277,7 +277,7 @@ export const landing: CatalogShape<typeof en> = {
     title: 'Contacto',
     intro: 'Escríbenos si tienes dudas sobre tu cuenta 17Suit, el acceso a alguna app o tus datos.',
     emailLabel: 'Correo de contacto',
-    pending: 'Canal de contacto en configuración.',
+    pending: '26 de noviembre de 2026',
     alsoReview: 'También puedes revisar la',
     privacyLink: 'Política de privacidad',
     and: 'y los',
@@ -286,7 +286,7 @@ export const landing: CatalogShape<typeof en> = {
   legal: {
     lastUpdated: 'Última actualización:',
     pending: 'Pendiente',
-    inReview: 'Documento en revisión.',
+    inReview: 'Plantilla básica. El texto final puede cambiar.',
     toc: 'Contenido',
     pendingText: 'Pendiente de redacción.',
     meanwhile: 'Mientras tanto, escríbenos desde la',
@@ -303,6 +303,22 @@ export const landing: CatalogShape<typeof en> = {
         'your-rights': 'Tus derechos y cómo revocar el acceso',
         contact: 'Contacto',
       },
+      body: {
+        'data-collected':
+          'Recopilamos el correo y la contraseña con los que creas tu cuenta 17Suit, datos básicos de inicio de sesión (como el método usado y la información de sesión) y la información que ingresas en cada app, por ejemplo reservas, complejos y datos de contacto.',
+        'data-use':
+          'Usamos tus datos para crear y proteger tu cuenta, ofrecer las apps que usas, enviarte mensajes del servicio como códigos de verificación, y corregir errores y mejorar el servicio. No vendemos tus datos personales.',
+        'gmail-access':
+          'Algunas apps pueden pedir acceso a tu cuenta de Gmail. Solo ocurre si lo autorizas de forma explícita, se limita a lo que la app necesita para funcionar y puedes revocarlo en cualquier momento desde la configuración de tu cuenta de Google.',
+        'data-sharing':
+          'Compartimos datos solo con los proveedores que nos ayudan a operar el servicio (por ejemplo autenticación, alojamiento y envío de correos), y únicamente lo necesario. También podemos compartirlos cuando la ley lo exija.',
+        'data-retention':
+          'Conservamos tus datos mientras tu cuenta esté activa. Si pides eliminar tu cuenta, borramos o anonimizamos tus datos, salvo lo que debamos conservar para cumplir obligaciones legales.',
+        'your-rights':
+          'Puedes pedir acceso, corrección o eliminación de tus datos, y revocar cualquier acceso que hayas dado a servicios de terceros. Escríbenos desde la página de contacto y te responderemos lo antes posible.',
+        contact:
+          'Si tienes dudas sobre esta política o sobre tus datos, escríbenos desde la página de contacto.',
+      },
     },
     terms: {
       title: 'Términos y condiciones',
@@ -318,6 +334,27 @@ export const landing: CatalogShape<typeof en> = {
         suspension: 'Suspensión y cancelación de la cuenta',
         changes: 'Cambios a estos términos',
         contact: 'Contacto',
+      },
+      body: {
+        acceptance:
+          'Al crear una cuenta o usar 17Suit aceptas estos términos. Si no estás de acuerdo, no uses el servicio.',
+        service:
+          '17Suit es un conjunto de apps que comparten una cuenta. Las funciones pueden cambiar y algunas apps pueden estar en etapas tempranas.',
+        account:
+          'Eres responsable de que tu información sea correcta y de mantener segura tu contraseña. Avísanos si crees que otra persona accedió a tu cuenta.',
+        'acceptable-use':
+          'No uses 17Suit para infringir la ley, perjudicar a otras personas, intentar acceder a sistemas o datos que no son tuyos, ni para interrumpir el servicio.',
+        'third-party':
+          'Algunas funciones dependen de servicios de terceros, como los proveedores de inicio de sesión. Sus propios términos aplican a tu uso de ellos.',
+        'intellectual-property':
+          '17Suit, su contenido, diseño y software pertenecen a sus titulares. Conservas los derechos sobre el contenido que ingresas y nos autorizas a procesarlo para prestar el servicio.',
+        liability:
+          'El servicio se ofrece tal cual. En la medida que la ley lo permita, no respondemos por daños indirectos ni por interrupciones del servicio.',
+        suspension:
+          'Puedes dejar de usar el servicio y pedirnos eliminar tu cuenta en cualquier momento. Podemos suspender o cerrar cuentas que incumplan estos términos.',
+        changes:
+          'Podemos actualizar estos términos. Cuando lo hagamos, cambiaremos la fecha al inicio de la página. Usar el servicio después de un cambio implica que lo aceptas.',
+        contact: 'Si tienes dudas sobre estos términos, escríbenos desde la página de contacto.',
       },
     },
   },
