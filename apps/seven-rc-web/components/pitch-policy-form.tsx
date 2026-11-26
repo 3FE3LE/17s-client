@@ -1,7 +1,11 @@
 'use client';
 
+import { optionalIntInRange } from '@17suit/core';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton } from '@17suit/ui';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import {
   HintedInput,
   InlineError,
@@ -13,7 +17,6 @@ import {
   asDepositPolicy,
   DEPOSIT_POLICY_LABEL,
   DEPOSIT_POLICY_OPTIONS,
-  type DepositPolicy,
 } from '@/lib/deposit-policy';
 import {
   useConfigurePitchPolicyMutation,
@@ -64,6 +67,19 @@ const FIELDS = [
 
 type NumericKey = (typeof FIELDS)[number]['key'];
 
+const policyOverride = z.union([z.enum(['retain', 'refund', 'owner_decides']), z.literal('')]);
+
+const pitchPolicySchema = z.object({
+  depositPercent: optionalIntInRange(0, 100, FIELDS[0].error),
+  holdMinutes: optionalIntInRange(5, 1440, FIELDS[1].error),
+  cancellationWindowHours: optionalIntInRange(0, 168, FIELDS[2].error),
+  paymentInstructions: z.string(),
+  lateCancelDeposit: policyOverride,
+  noShowDeposit: policyOverride,
+  conditionsText: z.string().max(1000),
+});
+type PitchPolicyValues = z.infer<typeof pitchPolicySchema>;
+
 /** Booking conditions for one pitch. Blank fields inherit the venue's value. */
 export function PitchPolicyForm({
   venueId,
@@ -84,52 +100,52 @@ export function PitchPolicyForm({
   pitch: PitchWithPricing;
 }) {
   const mutation = useConfigurePitchPolicyMutation(pitch.id, venueId);
-  const [values, setValues] = useState<Record<NumericKey, string>>({
-    depositPercent: pitch.depositPercent === null ? '' : String(pitch.depositPercent),
-    holdMinutes: pitch.holdMinutes === null ? '' : String(pitch.holdMinutes),
-    cancellationWindowHours:
-      pitch.cancellationWindowHours === null ? '' : String(pitch.cancellationWindowHours),
-  });
-  const [instructions, setInstructions] = useState(pitch.paymentInstructions ?? '');
-  // '' = inherit the venue.
-  const [lateCancel, setLateCancel] = useState<DepositPolicy | ''>(pitch.lateCancelDeposit ?? '');
-  const [noShow, setNoShow] = useState<DepositPolicy | ''>(pitch.noShowDeposit ?? '');
-  const [conditionsText, setConditionsText] = useState(pitch.conditionsText ?? '');
-  const [errors, setErrors] = useState<Partial<Record<NumericKey, string>>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { control, handleSubmit } = useForm<PitchPolicyValues>({
+    resolver: zodResolver(pitchPolicySchema),
+    defaultValues: {
+      depositPercent: pitch.depositPercent === null ? '' : String(pitch.depositPercent),
+      holdMinutes: pitch.holdMinutes === null ? '' : String(pitch.holdMinutes),
+      cancellationWindowHours:
+        pitch.cancellationWindowHours === null ? '' : String(pitch.cancellationWindowHours),
+      paymentInstructions: pitch.paymentInstructions ?? '',
+      // '' = inherit the venue.
+      lateCancelDeposit: pitch.lateCancelDeposit ?? '',
+      noShowDeposit: pitch.noShowDeposit ?? '',
+      conditionsText: pitch.conditionsText ?? '',
+    },
+  });
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setFormError(null);
-    setNotice(null);
-    const next: Partial<Record<NumericKey, string>> = {};
-    const parsed = {} as Record<NumericKey, number | null>;
-    for (const field of FIELDS) {
-      const result = parseOptionalInt(values[field.key], field.min, field.max);
-      if (result === 'invalid') next[field.key] = field.error;
-      else parsed[field.key] = result;
-    }
-    setErrors(next);
-    if (Object.keys(next).length > 0) {
+  const onSubmit = handleSubmit(
+    async (values) => {
+      setFormError(null);
+      setNotice(null);
+      try {
+        await mutation.mutateAsync({
+          depositPercent: parseOptionalInt(values.depositPercent, 0, 100) as number | null,
+          holdMinutes: parseOptionalInt(values.holdMinutes, 5, 1440) as number | null,
+          cancellationWindowHours: parseOptionalInt(values.cancellationWindowHours, 0, 168) as
+            | number
+            | null,
+          paymentInstructions:
+            values.paymentInstructions.trim() === '' ? null : values.paymentInstructions.trim(),
+          lateCancelDeposit: values.lateCancelDeposit === '' ? null : values.lateCancelDeposit,
+          noShowDeposit: values.noShowDeposit === '' ? null : values.noShowDeposit,
+          conditionsText: values.conditionsText.trim() === '' ? null : values.conditionsText.trim(),
+        });
+        setNotice(
+          `Guardaste las condiciones de ${pitch.name}. Los campos vacíos usan las del complejo.`,
+        );
+      } catch (caught) {
+        setFormError(describeError(caught, 'No se pudieron guardar las condiciones.'));
+      }
+    },
+    () => {
+      setNotice(null);
       setFormError('Revisa los campos marcados.');
-      return;
-    }
-    try {
-      await mutation.mutateAsync({
-        ...parsed,
-        paymentInstructions: instructions.trim() === '' ? null : instructions.trim(),
-        lateCancelDeposit: lateCancel === '' ? null : lateCancel,
-        noShowDeposit: noShow === '' ? null : noShow,
-        conditionsText: conditionsText.trim() === '' ? null : conditionsText.trim(),
-      });
-      setNotice(
-        `Guardaste las condiciones de ${pitch.name}. Los campos vacíos usan las del complejo.`,
-      );
-    } catch (caught) {
-      setFormError(describeError(caught, 'No se pudieron guardar las condiciones.'));
-    }
-  }
+    },
+  );
 
   const inherited: Record<NumericKey, string> = {
     depositPercent: String(venue.depositPercent),
@@ -153,77 +169,109 @@ export function PitchPolicyForm({
       </p>
       <div className="grid gap-sm md:grid-cols-3">
         {FIELDS.map((field) => (
-          <HintedInput
+          <Controller
             key={field.key}
-            type="text"
-            name={field.name}
-            label={field.label}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder={inherited[field.key]}
-            errorMessage={errors[field.key] ?? null}
-            value={values[field.key]}
-            onChangeText={(value) => {
-              setValues((current) => ({ ...current, [field.key]: value }));
-              setNotice(null);
-            }}
-            hint={
-              values[field.key].trim() === ''
-                ? `Usa el del complejo: ${inherited[field.key]}.`
-                : 'Valor propio de esta cancha.'
-            }
+            control={control}
+            name={field.key}
+            render={({ field: input, fieldState }) => (
+              <HintedInput
+                type="text"
+                name={field.name}
+                label={field.label}
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={inherited[field.key]}
+                errorMessage={fieldState.error?.message ?? null}
+                value={input.value}
+                onChangeText={(value) => {
+                  input.onChange(value);
+                  setNotice(null);
+                }}
+                onBlur={input.onBlur}
+                hint={
+                  input.value.trim() === ''
+                    ? `Usa el del complejo: ${inherited[field.key]}.`
+                    : 'Valor propio de esta cancha.'
+                }
+              />
+            )}
           />
         ))}
       </div>
-      <HintedInput
-        type="text"
+      <Controller
+        control={control}
         name="paymentInstructions"
-        label="Instrucciones de pago"
-        autoComplete="off"
-        placeholder={venue.paymentInstructions ?? ''}
-        value={instructions}
-        onChangeText={(value) => {
-          setInstructions(value);
-          setNotice(null);
-        }}
-        hint={instructions.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+        render={({ field }) => (
+          <HintedInput
+            type="text"
+            name="paymentInstructions"
+            label="Instrucciones de pago"
+            autoComplete="off"
+            placeholder={venue.paymentInstructions ?? ''}
+            value={field.value}
+            onChangeText={(value) => {
+              field.onChange(value);
+              setNotice(null);
+            }}
+            onBlur={field.onBlur}
+            hint={field.value.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+          />
+        )}
       />
       <div className="grid gap-sm md:grid-cols-2">
-        <SelectField
-          label="Cancelación tardía: anticipo"
+        <Controller
+          control={control}
           name="lateCancelDeposit"
-          value={lateCancel}
-          onChangeValue={(value) => setLateCancel(value === '' ? '' : asDepositPolicy(value))}
-          options={[
-            {
-              value: '',
-              label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.lateCancelDeposit]})`,
-            },
-            ...DEPOSIT_POLICY_OPTIONS,
-          ]}
+          render={({ field }) => (
+            <SelectField
+              label="Cancelación tardía: anticipo"
+              name="lateCancelDeposit"
+              value={field.value}
+              onChangeValue={(value) => field.onChange(value === '' ? '' : asDepositPolicy(value))}
+              options={[
+                {
+                  value: '',
+                  label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.lateCancelDeposit]})`,
+                },
+                ...DEPOSIT_POLICY_OPTIONS,
+              ]}
+            />
+          )}
         />
-        <SelectField
-          label="No asistencia: anticipo"
+        <Controller
+          control={control}
           name="noShowDeposit"
-          value={noShow}
-          onChangeValue={(value) => setNoShow(value === '' ? '' : asDepositPolicy(value))}
-          options={[
-            {
-              value: '',
-              label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.noShowDeposit]})`,
-            },
-            ...DEPOSIT_POLICY_OPTIONS,
-          ]}
+          render={({ field }) => (
+            <SelectField
+              label="No asistencia: anticipo"
+              name="noShowDeposit"
+              value={field.value}
+              onChangeValue={(value) => field.onChange(value === '' ? '' : asDepositPolicy(value))}
+              options={[
+                {
+                  value: '',
+                  label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.noShowDeposit]})`,
+                },
+                ...DEPOSIT_POLICY_OPTIONS,
+              ]}
+            />
+          )}
         />
       </div>
-      <TextAreaField
-        label="Condiciones adicionales"
+      <Controller
+        control={control}
         name="conditionsText"
-        value={conditionsText}
-        onChangeValue={setConditionsText}
-        maxLength={1000}
-        placeholder={venue.conditionsText ?? ''}
-        hint={conditionsText.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+        render={({ field }) => (
+          <TextAreaField
+            label="Condiciones adicionales"
+            name="conditionsText"
+            value={field.value}
+            onChangeValue={field.onChange}
+            maxLength={1000}
+            placeholder={venue.conditionsText ?? ''}
+            hint={field.value.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+          />
+        )}
       />
       <div>
         <AppButton type="submit" fullWidth={false} disabled={mutation.isPending}>
