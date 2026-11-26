@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
 import { CancelReservation, ShareReservation } from '@/components/reservation-link-actions';
+import { asDepositPolicy, DEPOSIT_OUTCOME_LABEL, policySummaryLines } from '@/lib/deposit-policy';
 import { fetchPublicReservation } from '@/lib/public-venue-api';
 import {
   dateKeyInTimeZone,
@@ -133,6 +134,31 @@ export default async function PublicReservationPage({ params }: PageProps) {
           ) : null}
         </section>
       ) : null}
+
+      <section aria-labelledby="condiciones-titulo" className="grid gap-xs">
+        <h2 id="condiciones-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
+          Condiciones que aceptaste
+        </h2>
+        <ul className="m-0 grid list-disc gap-[2px] pl-md text-sm leading-[18px] text-muted">
+          {policySummaryLines({
+            cancellationWindowHours: reservation.policy.cancellationWindowHours,
+            lateCancelDeposit: asDepositPolicy(reservation.policy.lateCancelDeposit),
+            noShowDeposit: asDepositPolicy(reservation.policy.noShowDeposit),
+          }).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+        {reservation.policy.conditionsText?.trim() ? (
+          <p className="m-0 whitespace-pre-line text-sm leading-[18px] text-text">
+            {reservation.policy.conditionsText.trim()}
+          </p>
+        ) : null}
+        {reservation.depositOutcome !== 'none' ? (
+          <p className="m-0 text-sm leading-[18px] text-text">
+            {DEPOSIT_OUTCOME_LABEL[reservation.depositOutcome]}.
+          </p>
+        ) : null}
+      </section>
 
       {active ? (
         <section aria-labelledby="cancelar-titulo" className="grid gap-xs">

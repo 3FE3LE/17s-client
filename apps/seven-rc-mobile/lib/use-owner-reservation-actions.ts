@@ -137,7 +137,7 @@ export function useOwnerReservationActions() {
         await completeMutation.mutateAsync(reservation.id);
         feedback.success('Reserva completada');
       } else if (action === 'no_show') {
-        await noShowMutation.mutateAsync(reservation.id);
+        await noShowMutation.mutateAsync({ reservationId: reservation.id });
         feedback.success('Marcada como "No asistió"');
       } else {
         await cancelMutation.mutateAsync({ reservationId: reservation.id });

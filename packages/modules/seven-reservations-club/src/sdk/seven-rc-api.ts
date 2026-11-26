@@ -38,6 +38,8 @@ export type UpdateVenueSettingsInput = ApiInput<ApiSchema<'UpdateVenueSettingsDt
 export type ConfigurePitchPricingInput = ApiInput<ApiSchema<'ConfigurePitchPricingDto'>>;
 export type ConfigurePitchPolicyInput = ApiInput<ApiSchema<'ConfigurePitchPolicyDto'>>;
 export type RecordReservationPaymentInput = ApiInput<ApiSchema<'RecordReservationPaymentDto'>>;
+export type MarkNoShowInput = ApiInput<ApiSchema<'MarkNoShowDto'>>;
+export type CustomerHistory = ApiSchema<'CustomerHistoryResponseDto'>;
 export type CancelReservationByOwnerInput = ApiInput<ApiSchema<'CancelReservationByOwnerDto'>>;
 export type CreateOwnerReservationInput = ApiInput<ApiSchema<'CreateOwnerReservationDto'>>;
 export type CreateRecurringReservationInput = ApiInput<ApiSchema<'CreateRecurringReservationDto'>>;
@@ -91,7 +93,10 @@ export interface SevenRcOwnerApi {
     reservationId: string,
     input: RecordReservationPaymentInput,
   ) => Promise<ReservationBase>;
-  markNoShow: (reservationId: string) => Promise<ReservationBase>;
+  /** Records the no-show. With held money and an owner-decides policy, `depositOutcome` is required. */
+  markNoShow: (reservationId: string, input?: MarkNoShowInput) => Promise<ReservationBase>;
+  /** No-shows and late cancels of a customer (by E.164 phone) at one venue. */
+  getCustomerHistory: (venueId: string, phone: string) => Promise<CustomerHistory>;
   completeReservation: (reservationId: string) => Promise<ReservationBase>;
   /**
    * Venue-side cancel; no cancellation window applies. With paid money the
@@ -402,10 +407,20 @@ export function createSevenRcOwnerApi(options: SevenRcApiClientOptions): SevenRc
         },
       );
     },
-    markNoShow(reservationId) {
+    markNoShow(reservationId, input) {
       return request<ReservationBase>(
         apiPath('/7rc/reservations/{id}/no-show', { id: reservationId }),
-        { method: 'POST' },
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input ?? {}),
+        },
+      );
+    },
+    getCustomerHistory(venueId, phone) {
+      return request<CustomerHistory>(
+        `${apiPath('/7rc/venues/{venueId}/customer-history', { venueId })}?phone=${encodeURIComponent(phone)}`,
+        { method: 'GET' },
       );
     },
     completeReservation(reservationId) {

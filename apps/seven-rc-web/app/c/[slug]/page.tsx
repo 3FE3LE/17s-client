@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
 import { GuestBookingForm } from '@/components/guest-booking-form';
+import { asDepositPolicy } from '@/lib/deposit-policy';
 import { fetchPublicVenue, fetchPublicVenueAvailability } from '@/lib/public-venue-api';
 import {
   addDaysToDateKey,
@@ -77,6 +78,16 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
   const selectedSlot = selectedPitch?.slots.find(
     (slot) => slot.startAt === turnoStartAt && slot.status === 'AVAILABLE',
   );
+  // Conditions resolve per pitch (pitch value ?? venue value); fall back to the venue's.
+  const policyPitch = venue.pitches.find((pitch) => pitch.id === selectedPitch?.pitchId);
+  const policy = {
+    depositPercent: policyPitch?.depositPercent ?? venue.depositPercent,
+    holdMinutes: policyPitch?.holdMinutes ?? venue.holdMinutes,
+    cancellationWindowHours: policyPitch?.cancellationWindowHours ?? venue.cancellationWindowHours,
+    lateCancelDeposit: asDepositPolicy(policyPitch?.lateCancelDeposit ?? venue.lateCancelDeposit),
+    noShowDeposit: asDepositPolicy(policyPitch?.noShowDeposit ?? venue.noShowDeposit),
+    conditionsText: policyPitch?.conditionsText ?? venue.conditionsText ?? null,
+  };
   const hadConflict = (Array.isArray(conflicto) ? conflicto[0] : conflicto) === '1';
   const conditionsChanged = (Array.isArray(condiciones) ? condiciones[0] : condiciones) === '1';
 
@@ -244,12 +255,13 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
             when={formatSlotWhen(selectedSlot.startAt, selectedSlot.endAt, timeZone)}
             pitchName={selectedPitch.pitchName}
             priceLabel={formatMoneyMinor(selectedSlot.priceMinor, availability.currency)}
-            depositPercent={venue.depositPercent}
+            depositPercent={policy.depositPercent}
             depositLabel={formatMoneyMinor(
-              Math.ceil((selectedSlot.priceMinor * venue.depositPercent) / 100),
+              Math.ceil((selectedSlot.priceMinor * policy.depositPercent) / 100),
               availability.currency,
             )}
-            holdMinutes={venue.holdMinutes}
+            holdMinutes={policy.holdMinutes}
+            policy={policy}
             policyVersion={venue.policyVersion}
           />
         </div>
