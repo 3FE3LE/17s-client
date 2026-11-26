@@ -1,6 +1,9 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useActionState, useTransition, type FormEvent } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { AppButton } from '@17suit/ui';
 import { reserveAction, type BookingFormState } from '@/app/c/[slug]/actions';
 import { policySummaryLines, type PolicySummaryInput } from '@/lib/deposit-policy';
@@ -25,6 +28,17 @@ export interface GuestBookingFormProps {
   policy: PolicySummaryInput;
 }
 
+// Cheap checks before the round trip. The server action still owns phone normalization by country.
+const guestBookingSchema = z.object({
+  customerName: z.string().trim().min(2, 'Escribe tu nombre.').max(80),
+  customerPhone: z
+    .string()
+    .trim()
+    .regex(/^\+?[\d\s().-]{7,20}$/, 'Escribe el número con indicativo, p. ej. +57 300 123 4567.'),
+  notes: z.string().max(300),
+});
+type GuestBookingValues = z.infer<typeof guestBookingSchema>;
+
 const INITIAL: BookingFormState = { fieldErrors: {}, formError: null };
 
 function holdText(minutes: number): string {
@@ -41,14 +55,22 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
     INITIAL,
   );
   const needsDeposit = props.depositPercent > 0;
-  // Controlled: React resets uncontrolled fields after a form action, which would wipe a failed submit.
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [notes, setNotes] = useState('');
+  const [isSending, startTransition] = useTransition();
+  const { control, handleSubmit } = useForm<GuestBookingValues>({
+    resolver: zodResolver(guestBookingSchema),
+    defaultValues: { customerName: '', customerPhone: '', notes: '' },
+  });
+  const submit = handleSubmit((_values, event) => {
+    const form = event?.target as EventTarget | undefined;
+    if (!(form instanceof HTMLFormElement)) return;
+    const data = new FormData(form);
+    startTransition(() => formAction(data));
+  });
+  const pending = isPending || isSending;
 
   return (
     <form
-      action={formAction}
+      onSubmit={(event: FormEvent<HTMLFormElement>) => void submit(event)}
       noValidate
       aria-labelledby="reservar-titulo"
       className="grid gap-md rounded-[var(--radius-lg)] border border-border-strong p-md"
@@ -111,45 +133,63 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
       </section>
 
       <div className="grid gap-md md:grid-cols-2">
-        <HintedInput
-          type="text"
+        <Controller
+          control={control}
           name="customerName"
-          label="Tu nombre"
-          autoComplete="name"
-          maxLength={80}
-          required
-          errorMessage={state.fieldErrors.name ?? null}
-          value={name}
-          onChangeText={setName}
-          hint="Como quieres que te llame el complejo."
+          render={({ field, fieldState }) => (
+            <HintedInput
+              type="text"
+              name="customerName"
+              label="Tu nombre"
+              autoComplete="name"
+              maxLength={80}
+              errorMessage={fieldState.error?.message ?? state.fieldErrors.name ?? null}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              hint="Como quieres que te llame el complejo."
+            />
+          )}
         />
-        <HintedInput
-          type="tel"
+        <Controller
+          control={control}
           name="customerPhone"
-          label="Tu teléfono o WhatsApp"
-          autoComplete="tel"
-          inputMode="tel"
-          spellCheck={false}
-          placeholder="+57 300 123 4567"
-          required
-          errorMessage={state.fieldErrors.phone ?? null}
-          value={phone}
-          onChangeText={setPhone}
-          hint="El complejo lo usa para confirmarte o avisarte de cambios."
+          render={({ field, fieldState }) => (
+            <HintedInput
+              type="tel"
+              name="customerPhone"
+              label="Tu teléfono o WhatsApp"
+              autoComplete="tel"
+              inputMode="tel"
+              spellCheck={false}
+              placeholder="+57 300 123 4567"
+              errorMessage={fieldState.error?.message ?? state.fieldErrors.phone ?? null}
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              hint="El complejo lo usa para confirmarte o avisarte de cambios."
+            />
+          )}
         />
       </div>
-      <TextAreaField
-        label="Nota (opcional)"
+      <Controller
+        control={control}
         name="notes"
-        maxLength={300}
-        value={notes}
-        onChangeValue={setNotes}
+        render={({ field }) => (
+          <TextAreaField
+            label="Nota (opcional)"
+            name="notes"
+            maxLength={300}
+            value={field.value}
+            onChangeValue={field.onChange}
+          />
+        )}
       />
 
       <InlineError message={state.formError} />
       <div className="grid gap-sm sm:max-w-[280px]">
-        <AppButton type="submit" disabled={isPending}>
-          {isPending ? 'Reservando…' : 'Reservar'}
+        <AppButton type="submit" disabled={pending}>
+          {pending ? 'Reservando…' : 'Reservar'}
         </AppButton>
       </div>
     </form>

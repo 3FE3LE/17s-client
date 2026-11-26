@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { SevenRcApiError } from '@17suit/module-seven-reservations-club';
 import { AppBadge, AppButton, cx } from '@17suit/ui';
 import { HintedInput, InlineError, InlineStatus } from '@/components/seven-rc-ui';
@@ -22,14 +25,18 @@ function suggestSlug(name: string): string {
     .replace(/-+$/g, '');
 }
 
-function validateSlug(value: string): string | null {
-  if (!value) return 'Escribe el enlace de tu complejo.';
-  if (value.length > SLUG_MAX) return `Usa máximo ${SLUG_MAX} caracteres.`;
-  if (!SLUG_PATTERN.test(value)) {
-    return 'Usa solo minúsculas, números y guiones, sin guiones al inicio, al final ni repetidos.';
-  }
-  return null;
-}
+const slugSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(1, 'Escribe el enlace de tu complejo.')
+    .max(SLUG_MAX, `Usa máximo ${SLUG_MAX} caracteres.`)
+    .regex(
+      SLUG_PATTERN,
+      'Usa solo minúsculas, números y guiones, sin guiones al inicio, al final ni repetidos.',
+    ),
+});
+type SlugValues = z.infer<typeof slugSchema>;
 
 function isSlugTaken(error: unknown): boolean {
   if (error instanceof SevenRcApiError && error.status === 409) return true;
@@ -44,10 +51,13 @@ export interface PublishVenueFormProps {
 
 export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
   const mutation = useUpdateVenueSettingsMutation(venue.id);
-  const [slug, setSlug] = useState(venue.slug ?? suggestSlug(venue.name));
-  const [slugError, setSlugError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { control, handleSubmit, setError, watch } = useForm<SlugValues>({
+    resolver: zodResolver(slugSchema),
+    defaultValues: { slug: venue.slug ?? suggestSlug(venue.name) },
+  });
+  const slug = watch('slug');
 
   const savedSlug = venue.slug ?? null;
   const published = venue.isPublished;
@@ -62,25 +72,20 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
       setNotice(success);
     } catch (caught) {
       if (input.slug !== undefined && isSlugTaken(caught)) {
-        setSlugError('Ese enlace ya lo usa otro complejo. Prueba con otro.');
+        setError('slug', { message: 'Ese enlace ya lo usa otro complejo. Prueba con otro.' });
         return;
       }
       setFormError(describeError(caught, 'No se pudo guardar. Intenta de nuevo.'));
     }
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const value = slug.trim();
-    const problem = validateSlug(value);
-    setSlugError(problem);
-    if (problem) return;
-    if (value === savedSlug) {
+  const onSubmit = handleSubmit(async (values) => {
+    if (values.slug === savedSlug) {
       setNotice('Ese ya es el enlace de tu complejo.');
       return;
     }
-    await save({ slug: value }, 'Guardaste el enlace.');
-  }
+    await save({ slug: values.slug }, 'Guardaste el enlace.');
+  });
 
   async function copyLink() {
     if (!publicPath) return;
@@ -118,22 +123,26 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
         noValidate
         className="grid gap-sm sm:max-w-[420px]"
       >
-        <HintedInput
-          type="text"
+        <Controller
+          control={control}
           name="slug"
-          label="Enlace de tu complejo"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          maxLength={SLUG_MAX}
-          placeholder="cancha-la-70"
-          errorMessage={slugError}
-          value={slug}
-          onChangeText={(value) => {
-            setSlug(value.toLowerCase());
-            setSlugError(null);
-          }}
-          hint={`Quedará como /c/${slug.trim() || 'tu-enlace'}. Solo minúsculas, números y guiones.`}
+          render={({ field, fieldState }) => (
+            <HintedInput
+              type="text"
+              name="slug"
+              label="Enlace de tu complejo"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              maxLength={SLUG_MAX}
+              placeholder="cancha-la-70"
+              errorMessage={fieldState.error?.message ?? null}
+              value={field.value}
+              onChangeText={(value) => field.onChange(value.toLowerCase())}
+              onBlur={field.onBlur}
+              hint={`Quedará como /c/${slug.trim() || 'tu-enlace'}. Solo minúsculas, números y guiones.`}
+            />
+          )}
         />
         <AppButton type="submit" variant="neutral" fullWidth={false} disabled={mutation.isPending}>
           {mutation.isPending ? 'Guardando…' : 'Guardar enlace'}

@@ -90,13 +90,25 @@ describe('GuestBookingForm', () => {
     });
     const user = userEvent.setup();
     render(<GuestBookingForm {...PROPS} />);
-    await user.type(screen.getByLabelText('Tu nombre'), 'A');
+    await user.type(screen.getByLabelText('Tu nombre'), 'Ana');
+    await user.type(screen.getByLabelText('Tu teléfono o WhatsApp'), '3001234567');
     await user.click(screen.getByRole('button', { name: 'Reservar' }));
 
     expect(await screen.findByText('Revisa los campos marcados.')).toBeTruthy();
     expect(screen.getByText('Escribe tu nombre.')).toBeTruthy();
     expect(screen.getByText('Número inválido.')).toBeTruthy();
-    expect(screen.getByLabelText<HTMLInputElement>('Tu nombre').value).toBe('A');
+    expect(screen.getByLabelText<HTMLInputElement>('Tu nombre').value).toBe('Ana');
+  });
+
+  it('blocks an empty submit with inline errors and never calls the server', async () => {
+    const user = userEvent.setup();
+    render(<GuestBookingForm {...PROPS} />);
+    await user.type(screen.getByLabelText('Tu nombre'), 'A');
+    await user.click(screen.getByRole('button', { name: 'Reservar' }));
+
+    expect(await screen.findByText('Escribe tu nombre.')).toBeTruthy();
+    expect(screen.getByText(/Escribe el número con indicativo/)).toBeTruthy();
+    expect(reserveAction).not.toHaveBeenCalled();
   });
 
   it('shows the booked conditions before the player confirms', () => {
