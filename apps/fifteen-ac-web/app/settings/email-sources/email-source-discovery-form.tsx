@@ -41,7 +41,8 @@ const discoveryQueryParsers = {
   keywords: parseAsString.withDefault(''),
 };
 
-type DiscoveryFormValues = z.infer<typeof discoveryFormSchema>;
+type DiscoveryFormInput = z.input<typeof discoveryFormSchema>;
+type DiscoveryFormValues = z.output<typeof discoveryFormSchema>;
 
 export function EmailSourceDiscoveryForm() {
   const [queryValues, setQueryValues] = useQueryStates(discoveryQueryParsers, {
@@ -53,7 +54,7 @@ export function EmailSourceDiscoveryForm() {
     formState: { errors },
     handleSubmit,
     register,
-  } = useForm<DiscoveryFormValues>({
+  } = useForm<DiscoveryFormInput, unknown, DiscoveryFormValues>({
     resolver: zodResolver(discoveryFormSchema),
     defaultValues: queryValues,
     mode: 'onSubmit',

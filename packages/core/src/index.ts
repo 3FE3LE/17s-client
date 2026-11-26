@@ -3,6 +3,7 @@ export * from './api-client';
 export * from './api-types';
 export * from './auth';
 export * from './auth-schemas';
+export * from './form-schemas';
 export * from './co-address';
 export * from './env';
 export * from './feature-flags';
