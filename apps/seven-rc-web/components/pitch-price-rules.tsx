@@ -1,7 +1,10 @@
 'use client';
 
 import { AppButton, AppInput } from '@17suit/ui';
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useFieldArray, useForm, type FieldErrors } from 'react-hook-form';
+import { z } from 'zod';
 import { HintedInput, InlineError, InlineStatus } from '@/components/seven-rc-ui';
 import { useConfigurePitchPricingMutation, type PitchWithPricing } from '@/lib/owner-queries';
 import { formatAmountInput, parseAmount } from '@/lib/owner-payment';
@@ -15,19 +18,16 @@ import {
 import { describeError } from '@/lib/seven-rc-errors';
 import { formatMoneyMinor, WEEKDAYS } from '@/lib/seven-rc-format';
 
-interface Draft {
-  key: number;
-  days: number[];
-  startTime: string;
-  endTime: string;
-  amount: string;
-}
+const ruleDraftSchema = z.object({
+  days: z.array(z.number()),
+  startTime: z.string(),
+  endTime: z.string(),
+  amount: z.string(),
+});
+type RuleDraft = z.infer<typeof ruleDraftSchema>;
 
-let nextKey = 0;
-
-function fromRule(rule: PitchWithPricing['priceRules'][number]): Draft {
+function fromRule(rule: PitchWithPricing['priceRules'][number]): RuleDraft {
   return {
-    key: nextKey++,
     days: [...rule.daysOfWeek],
     startTime: rule.startTime,
     endTime: rule.endTime,
@@ -35,7 +35,7 @@ function fromRule(rule: PitchWithPricing['priceRules'][number]): Draft {
   };
 }
 
-function toRule(draft: Draft): PriceRuleInput {
+function toRule(draft: RuleDraft): PriceRuleInput {
   return {
     daysOfWeek: draft.days,
     startTime: draft.startTime,
@@ -43,6 +43,41 @@ function toRule(draft: Draft): PriceRuleInput {
     // NaN fails validateRule's integer check, so an unparsable amount is reported.
     priceMinor: parseAmount(draft.amount) ?? Number.NaN,
   };
+}
+
+/**
+ * Per-rule rules live in `validateRule` and `findOverlaps` (shared with the server mirror).
+ * Each message is attached to `rules[i].root` so react-hook-form keeps one entry per rule.
+ */
+const priceRulesSchema = z
+  .object({ rules: z.array(ruleDraftSchema).max(MAX_PRICE_RULES) })
+  .superRefine(({ rules: drafts }, issues) => {
+    const rules = drafts.map(toRule);
+    const messages = new Map<number, string[]>();
+    const add = (index: number, message: string) =>
+      messages.set(index, [...(messages.get(index) ?? []), message]);
+    rules.forEach((rule, index) => {
+      const message = validateRule(rule);
+      if (message) add(index, `Regla ${index + 1}: ${message}`);
+    });
+    if (messages.size === 0) {
+      for (const [a, b] of findOverlaps(rules)) {
+        add(b, `Las reglas ${a + 1} y ${b + 1} se solapan: comparten día y horario.`);
+      }
+    }
+    for (const [index, list] of messages) {
+      issues.addIssue({ code: 'custom', path: ['rules', index, 'root'], message: list.join(' ') });
+    }
+  });
+type PriceRulesValues = z.infer<typeof priceRulesSchema>;
+
+function ruleMessages(errors: FieldErrors<PriceRulesValues>): string[] {
+  const list = errors.rules;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((entry: unknown) => {
+    const message = (entry as { root?: { message?: string } } | undefined)?.root?.message;
+    return message ? [message] : [];
+  });
 }
 
 /** Price rules by weekday and time window, with the resulting price per slot. */
@@ -56,44 +91,21 @@ export function PitchPriceRules({
   pitch: PitchWithPricing;
 }) {
   const mutation = useConfigurePitchPricingMutation(pitch.id, venueId);
-  const [drafts, setDrafts] = useState<Draft[]>(() => pitch.priceRules.map(fromRule));
-  const [errors, setErrors] = useState<string[]>([]);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const { control, handleSubmit, watch, formState } = useForm<PriceRulesValues>({
+    resolver: zodResolver(priceRulesSchema),
+    defaultValues: { rules: pitch.priceRules.map(fromRule) },
+  });
+  const { fields, append, remove } = useFieldArray({ control, name: 'rules' });
 
-  const rules = drafts.map(toRule);
-  const validRules = rules.filter((rule) => validateRule(rule) === null);
+  const drafts = watch('rules');
+  const validRules = drafts.map(toRule).filter((rule) => validateRule(rule) === null);
 
-  function update(key: number, patch: Partial<Draft>) {
-    setDrafts((current) => current.map((d) => (d.key === key ? { ...d, ...patch } : d)));
+  const onSubmit = handleSubmit(async (values) => {
     setNotice(null);
-  }
-
-  function toggleDay(draft: Draft, day: number, checked: boolean) {
-    update(draft.key, {
-      days: checked ? [...new Set([...draft.days, day])] : draft.days.filter((d) => d !== day),
-    });
-  }
-
-  function validateAll(): string[] {
-    const found: string[] = [];
-    rules.forEach((rule, index) => {
-      const message = validateRule(rule);
-      if (message) found.push(`Regla ${index + 1}: ${message}`);
-    });
-    if (found.length === 0) {
-      for (const [a, b] of findOverlaps(rules)) {
-        found.push(`Las reglas ${a + 1} y ${b + 1} se solapan: comparten día y horario.`);
-      }
-    }
-    return found;
-  }
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setNotice(null);
-    const found = validateAll();
-    setErrors(found);
-    if (found.length > 0) return;
+    setServerError(null);
+    const rules = values.rules.map(toRule);
     try {
       // The endpoint replaces base price and rules together; keep the stored base price.
       await mutation.mutateAsync({ basePriceMinor: pitch.basePriceMinor, rules });
@@ -103,9 +115,10 @@ export function PitchPriceRules({
           : `Guardaste ${rules.length === 1 ? '1 tarifa' : `${rules.length} tarifas`} para ${pitch.name}.`,
       );
     } catch (caught) {
-      setErrors([describeError(caught, 'No se pudieron guardar las tarifas.')]);
+      setServerError(describeError(caught, 'No se pudieron guardar las tarifas.'));
     }
-  }
+  });
+  const errors = [...ruleMessages(formState.errors), ...(serverError ? [serverError] : [])];
 
   const openDays = WEEKDAYS.filter((day) => {
     const hours = pitch.openingHours?.[String(day.value)];
@@ -127,61 +140,101 @@ export function PitchPriceRules({
         tarifas no pueden solaparse.
       </p>
 
-      {drafts.length === 0 ? (
+      {fields.length === 0 ? (
         <p className="m-0 text-md leading-[1.5] text-muted">
           Sin tarifas: todos los turnos cuestan el precio base.
         </p>
       ) : (
         <ol className="m-0 grid list-none gap-sm p-0">
-          {drafts.map((draft, index) => (
+          {fields.map((item, index) => (
             <li
-              key={draft.key}
+              key={item.id}
               className="grid gap-sm rounded-[var(--radius-lg)] border border-border-strong bg-background p-md"
             >
-              <fieldset className="m-0 flex flex-wrap gap-sm border-0 p-0">
-                <legend className="mb-xs p-0 text-sm font-bold text-text">
-                  Tarifa {index + 1} · días
-                </legend>
-                {WEEKDAYS.map((day) => (
-                  <label key={day.value} className="inline-flex items-center gap-xs text-md">
-                    <input
-                      type="checkbox"
-                      name={`tarifa-${index + 1}-dias`}
-                      checked={draft.days.includes(day.value)}
-                      onChange={(event) => toggleDay(draft, day.value, event.target.checked)}
-                    />
-                    {day.label}
-                  </label>
-                ))}
-              </fieldset>
+              <Controller
+                control={control}
+                name={`rules.${index}.days`}
+                render={({ field }) => (
+                  <fieldset className="m-0 flex flex-wrap gap-sm border-0 p-0">
+                    <legend className="mb-xs p-0 text-sm font-bold text-text">
+                      Tarifa {index + 1} · días
+                    </legend>
+                    {WEEKDAYS.map((day) => (
+                      <label key={day.value} className="inline-flex items-center gap-xs text-md">
+                        <input
+                          type="checkbox"
+                          name={`tarifa-${index + 1}-dias`}
+                          checked={field.value.includes(day.value)}
+                          onChange={(event) => {
+                            field.onChange(
+                              event.target.checked
+                                ? [...new Set([...field.value, day.value])]
+                                : field.value.filter((d) => d !== day.value),
+                            );
+                            setNotice(null);
+                          }}
+                        />
+                        {day.label}
+                      </label>
+                    ))}
+                  </fieldset>
+                )}
+              />
               <div className="grid gap-sm sm:grid-cols-3">
-                <AppInput
-                  type="time"
-                  name={`tarifa-${index + 1}-desde`}
-                  label="Desde"
-                  value={draft.startTime}
-                  onChangeText={(value) => update(draft.key, { startTime: value })}
+                <Controller
+                  control={control}
+                  name={`rules.${index}.startTime`}
+                  render={({ field }) => (
+                    <AppInput
+                      type="time"
+                      name={`tarifa-${index + 1}-desde`}
+                      label="Desde"
+                      value={field.value}
+                      onChangeText={(value) => {
+                        field.onChange(value);
+                        setNotice(null);
+                      }}
+                    />
+                  )}
                 />
-                <AppInput
-                  type="time"
-                  name={`tarifa-${index + 1}-hasta`}
-                  label="Hasta (00:00 = medianoche)"
-                  value={draft.endTime}
-                  onChangeText={(value) => update(draft.key, { endTime: value })}
+                <Controller
+                  control={control}
+                  name={`rules.${index}.endTime`}
+                  render={({ field }) => (
+                    <AppInput
+                      type="time"
+                      name={`tarifa-${index + 1}-hasta`}
+                      label="Hasta (00:00 = medianoche)"
+                      value={field.value}
+                      onChangeText={(value) => {
+                        field.onChange(value);
+                        setNotice(null);
+                      }}
+                    />
+                  )}
                 />
-                <HintedInput
-                  name={`tarifa-${index + 1}-precio`}
-                  label={`Precio por turno (${currency})`}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="150.000"
-                  value={draft.amount}
-                  onChangeText={(value) => update(draft.key, { amount: value })}
-                  hint={
-                    parseAmount(draft.amount) === null
-                      ? 'Ej. 150.000'
-                      : formatMoneyMinor(parseAmount(draft.amount) ?? 0, currency)
-                  }
+                <Controller
+                  control={control}
+                  name={`rules.${index}.amount`}
+                  render={({ field }) => (
+                    <HintedInput
+                      name={`tarifa-${index + 1}-precio`}
+                      label={`Precio por turno (${currency})`}
+                      inputMode="decimal"
+                      autoComplete="off"
+                      placeholder="150.000"
+                      value={field.value}
+                      onChangeText={(value) => {
+                        field.onChange(value);
+                        setNotice(null);
+                      }}
+                      hint={
+                        parseAmount(field.value) === null
+                          ? 'Ej. 150.000'
+                          : formatMoneyMinor(parseAmount(field.value) ?? 0, currency)
+                      }
+                    />
+                  )}
                 />
               </div>
               <div>
@@ -190,7 +243,7 @@ export function PitchPriceRules({
                   compact
                   fullWidth={false}
                   onPress={() => {
-                    setDrafts((current) => current.filter((d) => d.key !== draft.key));
+                    remove(index);
                     setNotice(null);
                   }}
                 >
@@ -206,19 +259,20 @@ export function PitchPriceRules({
         <AppButton
           variant="neutral"
           fullWidth={false}
-          disabled={drafts.length >= MAX_PRICE_RULES}
+          disabled={fields.length >= MAX_PRICE_RULES}
           onPress={() => {
-            setDrafts((current) => [
-              ...current,
-              { key: nextKey++, days: [], startTime: '19:00', endTime: '22:00', amount: '' },
-            ]);
+            append({ days: [], startTime: '19:00', endTime: '22:00', amount: '' });
             setNotice(null);
           }}
         >
           Agregar tarifa
         </AppButton>
-        <AppButton type="submit" fullWidth={false} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Guardando…' : 'Guardar tarifas'}
+        <AppButton
+          type="submit"
+          fullWidth={false}
+          disabled={mutation.isPending || formState.isSubmitting}
+        >
+          {mutation.isPending || formState.isSubmitting ? 'Guardando…' : 'Guardar tarifas'}
         </AppButton>
       </div>
       {errors.length > 0 ? (

@@ -7,7 +7,10 @@ import {
 import { AppButton, AppFrame, AppInput } from '@17suit/ui';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { InlineError, ListSkeleton, SectionHeader, SelectField } from '@/components/seven-rc-ui';
 import { describeError } from '@/lib/seven-rc-errors';
 import {
@@ -42,6 +45,12 @@ export default function OwnerReportsPage() {
   return <ReportsWorkspace />;
 }
 
+const periodSchema = z.object({ from: z.string(), to: z.string() }).superRefine((value, issues) => {
+  const message = validatePeriod(value.from, value.to);
+  if (message) issues.addIssue({ code: 'custom', path: ['to'], message });
+});
+type PeriodValues = z.infer<typeof periodSchema>;
+
 const percent = new Intl.NumberFormat('es-CO', { style: 'percent', maximumFractionDigits: 0 });
 
 function ReportsWorkspace() {
@@ -52,13 +61,15 @@ function ReportsWorkspace() {
   const timeZone = safeTimeZone(venue?.timezone);
   const today = dateKeyInTimeZone(new Date(), timeZone);
 
-  // Draft is what the inputs show; `applied` is what the queries run on (set on submit).
-  const [draft, setDraft] = useState<{ from: string; to: string } | null>(null);
-  const [applied, setApplied] = useState<{ from: string; to: string } | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  // The form holds what the inputs show; `applied` is what the queries run on (set on submit).
+  const [applied, setApplied] = useState<PeriodValues | null>(null);
   const defaults = { from: addDaysToDateKey(today, -29), to: today };
-  const shown = draft ?? defaults;
   const period = applied ?? defaults;
+  const { control, handleSubmit, reset } = useForm<PeriodValues>({
+    resolver: zodResolver(periodSchema),
+    values: defaults,
+    resetOptions: { keepDirtyValues: true },
+  });
 
   const venueId = venue?.id ?? null;
   const reportQuery = useOwnerVenueReportQuery(venueId, period.from, period.to);
@@ -67,17 +78,11 @@ function ReportsWorkspace() {
   const currency = report?.currency ?? venue?.currency ?? 'COP';
   const money = (amountMinor: number) => formatMoneyMinor(amountMinor, currency);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const message = validatePeriod(shown.from, shown.to);
-    setFormError(message);
-    if (!message) setApplied({ ...shown });
-  }
+  const onSubmit = handleSubmit((values) => setApplied({ ...values }));
 
   function preset(days: number) {
     const next = { from: addDaysToDateKey(today, -(days - 1)), to: today };
-    setDraft(next);
-    setFormError(null);
+    reset(next);
     setApplied(next);
   }
 
@@ -136,29 +141,48 @@ function ReportsWorkspace() {
       ) : null}
 
       <form
-        onSubmit={onSubmit}
+        onSubmit={(event) => void onSubmit(event)}
         aria-labelledby="reporte-periodo"
         className="grid max-w-[var(--container-form)] gap-sm"
         noValidate
       >
         <SectionHeader id="reporte-periodo" title="Período" />
         <div className="grid gap-sm sm:grid-cols-2">
-          <AppInput
-            label="Desde"
-            name="desde"
-            type="date"
-            value={shown.from}
-            onChangeText={(value) => setDraft({ ...shown, from: value })}
+          <Controller
+            control={control}
+            name="from"
+            render={({ field }) => (
+              <AppInput
+                label="Desde"
+                name="desde"
+                type="date"
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
-          <AppInput
-            label="Hasta"
-            name="hasta"
-            type="date"
-            value={shown.to}
-            onChangeText={(value) => setDraft({ ...shown, to: value })}
+          <Controller
+            control={control}
+            name="to"
+            render={({ field, fieldState }) => (
+              <AppInput
+                label="Hasta"
+                name="hasta"
+                type="date"
+                error={Boolean(fieldState.error)}
+                value={field.value}
+                onChangeText={field.onChange}
+                onBlur={field.onBlur}
+              />
+            )}
           />
         </div>
-        <InlineError message={formError} />
+        <Controller
+          control={control}
+          name="to"
+          render={({ fieldState }) => <InlineError message={fieldState.error?.message ?? null} />}
+        />
         <div className="flex flex-wrap gap-sm">
           <AppButton type="submit" fullWidth={false}>
             Ver reporte
