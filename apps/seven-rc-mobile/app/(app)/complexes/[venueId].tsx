@@ -186,6 +186,9 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
     >
       <GapView gap="md">
         <OwnerActionSheet actions={actions} />
+        <AppButton variant="neutral" onPress={() => router.push(`/complexes/${venueId}/edit`)}>
+          {t('venueOwner.editVenue')}
+        </AppButton>
         {!timeZone && !venuesQuery.isFetching ? (
           <AppAlert
             variant="warning"
