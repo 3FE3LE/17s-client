@@ -44,6 +44,7 @@ export const errors: CatalogShape<typeof en> = {
   slotBlocked: 'El complejo bloqueó ese horario. Elige otro de la lista.',
   slotUnavailable: 'Otra persona acaba de reservar ese horario. Elige otro de la lista.',
   occurrencesAmbiguous: 'Elige un número de semanas o una fecha final, no ambos.',
+  tooManySlots: 'Una reserva puede incluir hasta {{max}} turnos seguidos.',
   tooManyOccurrences: 'Una reserva recurrente puede tener como máximo {{max}} fechas.',
   untilBeforeFirst: 'La fecha final es anterior a la primera fecha de la reserva.',
   blockOverlapsReservations:

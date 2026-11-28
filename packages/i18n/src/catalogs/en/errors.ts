@@ -40,6 +40,7 @@ export const errors = {
   slotBlocked: 'The venue blocked that time. Pick another one from the list.',
   slotUnavailable: 'Someone just booked that time. Pick another one from the list.',
   occurrencesAmbiguous: 'Choose either a number of weeks or an end date, not both.',
+  tooManySlots: 'A reservation can include up to {{max}} consecutive slots.',
   tooManyOccurrences: 'A recurring booking can have at most {{max}} dates.',
   untilBeforeFirst: 'The end date is before the first booking date.',
   blockOverlapsReservations:

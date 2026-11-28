@@ -20,6 +20,8 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
+vi.mock('@17suit/i18n/next', () => ({ getProductLocale: () => Promise.resolve('es') }));
+
 import { revalidatePath } from 'next/cache';
 
 import { cancelReservationAction, reserveAction } from './actions';
@@ -111,6 +113,40 @@ describe('reserveAction', () => {
     expect(await redirectOf(reserveAction('club', EMPTY, form()))).toBe(
       '/c/club?fecha=2026-11-22&conflicto=1',
     );
+  });
+
+  it.each([
+    'slotNotAligned',
+    'slotAlreadyStarted',
+    'outsideBookingWindow',
+    'slotBlocked',
+    'slotUnavailable',
+  ])('redirects with conflicto=%s and refreshes availability', async (errorKey) => {
+    api.createPublicReservation.mockResolvedValue({
+      ok: false,
+      status: errorKey === 'slotUnavailable' ? 409 : 400,
+      message: '',
+      code: 'HTTP_ERROR',
+      errorKey,
+      params: {},
+    });
+    expect(await redirectOf(reserveAction('club', EMPTY, form()))).toBe(
+      `/c/club?fecha=2026-11-22&conflicto=${errorKey}`,
+    );
+    expect(revalidatePath).toHaveBeenCalledWith('/c/club');
+  });
+
+  it('shows the catalog message for tooManySlots on 400', async () => {
+    api.createPublicReservation.mockResolvedValue({
+      ok: false,
+      status: 400,
+      message: '',
+      code: 'HTTP_ERROR',
+      errorKey: 'tooManySlots',
+      params: { max: 8 },
+    });
+    const state = await reserveAction('club', EMPTY, form());
+    expect(state.formError).toBe('Una reserva puede incluir hasta 8 turnos seguidos.');
   });
 
   it('sends the policy version the visitor saw', async () => {

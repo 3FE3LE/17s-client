@@ -30,6 +30,7 @@ import {
   RefreshControl,
   SectionHeader,
 } from '@/components/seven-rc-ui';
+import { bookingStripLength } from '@/lib/booking-horizon';
 import { describeError, isSlotConflict } from '@/lib/seven-rc-errors';
 import {
   addDaysToDateKey,
@@ -64,7 +65,6 @@ import {
 import { useNow } from '@/lib/use-now';
 
 const SEARCH_DEBOUNCE_MS = 350;
-const DATE_STRIP_DAYS = 14;
 const MAX_VENUE_RESULTS = 12;
 const PENDING_POLL_MS = 30_000;
 
@@ -237,10 +237,7 @@ function PlayerWorkspace() {
 
   const timeZone = safeTimeZone(selectedVenue?.timezone);
   const todayKey = dateKeyInTimeZone(new Date(), timeZone);
-  const stripLength = Math.max(
-    1,
-    Math.min(DATE_STRIP_DAYS, (selectedVenue?.bookingHorizonDays ?? DATE_STRIP_DAYS - 1) + 1),
-  );
+  const stripLength = bookingStripLength(selectedVenue?.bookingHorizonDays);
   const dateKeys = Array.from({ length: stripLength }, (_, index) =>
     addDaysToDateKey(todayKey, index),
   );

@@ -93,6 +93,24 @@ describe('public venue page /c/[slug]', () => {
     expect(fetchPublicVenueAvailability).toHaveBeenCalledWith('cancha-la-70', '2026-11-23');
   });
 
+  it('clamps a date past the booking horizon to today', async () => {
+    await PublicVenuePage({
+      params: Promise.resolve({ slug: 'cancha-la-70' }),
+      searchParams: Promise.resolve({ fecha: '2027-12-31' }),
+    });
+
+    expect(fetchPublicVenueAvailability).toHaveBeenCalledWith('cancha-la-70', '2026-11-23');
+  });
+
+  it('clamps a past date to today', async () => {
+    await PublicVenuePage({
+      params: Promise.resolve({ slug: 'cancha-la-70' }),
+      searchParams: Promise.resolve({ fecha: '2026-11-01' }),
+    });
+
+    expect(fetchPublicVenueAvailability).toHaveBeenCalledWith('cancha-la-70', '2026-11-23');
+  });
+
   it('answers not found for an unknown venue', async () => {
     vi.mocked(fetchPublicVenue).mockResolvedValue(null);
 

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
+import { describeApiError } from '@17suit/i18n';
+import { isSlotConflictErrorKey } from '@/lib/slot-conflict';
 import { getServerT } from '@/lib/i18n-server';
 import { GuestBookingForm } from '@/components/guest-booking-form';
 import { asDepositPolicy } from '@/lib/deposit-policy';
@@ -88,7 +90,9 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
     noShowDeposit: asDepositPolicy(policyPitch?.noShowDeposit ?? venue.noShowDeposit),
     conditionsText: policyPitch?.conditionsText ?? venue.conditionsText ?? null,
   };
-  const hadConflict = (Array.isArray(conflicto) ? conflicto[0] : conflicto) === '1';
+  const conflictRaw = Array.isArray(conflicto) ? conflicto[0] : conflicto;
+  const conflictKey = isSlotConflictErrorKey(conflictRaw) ? conflictRaw : null;
+  const hadConflict = conflictRaw === '1' || conflictKey !== null;
   const conditionsChanged = (Array.isArray(condiciones) ? condiciones[0] : condiciones) === '1';
 
   return (
@@ -120,7 +124,9 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           role="alert"
           className="m-0 rounded-[var(--radius-md)] border border-destructive/50 bg-feedback-error-soft px-3 py-2 text-sm leading-[18px] text-text"
         >
-          {t('venuePage.conflict')}
+          {conflictKey
+            ? describeApiError({ errorKey: conflictKey }, locale)
+            : t('venuePage.conflict')}
         </p>
       ) : null}
 
