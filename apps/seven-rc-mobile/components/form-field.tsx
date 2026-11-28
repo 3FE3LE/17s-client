@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '@17suit/i18n/react';
 import { inputRecipe, useAppTheme } from '@17suit/ui-native';
 import { useId, useState } from 'react';
 import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
@@ -70,6 +71,7 @@ export function FormField({
   returnKeyType,
 }: FormFieldProps) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation('mobile');
   const nativeId = useId();
   const [revealed, setRevealed] = useState(false);
   const isSecret = kind === 'password' || kind === 'new-password';
@@ -107,7 +109,7 @@ export function FormField({
           <Pressable
             onPress={() => setRevealed((current) => !current)}
             accessibilityRole="button"
-            accessibilityLabel={revealed ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityLabel={revealed ? t('form.hidePassword') : t('form.showPassword')}
             hitSlop={10}
             style={{
               position: 'absolute',

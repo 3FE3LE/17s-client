@@ -1,7 +1,7 @@
 import { sevenRcResources } from '@17suit/module-seven-reservations-club/i18n';
-import { getProductLocale } from '@17suit/i18n/next';
 import { WebAuthProvider } from '@17suit/core/auth/next';
 import { AppProductFooter, buttonRecipe, ThemeScript } from '@17suit/ui';
+import { getServerT } from '@/lib/i18n-server';
 import { AppProviders } from '@17suit/ui/app-providers';
 import { getServerAuth } from '@/lib/server-auth';
 import type { Metadata } from 'next';
@@ -34,25 +34,27 @@ const zillaSlab = Zilla_Slab({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Seven Reservations Club | 17Suit',
-  description:
-    'Reserva canchas eligiendo un horario libre y recibe la confirmación del complejo, sin cadenas de WhatsApp.',
-  icons: {
-    icon: [
-      { url: '/icon-17suit.ico', type: 'image/x-icon' },
-      { url: '/icon-17suit.png', type: 'image/png', sizes: '200x200' },
-    ],
-    shortcut: '/icon-17suit.ico',
-    apple: '/icon-17suit.png',
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerT('shell');
+  return {
+    title: 'Seven Reservations Club | 17Suit',
+    description: t('meta.description'),
+    icons: {
+      icon: [
+        { url: '/icon-17suit.ico', type: 'image/x-icon' },
+        { url: '/icon-17suit.png', type: 'image/png', sizes: '200x200' },
+      ],
+      shortcut: '/icon-17suit.ico',
+      apple: '/icon-17suit.png',
+    },
+  };
+}
 
 const footerButton = (intent: 'primary' | 'secondary') =>
   buttonRecipe({ intent, size: 'sm', platform: 'web', fullWidth: false });
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const locale = await getProductLocale();
+  const { t, locale } = await getServerT('shell');
   const { userId } = await getServerAuth();
   const isSignedIn = Boolean(userId);
 
@@ -82,23 +84,23 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <AppProductFooter
                 productName="Seven Reservations Club"
                 productSlug="seven-reservations-club"
-                productTagline="Reservas de canchas y agenda para complejos deportivos."
+                productTagline={t('footer.productTagline')}
                 suiteName="17Suit"
                 actionControls={
                   isSignedIn ? (
                     <>
                       <Link href="/" className={footerButton('secondary')}>
-                        Ir a mi panel
+                        {t('footer.goToDashboard')}
                       </Link>
                       <SignOutControl className={footerButton('secondary')} />
                     </>
                   ) : (
                     <>
                       <Link href="/sign-in?redirect_url=/" className={footerButton('secondary')}>
-                        Iniciar sesión
+                        {t('footer.signIn')}
                       </Link>
                       <Link href="/sign-up?redirect_url=/" className={footerButton('primary')}>
-                        Crear cuenta
+                        {t('footer.signUp')}
                       </Link>
                     </>
                   )

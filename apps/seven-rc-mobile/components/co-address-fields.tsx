@@ -7,35 +7,37 @@ import {
   type CoAddressErrorKey,
   type CoAddressField,
 } from '@17suit/core';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppInput, AppSelect, GapView } from '@17suit/ui-native';
 import { Text } from 'react-native';
 import { FormError } from './form-field';
 
+/** Catalog keys (`mobile` namespace) per field and zod error code. */
 const ERROR_TEXT: Record<CoAddressField, Partial<Record<CoAddressErrorKey, string>>> = {
-  viaTipo: { required: 'Elige el tipo de vía.' },
+  viaTipo: { required: 'address.errors.viaTipoRequired' },
   viaNumero: {
-    required: 'Escribe el número de la vía.',
-    viaNumero: 'Usa un formato como 72, 72A o 72 Bis Sur.',
+    required: 'address.errors.viaNumeroRequired',
+    viaNumero: 'address.errors.viaNumeroFormat',
   },
   cruceNumero: {
-    required: 'Escribe el número después del #.',
-    cruceNumero: 'Usa solo el número, p. ej. 10 o 10A.',
+    required: 'address.errors.cruceNumeroRequired',
+    cruceNumero: 'address.errors.cruceNumeroFormat',
   },
   placaNumero: {
-    required: 'Escribe el número después del guion.',
-    placaNumero: 'Usa solo números, hasta 3 dígitos.',
+    required: 'address.errors.placaNumeroRequired',
+    placaNumero: 'address.errors.placaNumeroFormat',
   },
-  complemento: { tooLong: 'Usa máximo 80 caracteres.' },
-  barrio: { tooLong: 'Usa máximo 80 caracteres.' },
+  complemento: { tooLong: 'address.errors.tooLong' },
+  barrio: { tooLong: 'address.errors.tooLong' },
   municipio: {
-    required: 'Escribe el municipio.',
-    tooShort: 'Escribe al menos 2 letras.',
-    tooLong: 'Usa máximo 80 caracteres.',
+    required: 'address.errors.municipioRequired',
+    tooShort: 'address.errors.tooShort',
+    tooLong: 'address.errors.tooLong',
   },
   departamento: {
-    required: 'Escribe el departamento.',
-    tooShort: 'Escribe al menos 2 letras.',
-    tooLong: 'Usa máximo 80 caracteres.',
+    required: 'address.errors.departamentoRequired',
+    tooShort: 'address.errors.tooShort',
+    tooLong: 'address.errors.tooLong',
   },
 };
 
@@ -49,25 +51,27 @@ interface Props {
 
 /** Colombian address as vía, # cruce, - placa plus place fields. Controlled by the screen. */
 export function CoAddressFields({ value, onChange, errors }: Props) {
+  const { t } = useTranslation('mobile');
   const set = (field: CoAddressField, next: string) => onChange({ ...value, [field]: next });
   const message = (field: CoAddressField) => {
     const key = errors[field];
-    return key ? (ERROR_TEXT[field][key] ?? 'Revisa este campo.') : null;
+    const errorKey = key ? ERROR_TEXT[field][key] : undefined;
+    return key ? t(errorKey ?? 'address.errors.invalid') : null;
   };
   const address = coAddressFromDraft(value);
 
   const text = (
     field: Exclude<CoAddressField, 'viaTipo'>,
-    label: string,
-    placeholder: string,
+    labelKey: string,
+    placeholderKey: string,
     keyboard?: 'number-pad',
   ) => (
     <>
       <AppInput
         value={value[field]}
         onChangeText={(next) => set(field, next)}
-        label={label}
-        placeholder={placeholder}
+        label={t(labelKey)}
+        placeholder={t(placeholderKey)}
         error={Boolean(errors[field])}
         autoCorrect={false}
         {...(keyboard ? { keyboardType: keyboard } : {})}
@@ -82,20 +86,27 @@ export function CoAddressFields({ value, onChange, errors }: Props) {
         value={value.viaTipo}
         onChangeValue={(next) => set('viaTipo', next)}
         options={VIA_OPTIONS}
-        label="Vía (opcional)"
-        placeholder="Tipo de vía"
+        label={t('address.viaTipoLabel')}
+        placeholder={t('address.viaTipoPlaceholder')}
         error={Boolean(errors.viaTipo)}
       />
       <FormError message={message('viaTipo')} />
-      {text('viaNumero', 'Número de la vía', 'Ej. 72, 72A, 72 Bis Sur')}
-      {text('cruceNumero', 'Número # (cruce)', 'Lo que va después del #')}
-      {text('placaNumero', 'Número - (placa)', 'Lo que va después del guion', 'number-pad')}
-      {text('municipio', 'Municipio', 'Ej. Medellín')}
-      {text('departamento', 'Departamento', 'Ej. Antioquia')}
-      {text('barrio', 'Barrio (opcional)', 'Ej. Chapinero')}
-      {text('complemento', 'Complemento (opcional)', 'Local, interior, referencia')}
+      {text('viaNumero', 'address.viaNumeroLabel', 'address.viaNumeroPlaceholder')}
+      {text('cruceNumero', 'address.cruceNumeroLabel', 'address.cruceNumeroPlaceholder')}
+      {text(
+        'placaNumero',
+        'address.placaNumeroLabel',
+        'address.placaNumeroPlaceholder',
+        'number-pad',
+      )}
+      {text('municipio', 'address.municipioLabel', 'address.municipioPlaceholder')}
+      {text('departamento', 'address.departamentoLabel', 'address.departamentoPlaceholder')}
+      {text('barrio', 'address.barrioLabel', 'address.barrioPlaceholder')}
+      {text('complemento', 'address.complementoLabel', 'address.complementoPlaceholder')}
       {address ? (
-        <Text accessibilityLiveRegion="polite">Se verá así: {formatCoAddress(address)}</Text>
+        <Text accessibilityLiveRegion="polite">
+          {t('address.preview', { address: formatCoAddress(address) })}
+        </Text>
       ) : null}
     </GapView>
   );

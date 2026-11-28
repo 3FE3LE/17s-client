@@ -11,6 +11,7 @@ import {
 } from '@17suit/ui';
 import { useId, type ReactNode, type RefObject } from 'react';
 import { formatUpdatedAgo } from '@/lib/seven-rc-format';
+import { useTranslation } from '@17suit/i18n/react';
 import { useNow } from '@/lib/use-now';
 
 /**
@@ -348,7 +349,7 @@ export function RefreshControl({
   dataUpdatedAt,
   isFetching,
   onRefresh,
-  label = 'Actualizar',
+  label,
 }: {
   dataUpdatedAt: number;
   isFetching: boolean;
@@ -356,10 +357,13 @@ export function RefreshControl({
   label?: string;
 }) {
   const now = useNow();
+  const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-sm">
       <p className="m-0 text-sm leading-[18px] text-muted tabular-nums">
-        {isFetching ? 'Actualizando…' : formatUpdatedAgo(dataUpdatedAt, now || dataUpdatedAt)}
+        {isFetching
+          ? t('format:updated.refreshing')
+          : formatUpdatedAgo(dataUpdatedAt, now || dataUpdatedAt, t)}
       </p>
       <AppButton
         variant="neutral"
@@ -377,7 +381,7 @@ export function RefreshControl({
             aria-hidden
             className={isFetching ? 'motion-safe:animate-spin' : ''}
           />
-          {label}
+          {label ?? t('format:updated.refresh')}
         </span>
       </AppButton>
     </div>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { tEn, tEs } from './test-translate';
 import {
   addDaysToDateKey,
   dateKeyInTimeZone,
@@ -78,29 +79,41 @@ describe('durations', () => {
 
 describe('formatMoneyMinor', () => {
   it('renders whole amounts without decimals', () => {
-    const text = formatMoneyMinor(8_000_000, 'COP').replace(/\s/g, ' ');
+    const text = formatMoneyMinor(8_000_000, 'COP', 'es').replace(/\s/g, ' ');
     expect(text).toContain('80.000');
     expect(text).not.toMatch(/[.,]00$/);
   });
 
   it('keeps decimals for fractional amounts', () => {
-    expect(formatMoneyMinor(1050, 'USD')).toMatch(/10,50/);
+    expect(formatMoneyMinor(1050, 'USD', 'es')).toMatch(/10,50/);
   });
 
   it('falls back for an invalid currency code', () => {
-    expect(formatMoneyMinor(1000, 'NOPE!')).toContain('NOPE!');
+    expect(formatMoneyMinor(1000, 'NOPE!', 'es')).toContain('NOPE!');
   });
 });
 
 describe('labels', () => {
   it('maps known sports and passes unknown ones through', () => {
-    expect(sportLabel('padel')).toBe('Pádel');
-    expect(sportLabel('curling')).toBe('curling');
+    expect(sportLabel('padel', tEs)).toBe('Pádel');
+    expect(sportLabel('curling', tEs)).toBe('curling');
   });
 
   it('maps known statuses and humanizes unknown ones', () => {
-    expect(reservationStatus('confirmed')).toEqual({ label: 'Confirmada', variant: 'success' });
-    expect(reservationStatus('on_hold')).toEqual({ label: 'on hold', variant: 'neutral' });
+    expect(reservationStatus('confirmed', tEs)).toEqual({
+      label: 'Confirmada',
+      variant: 'success',
+    });
+    expect(reservationStatus('on_hold', tEs)).toEqual({ label: 'on hold', variant: 'neutral' });
+  });
+});
+
+describe('locale awareness', () => {
+  it('translates labels and formats amounts per locale', () => {
+    expect(sportLabel('padel', tEn)).toBe('Padel');
+    expect(reservationStatus('confirmed', tEn).label).toBe('Confirmed');
+    expect(formatUpdatedAgo(0, 1, tEn)).toBe('Not updated yet');
+    expect(formatMoneyMinor(1050, 'USD', 'en')).toMatch(/10\.50/);
   });
 });
 
@@ -114,6 +127,6 @@ describe('formatUpdatedAgo', () => {
     [now - 180 * 60_000, 'Actualizado hace 3 h'],
     [now + 60_000, 'Actualizado hace un momento'],
   ])('updatedAt=%i', (updatedAt, expected) => {
-    expect(formatUpdatedAgo(updatedAt, now)).toBe(expected);
+    expect(formatUpdatedAgo(updatedAt, now, tEs)).toBe(expected);
   });
 });

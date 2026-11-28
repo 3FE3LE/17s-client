@@ -1,68 +1,93 @@
 import type { AppBadgeProps } from '@17suit/ui';
 
-/** Display locale for every date, time and amount in seven-rc-web. */
+/** Locale of typed amounts (parse/format of input fields). Display text follows `intlLocale`. */
 export const DISPLAY_LOCALE = 'es-CO';
+
+/** Translator accepted by the formatting helpers (`t` from `useTranslation` or `getFixedT`). */
+export interface Translate {
+  (key: string): string;
+  (key: string, options: Record<string, unknown>): string;
+}
+
+/** BCP 47 tag used by `Intl` for an app locale (`en`, `es`). */
+export function intlLocale(locale: string): string {
+  return locale.toLowerCase().startsWith('en') ? 'en-US' : DISPLAY_LOCALE;
+}
 
 /** Launch market default. Venues carry their own IANA zone; this only fills gaps. */
 export const DEFAULT_TIMEZONE = 'America/Bogota';
 
+const TIMEZONES: ReadonlyArray<{ value: string; key: string }> = [
+  { value: 'America/Bogota', key: 'bogota' },
+  { value: 'America/Mexico_City', key: 'mexicoCity' },
+  { value: 'America/Lima', key: 'lima' },
+  { value: 'America/Guayaquil', key: 'guayaquil' },
+  { value: 'America/Panama', key: 'panama' },
+  { value: 'America/Caracas', key: 'caracas' },
+  { value: 'America/Santiago', key: 'santiago' },
+  { value: 'America/Argentina/Buenos_Aires', key: 'buenosAires' },
+  { value: 'America/Sao_Paulo', key: 'saoPaulo' },
+  { value: 'America/Montevideo', key: 'montevideo' },
+  { value: 'America/Asuncion', key: 'asuncion' },
+  { value: 'America/La_Paz', key: 'laPaz' },
+  { value: 'America/Costa_Rica', key: 'costaRica' },
+  { value: 'America/Guatemala', key: 'guatemala' },
+  { value: 'America/El_Salvador', key: 'elSalvador' },
+  { value: 'America/Tegucigalpa', key: 'tegucigalpa' },
+  { value: 'America/Managua', key: 'managua' },
+  { value: 'America/Santo_Domingo', key: 'santoDomingo' },
+  { value: 'America/Puerto_Rico', key: 'puertoRico' },
+  { value: 'America/New_York', key: 'newYork' },
+  { value: 'America/Chicago', key: 'chicago' },
+  { value: 'America/Los_Angeles', key: 'losAngeles' },
+  { value: 'Europe/Madrid', key: 'madrid' },
+];
+
 /** IANA zones offered when an owner creates a complejo. LatAm first, then the rest. */
-export const VENUE_TIMEZONE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'America/Bogota', label: 'Colombia (Bogotá)' },
-  { value: 'America/Mexico_City', label: 'México (Ciudad de México)' },
-  { value: 'America/Lima', label: 'Perú (Lima)' },
-  { value: 'America/Guayaquil', label: 'Ecuador (Guayaquil)' },
-  { value: 'America/Panama', label: 'Panamá' },
-  { value: 'America/Caracas', label: 'Venezuela (Caracas)' },
-  { value: 'America/Santiago', label: 'Chile (Santiago)' },
-  { value: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
-  { value: 'America/Sao_Paulo', label: 'Brasil (São Paulo)' },
-  { value: 'America/Montevideo', label: 'Uruguay (Montevideo)' },
-  { value: 'America/Asuncion', label: 'Paraguay (Asunción)' },
-  { value: 'America/La_Paz', label: 'Bolivia (La Paz)' },
-  { value: 'America/Costa_Rica', label: 'Costa Rica' },
-  { value: 'America/Guatemala', label: 'Guatemala' },
-  { value: 'America/El_Salvador', label: 'El Salvador' },
-  { value: 'America/Tegucigalpa', label: 'Honduras (Tegucigalpa)' },
-  { value: 'America/Managua', label: 'Nicaragua (Managua)' },
-  { value: 'America/Santo_Domingo', label: 'República Dominicana' },
-  { value: 'America/Puerto_Rico', label: 'Puerto Rico' },
-  { value: 'America/New_York', label: 'Estados Unidos (Nueva York)' },
-  { value: 'America/Chicago', label: 'Estados Unidos (Chicago)' },
-  { value: 'America/Los_Angeles', label: 'Estados Unidos (Los Ángeles)' },
-  { value: 'Europe/Madrid', label: 'España (Madrid)' },
+export function venueTimezoneOptions(t: Translate): Array<{ value: string; label: string }> {
+  return TIMEZONES.map(({ value, key }) => ({ value, label: t(`format:timezones.${key}`) }));
+}
+
+const WEEKDAY_KEYS: ReadonlyArray<{ value: number; key: string }> = [
+  { value: 1, key: 'monday' },
+  { value: 2, key: 'tuesday' },
+  { value: 3, key: 'wednesday' },
+  { value: 4, key: 'thursday' },
+  { value: 5, key: 'friday' },
+  { value: 6, key: 'saturday' },
+  { value: 0, key: 'sunday' },
 ];
 
-export const WEEKDAYS: ReadonlyArray<{ value: number; label: string }> = [
-  { value: 1, label: 'Lunes' },
-  { value: 2, label: 'Martes' },
-  { value: 3, label: 'Miércoles' },
-  { value: 4, label: 'Jueves' },
-  { value: 5, label: 'Viernes' },
-  { value: 6, label: 'Sábado' },
-  { value: 0, label: 'Domingo' },
+/** Monday-first week with localized names. */
+export function weekdayOptions(t: Translate): Array<{ value: number; label: string }> {
+  return WEEKDAY_KEYS.map(({ value, key }) => ({ value, label: t(`format:weekdays.${key}`) }));
+}
+
+const SPORTS: ReadonlyArray<{ value: string; key: string }> = [
+  { value: 'futbol-5', key: 'futbol5' },
+  { value: 'futbol-7', key: 'futbol7' },
+  { value: 'futbol-8', key: 'futbol8' },
+  { value: 'futbol-11', key: 'futbol11' },
+  { value: 'padel', key: 'padel' },
+  { value: 'tenis', key: 'tenis' },
+  { value: 'baloncesto', key: 'baloncesto' },
+  { value: 'voleibol', key: 'voleibol' },
 ];
 
-export const SPORT_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'futbol-5', label: 'Fútbol 5' },
-  { value: 'futbol-7', label: 'Fútbol 7' },
-  { value: 'futbol-8', label: 'Fútbol 8' },
-  { value: 'futbol-11', label: 'Fútbol 11' },
-  { value: 'padel', label: 'Pádel' },
-  { value: 'tenis', label: 'Tenis' },
-  { value: 'baloncesto', label: 'Baloncesto' },
-  { value: 'voleibol', label: 'Voleibol' },
-];
+export function sportOptions(t: Translate): Array<{ value: string; label: string }> {
+  return SPORTS.map(({ value, key }) => ({ value, label: t(`format:sports.${key}`) }));
+}
 
-export function sportLabel(value: string): string {
-  return SPORT_OPTIONS.find((option) => option.value === value)?.label ?? value;
+export function sportLabel(value: string, t: Translate): string {
+  const sport = SPORTS.find((option) => option.value === value);
+  return sport ? t(`format:sports.${sport.key}`) : value;
 }
 
 /** Returns a usable IANA zone: the venue's when valid, otherwise the launch default. */
 export function safeTimeZone(timeZone: string | null | undefined): string {
   if (!timeZone) return DEFAULT_TIMEZONE;
   try {
-    new Intl.DateTimeFormat(DISPLAY_LOCALE, { timeZone });
+    new Intl.DateTimeFormat('en-US', { timeZone });
     return timeZone;
   } catch {
     return DEFAULT_TIMEZONE;
@@ -96,18 +121,22 @@ export function addDaysToDateKey(dateKey: string, days: number): string {
 }
 
 /** Formats a `YYYY-MM-DD` key. The key is already venue-local, so format it as UTC. */
-export function formatDateKey(dateKey: string, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(DISPLAY_LOCALE, { ...options, timeZone: 'UTC' }).format(
+export function formatDateKey(
+  dateKey: string,
+  options: Intl.DateTimeFormatOptions,
+  locale: string,
+): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), { ...options, timeZone: 'UTC' }).format(
     dateKeyToUtcNoon(dateKey),
   );
 }
 
-export function formatLongDate(dateKey: string): string {
-  return formatDateKey(dateKey, { weekday: 'long', day: 'numeric', month: 'long' });
+export function formatLongDate(dateKey: string, locale: string): string {
+  return formatDateKey(dateKey, { weekday: 'long', day: 'numeric', month: 'long' }, locale);
 }
 
-export function formatTime(instant: string, timeZone: string): string {
-  return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+export function formatTime(instant: string, timeZone: string, locale: string): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), {
     timeZone,
     hour: 'numeric',
     minute: '2-digit',
@@ -115,21 +144,37 @@ export function formatTime(instant: string, timeZone: string): string {
 }
 
 /** "antes de las 7:30 p. m." / "antes de la 1:05 p. m." */
-export function formatBeforeTime(instant: string, timeZone: string): string {
-  const time = formatTime(instant, timeZone);
-  return `antes de ${time.startsWith('1:') ? 'la' : 'las'} ${time}`;
+export function formatBeforeTime(
+  instant: string,
+  timeZone: string,
+  locale: string,
+  t: Translate,
+): string {
+  const time = formatTime(instant, timeZone, locale);
+  return t(`format:beforeTime.${time.startsWith('1:') ? 'singular' : 'default'}`, { time });
 }
 
-export function formatTimeRange(startAt: string, endAt: string, timeZone: string): string {
-  return `${formatTime(startAt, timeZone)} – ${formatTime(endAt, timeZone)}`;
+export function formatTimeRange(
+  startAt: string,
+  endAt: string,
+  timeZone: string,
+  locale: string,
+): string {
+  return `${formatTime(startAt, timeZone, locale)} – ${formatTime(endAt, timeZone, locale)}`;
 }
 
 /** "sábado 22 de noviembre · 7:00 p. m. – 8:00 p. m." in the venue zone. */
-export function formatSlotWhen(startAt: string, endAt: string, timeZone: string): string {
-  return `${formatLongDate(dateKeyInTimeZone(startAt, timeZone))} · ${formatTimeRange(
+export function formatSlotWhen(
+  startAt: string,
+  endAt: string,
+  timeZone: string,
+  locale: string,
+): string {
+  return `${formatLongDate(dateKeyInTimeZone(startAt, timeZone), locale)} · ${formatTimeRange(
     startAt,
     endAt,
     timeZone,
+    locale,
   )}`;
 }
 
@@ -145,44 +190,49 @@ export function minutesBetween(startAt: string, endAt: string): number {
 }
 
 /** Amounts arrive in minor units (cents). Whole amounts render without decimals. */
-export function formatMoneyMinor(amountMinor: number, currency: string): string {
+export function formatMoneyMinor(amountMinor: number, currency: string, locale: string): string {
   const amount = amountMinor / 100;
   try {
-    return new Intl.NumberFormat(DISPLAY_LOCALE, {
+    return new Intl.NumberFormat(intlLocale(locale), {
       style: 'currency',
       currency,
       minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
       maximumFractionDigits: 2,
     }).format(amount);
   } catch {
-    return `${amount.toLocaleString(DISPLAY_LOCALE)} ${currency}`;
+    return `${amount.toLocaleString(intlLocale(locale))} ${currency}`;
   }
 }
 
 type BadgeVariant = NonNullable<AppBadgeProps['variant']>;
 
-const STATUS_COPY: Record<string, { label: string; variant: BadgeVariant }> = {
-  pending_confirmation: { label: 'Pendiente de confirmación', variant: 'warning' },
-  confirmed: { label: 'Confirmada', variant: 'success' },
-  rejected: { label: 'Rechazada', variant: 'destructive' },
-  cancelled: { label: 'Cancelada', variant: 'neutral' },
-  completed: { label: 'Completada', variant: 'info' },
-  expired: { label: 'Vencida', variant: 'neutral' },
-  no_show: { label: 'No asistió', variant: 'destructive' },
+const STATUS_VARIANT: Record<string, BadgeVariant> = {
+  pending_confirmation: 'warning',
+  confirmed: 'success',
+  rejected: 'destructive',
+  cancelled: 'neutral',
+  completed: 'info',
+  expired: 'neutral',
+  no_show: 'destructive',
 };
 
-export function reservationStatus(status: string): { label: string; variant: BadgeVariant } {
-  return STATUS_COPY[status] ?? { label: status.replaceAll('_', ' '), variant: 'neutral' };
+export function reservationStatus(
+  status: string,
+  t: Translate,
+): { label: string; variant: BadgeVariant } {
+  const variant = STATUS_VARIANT[status];
+  return variant
+    ? { label: t(`format:status.${status}`), variant }
+    : { label: status.replaceAll('_', ' '), variant: 'neutral' };
 }
 
 /** "Actualizado hace 3 min" from a React Query `dataUpdatedAt` and a ticking `now`. */
-export function formatUpdatedAgo(updatedAt: number, now: number): string {
-  if (!updatedAt) return 'Sin actualizar todavía';
+export function formatUpdatedAgo(updatedAt: number, now: number, t: Translate): string {
+  if (!updatedAt) return t('format:updated.never');
   const minutes = Math.floor(Math.max(0, now - updatedAt) / 60_000);
-  if (minutes < 1) return 'Actualizado hace un momento';
-  if (minutes < 60) return `Actualizado hace ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  return hours === 1 ? 'Actualizado hace 1 h' : `Actualizado hace ${hours} h`;
+  if (minutes < 1) return t('format:updated.justNow');
+  if (minutes < 60) return t('format:updated.minutesAgo', { minutes });
+  return t('format:updated.hoursAgo', { hours: Math.floor(minutes / 60) });
 }
 
 /** Venue-local hour (0–23) of an instant, for grouping slots by part of day. */

@@ -11,13 +11,15 @@ import { weekPayload } from '@/lib/opening-hours';
 import { useConfigurePitchSlotsMutation, type PitchWithPricing } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
 import { formatDuration } from '@/lib/seven-rc-format';
+import { useTranslation } from '@17suit/i18n/react';
 
 const durationSchema = z.object({
-  duration: intInRange(30, 240, 'La duración del turno debe estar entre 30 y 240 minutos.'),
+  duration: intInRange(30, 240, 'common.durationRange'),
 });
 type DurationValues = z.infer<typeof durationSchema>;
 
 export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: PitchWithPricing }) {
+  const { t } = useTranslation('venue');
   const mutation = useConfigurePitchSlotsMutation(pitch.id, venueId);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: P
     setNotice(null);
     const parsed = Number(values.duration);
     if (parsed === pitch.slotDurationMinutes) {
-      setNotice('La duración ya era esa. No hubo cambios.');
+      setNotice(t('slotDuration.unchanged'));
       return;
     }
     try {
@@ -39,9 +41,9 @@ export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: P
         openingHours: weekPayload(pitch.openingHours),
         slotDurationMinutes: parsed,
       });
-      setNotice(`Los turnos de ${pitch.name} ahora duran ${formatDuration(parsed)}.`);
+      setNotice(t('slotDuration.saved', { pitch: pitch.name, duration: formatDuration(parsed) }));
     } catch (caught) {
-      setError(describeError(caught, 'No se pudo guardar la duración del turno.'));
+      setError(describeError(caught, t('slotDuration.failed')));
     }
   });
   const saving = mutation.isPending || formState.isSubmitting;
@@ -54,7 +56,7 @@ export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: P
       noValidate
     >
       <h3 id="duracion-title" className="m-0 font-arvo text-md text-text">
-        Duración del turno
+        {t('slotDuration.title')}
       </h3>
       <div className="grid gap-sm md:grid-cols-2">
         <Controller
@@ -64,24 +66,28 @@ export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: P
             <HintedInput
               type="number"
               name="slotDurationMinutes"
-              label="Minutos por turno"
+              label={t('slotDuration.label')}
               inputMode="numeric"
               min={30}
               max={240}
               step={15}
               required
-              errorMessage={fieldState.error?.message ?? null}
+              errorMessage={
+                fieldState.error?.message
+                  ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+                  : null
+              }
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              hint="Cada reserva dura esto. Las reservas ya hechas conservan su horario."
+              hint={t('slotDuration.hint')}
             />
           )}
         />
       </div>
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar duración'}
+          {saving ? t('common.saving') : t('slotDuration.save')}
         </AppButton>
       </div>
       <InlineError message={error} />

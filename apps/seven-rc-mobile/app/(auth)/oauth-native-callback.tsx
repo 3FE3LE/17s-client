@@ -1,8 +1,10 @@
+import { useTranslation } from '@17suit/i18n/react';
 import { useRootNavigationState } from 'expo-router';
 import { AppFrame } from '@17suit/ui-native';
 import { useReplaceOnceReady } from '@17suit/ui-native';
 
 export default function OAuthNativeCallback() {
+  const { t } = useTranslation('mobile');
   const rootNavigationState = useRootNavigationState();
   const isNavigationReady = Boolean(rootNavigationState?.key);
 
@@ -12,5 +14,5 @@ export default function OAuthNativeCallback() {
   // `router.replace` call throws.
   useReplaceOnceReady({ ready: isNavigationReady, href: '/' });
 
-  return <AppFrame appName="Seven Reservations Club" subtitle="Procesando inicio de sesión…" />;
+  return <AppFrame appName="Seven Reservations Club" subtitle={t('auth.oauthProcessing')} />;
 }

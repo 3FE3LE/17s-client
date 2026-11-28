@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from '@17suit/i18n/react';
 import { useState } from 'react';
 import { Controller, useForm, type Control } from 'react-hook-form';
 import { z } from 'zod';
@@ -38,9 +39,9 @@ const TIME_PATTERN = /^\d{2}:\d{2}$/;
 function buildBlockSchema(timeZone: string) {
   return z
     .object({
-      date: z.string().min(1, 'Elige la fecha del bloqueo.'),
-      startTime: z.string().regex(TIME_PATTERN, 'Elige la hora de inicio.'),
-      endTime: z.string().regex(TIME_PATTERN, 'Elige la hora de fin.'),
+      date: z.string().min(1, 'dateRequired'),
+      startTime: z.string().regex(TIME_PATTERN, 'startRequired'),
+      endTime: z.string().regex(TIME_PATTERN, 'endRequired'),
       reason: z.string().max(REASON_MAX),
     })
     .superRefine((values, issues) => {
@@ -55,7 +56,7 @@ function buildBlockSchema(timeZone: string) {
         issues.addIssue({
           code: 'custom',
           path: ['endTime'],
-          message: 'La hora de fin debe ser posterior a la de inicio.',
+          message: 'endBeforeStart',
         });
         return;
       }
@@ -64,7 +65,7 @@ function buildBlockSchema(timeZone: string) {
         issues.addIssue({
           code: 'custom',
           path: ['endTime'],
-          message: 'Ese horario ya pasó. Elige uno más tarde.',
+          message: 'endPassed',
         });
       }
     });
@@ -84,6 +85,7 @@ function BlockTextField({
   type: 'date' | 'time';
   min?: string;
 }) {
+  const { t } = useTranslation('owner');
   const field = {
     date: 'blockDate',
     startTime: 'blockStart',
@@ -105,7 +107,11 @@ function BlockTextField({
             onChangeText={input.onChange}
             onBlur={input.onBlur}
           />
-          <InlineError message={fieldState.error?.message ?? null} />
+          <InlineError
+            message={
+              fieldState.error?.message ? t(`pitchBlocks.errors.${fieldState.error.message}`) : null
+            }
+          />
         </div>
       )}
     />
@@ -125,6 +131,7 @@ export interface PitchBlocksSectionProps {
  * returns them, so the owner can resolve those first.
  */
 export function PitchBlocksSection({ pitches, timeZone, todayKey }: PitchBlocksSectionProps) {
+  const { t } = useTranslation('owner');
   const [explicitPitchId, setExplicitPitchId] = useState<string | null>(null);
   const pitch = pitches.find((item) => item.id === explicitPitchId) ?? pitches[0] ?? null;
 
@@ -132,31 +139,29 @@ export function PitchBlocksSection({ pitches, timeZone, todayKey }: PitchBlocksS
     <section aria-labelledby={HEADING_ID} className="mt-lg grid gap-md">
       <SectionHeader
         id={HEADING_ID}
-        title="Bloqueos de horario"
-        description="Cierra una cancha por mantenimiento, un evento privado o una reserva que tomaste por otro medio. Ese horario deja de ofrecerse a los jugadores."
+        title={t('pitchBlocks.title')}
+        description={t('pitchBlocks.description')}
       />
       {!pitch ? (
-        <p className="m-0 text-md leading-[1.5] text-muted">
-          Agrega una cancha para poder bloquear sus horarios.
-        </p>
+        <p className="m-0 text-md leading-[1.5] text-muted">{t('pitchBlocks.noPitch')}</p>
       ) : (
         <>
           {pitches.length > 1 ? (
             <div className="max-w-[var(--container-form)]">
               <SelectField
-                label="Cancha"
+                label={t('pitchBlocks.pitch')}
                 name="blockPitch"
                 value={pitch.id}
                 onChangeValue={setExplicitPitchId}
                 options={pitches.map((item) => ({
                   value: item.id,
-                  label: `${item.name} · ${sportLabel(item.sportType)}`,
+                  label: `${item.name} · ${sportLabel(item.sportType, t)}`,
                 }))}
               />
             </div>
           ) : (
             <p className="m-0 text-md font-bold leading-[1.5] text-text">
-              {pitch.name} · {sportLabel(pitch.sportType)}
+              {pitch.name} · {sportLabel(pitch.sportType, t)}
             </p>
           )}
           <PitchBlocksPanel key={pitch.id} pitch={pitch} timeZone={timeZone} todayKey={todayKey} />
@@ -175,6 +180,8 @@ function PitchBlocksPanel({
   timeZone: string;
   todayKey: string;
 }) {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   // Fixed per mount: it is part of the request, not of the query key.
   const [from] = useState(() => new Date().toISOString());
   const blocksQuery = usePitchBlocksQuery(pitch.id, from);
@@ -205,14 +212,17 @@ function PitchBlocksPanel({
         ...(reason ? { reason } : {}),
       });
       setNotice(
-        `${pitch.name} bloqueada: ${formatSlotWhen(created.startAt, created.endAt, timeZone)}.`,
+        t('pitchBlocks.blocked', {
+          pitch: pitch.name,
+          when: formatSlotWhen(created.startAt, created.endAt, timeZone, locale),
+        }),
       );
       reset({ ...getValues(), startTime: '', endTime: '', reason: '' });
     } catch (caught) {
       if (caught instanceof SevenRcApiError && caught.status === 409) {
         setConflicts(caught.conflicts);
       }
-      setError(describeError(caught, 'No se pudo crear el bloqueo.'));
+      setError(describeError(caught, t('pitchBlocks.createError')));
     }
   });
 
@@ -224,10 +234,12 @@ function PitchBlocksPanel({
     try {
       await deleteMutation.mutateAsync(block.id);
       setNotice(
-        `Bloqueo quitado: ${formatSlotWhen(block.startAt, block.endAt, timeZone)}. Ese horario vuelve a estar disponible.`,
+        t('pitchBlocks.removed', {
+          when: formatSlotWhen(block.startAt, block.endAt, timeZone, locale),
+        }),
       );
     } catch (caught) {
-      setError(describeError(caught, 'No se pudo quitar el bloqueo.'));
+      setError(describeError(caught, t('pitchBlocks.removeError')));
     } finally {
       setRemovingId(null);
     }
@@ -244,12 +256,28 @@ function PitchBlocksPanel({
         noValidate
       >
         <h3 id={`${HEADING_ID}-nuevo`} className="m-0 font-arvo text-md text-text">
-          Nuevo bloqueo
+          {t('pitchBlocks.new')}
         </h3>
         <div className="grid max-w-[var(--container-form)] gap-sm sm:grid-cols-3">
-          <BlockTextField control={control} name="date" label="Fecha" type="date" min={todayKey} />
-          <BlockTextField control={control} name="startTime" label="Desde" type="time" />
-          <BlockTextField control={control} name="endTime" label="Hasta" type="time" />
+          <BlockTextField
+            control={control}
+            name="date"
+            label={t('pitchBlocks.date')}
+            type="date"
+            min={todayKey}
+          />
+          <BlockTextField
+            control={control}
+            name="startTime"
+            label={t('pitchBlocks.from')}
+            type="time"
+          />
+          <BlockTextField
+            control={control}
+            name="endTime"
+            label={t('pitchBlocks.to')}
+            type="time"
+          />
         </div>
         <div className="max-w-[var(--container-form)]">
           <Controller
@@ -259,28 +287,26 @@ function PitchBlocksPanel({
               <HintedInput
                 type="text"
                 name="blockReason"
-                label="Motivo (opcional)"
+                label={t('pitchBlocks.reason')}
                 maxLength={REASON_MAX}
                 autoComplete="off"
                 value={field.value}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
-                hint="Solo lo ves tú. Ej.: Mantenimiento del césped."
+                hint={t('pitchBlocks.reasonHint')}
               />
             )}
           />
         </div>
         <div className="grid gap-sm sm:max-w-[280px]">
           <AppButton type="submit" disabled={createMutation.isPending}>
-            {createMutation.isPending ? 'Bloqueando…' : 'Bloquear horario'}
+            {createMutation.isPending ? t('pitchBlocks.blocking') : t('pitchBlocks.block')}
           </AppButton>
         </div>
         <InlineError message={error} />
         {conflicts.length > 0 ? (
           <div className="grid gap-xs" role="alert">
-            <p className="m-0 text-sm leading-[18px] text-text">
-              Estas reservas activas se cruzan con el bloqueo:
-            </p>
+            <p className="m-0 text-sm leading-[18px] text-text">{t('pitchBlocks.conflicts')}</p>
             <ul className="m-0 grid list-none gap-xs p-0">
               {conflicts.map((reservation) => (
                 <li
@@ -288,10 +314,10 @@ function PitchBlocksPanel({
                   className="rounded-[var(--radius-lg)] border border-border-default bg-background px-md py-sm text-sm leading-[18px] text-text"
                 >
                   <span className="first-letter:uppercase">
-                    {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+                    {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone, locale)}
                   </span>{' '}
-                  · {reservation.customerName ?? 'Jugador sin nombre'} ·{' '}
-                  {reservationStatus(reservation.status).label}
+                  · {reservation.customerName ?? t('pitchBlocks.unnamedPlayer')} ·{' '}
+                  {reservationStatus(reservation.status, t).label}
                 </li>
               ))}
             </ul>
@@ -301,25 +327,23 @@ function PitchBlocksPanel({
       </form>
 
       <div className="grid gap-sm">
-        <h3 className="m-0 font-arvo text-md text-text">Bloqueos vigentes</h3>
+        <h3 className="m-0 font-arvo text-md text-text">{t('pitchBlocks.current')}</h3>
         {blocksQuery.isLoading ? (
-          <ListSkeleton rows={1} label="Cargando bloqueos" />
+          <ListSkeleton rows={1} label={t('pitchBlocks.loading')} />
         ) : blocksQuery.error && !blocksQuery.data ? (
           <div className="grid gap-sm">
-            <InlineError
-              message={describeError(blocksQuery.error, 'No se pudieron cargar los bloqueos.')}
-            />
+            <InlineError message={describeError(blocksQuery.error, t('pitchBlocks.loadError'))} />
             <AppButton
               variant="neutral"
               fullWidth={false}
               onPress={() => void blocksQuery.refetch()}
             >
-              Reintentar
+              {t('pitchBlocks.retry')}
             </AppButton>
           </div>
         ) : blocks.length === 0 ? (
           <p className="m-0 text-md leading-[1.5] text-muted">
-            {pitch.name} no tiene bloqueos próximos.
+            {t('pitchBlocks.none', { pitch: pitch.name })}
           </p>
         ) : (
           <ul className="m-0 grid list-none gap-sm p-0">
@@ -330,7 +354,7 @@ function PitchBlocksPanel({
               >
                 <div className="grid gap-xs">
                   <p className="m-0 text-md font-bold leading-[1.4] text-text first-letter:uppercase">
-                    {formatSlotWhen(block.startAt, block.endAt, timeZone)}
+                    {formatSlotWhen(block.startAt, block.endAt, timeZone, locale)}
                   </p>
                   {block.reason ? (
                     <p className="m-0 text-sm leading-[18px] text-muted">{block.reason}</p>
@@ -341,9 +365,11 @@ function PitchBlocksPanel({
                   fullWidth={false}
                   disabled={removingId === block.id}
                   onPress={() => void onRemove(block)}
-                  aria-label={`Quitar bloqueo de ${formatSlotWhen(block.startAt, block.endAt, timeZone)}`}
+                  aria-label={t('pitchBlocks.removeLabel', {
+                    when: formatSlotWhen(block.startAt, block.endAt, timeZone, locale),
+                  })}
                 >
-                  {removingId === block.id ? 'Quitando…' : 'Quitar'}
+                  {removingId === block.id ? t('pitchBlocks.removing') : t('pitchBlocks.remove')}
                 </AppButton>
               </li>
             ))}

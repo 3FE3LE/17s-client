@@ -16,9 +16,10 @@ import { addressErrorKeys, CoAddressFields } from '@/components/co-address-field
 import { HintedInput, InlineError, InlineStatus } from '@/components/seven-rc-ui';
 import { useUpdateVenueSettingsMutation, type OwnerVenue } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
+import { useTranslation } from '@17suit/i18n/react';
 
 const venueIdentitySchema = z.object({
-  name: z.string().trim().min(3, 'El nombre del complejo necesita al menos 3 caracteres.').max(120),
+  name: z.string().trim().min(3, 'common.venueNameMin').max(120),
   address: coAddressDraftSchema,
 });
 type VenueIdentityValues = z.infer<typeof venueIdentitySchema>;
@@ -29,6 +30,7 @@ type VenueIdentityValues = z.infer<typeof venueIdentitySchema>;
  * old text above an empty form until the owner saves the new one.
  */
 export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
+  const { t } = useTranslation('venue');
   const mutation = useUpdateVenueSettingsMutation(venue.id);
   const saved = parseCoAddress(venue.addressParts);
   const [formError, setFormError] = useState<string | null>(null);
@@ -49,17 +51,17 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
             name: values.name,
             ...(addressParts ? { addressParts } : {}),
           }),
-        { toastError: false, success: 'Datos del complejo guardados.' },
+        { toastError: false, success: t('identity.saved') },
       );
       if (result.ok) {
-        setNotice('Datos del complejo guardados.');
+        setNotice(t('identity.saved'));
       } else {
-        setFormError(describeError(result.error, 'No se pudieron guardar los datos del complejo.'));
+        setFormError(describeError(result.error, t('identity.saveFailed')));
       }
     },
     () => {
       setNotice(null);
-      setFormError('Revisa los campos marcados.');
+      setFormError(t('common.checkFields'));
     },
   );
 
@@ -71,7 +73,7 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
       className="grid gap-sm"
     >
       <h3 id="datos-complejo-title" className="m-0 font-arvo text-md text-text">
-        Datos del complejo
+        {t('identity.title')}
       </h3>
       <Controller
         control={control}
@@ -79,21 +81,25 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
         render={({ field, fieldState }) => (
           <HintedInput
             name="name"
-            label="Nombre del complejo"
+            label={t('common.venueName')}
             autoComplete="organization"
             maxLength={120}
             value={field.value}
             onChangeText={field.onChange}
             onBlur={field.onBlur}
-            hint="Es el nombre que ven los jugadores."
-            errorMessage={fieldState.error?.message ?? null}
+            hint={t('identity.nameHint')}
+            errorMessage={
+              fieldState.error?.message
+                ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+                : null
+            }
           />
         )}
       />
       {!saved && venue.address ? (
         <p className="m-0 text-sm leading-[18px] text-text-muted">
-          Dirección anterior: <strong>{venue.address}</strong>. Completa los campos para
-          reemplazarla.
+          {t('identity.previousAddress')} <strong>{venue.address}</strong>
+          {t('identity.replaceHint')}
         </p>
       ) : null}
       <Controller
@@ -109,7 +115,7 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
       />
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={formState.isSubmitting || mutation.isPending}>
-          {formState.isSubmitting || mutation.isPending ? 'Guardando…' : 'Guardar datos'}
+          {formState.isSubmitting || mutation.isPending ? t('common.saving') : t('identity.save')}
         </AppButton>
       </div>
       <InlineError message={formError} />

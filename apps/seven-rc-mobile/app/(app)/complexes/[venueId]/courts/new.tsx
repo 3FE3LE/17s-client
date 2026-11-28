@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppInput, AppSelect, AppSkeleton, GapView } from '@17suit/ui-native';
 import { useState } from 'react';
+import { useTranslation } from '@17suit/i18n/react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
@@ -13,47 +14,48 @@ import { feedback } from '../../../../../lib/feedback';
 import { findSport, SPORTS } from '../../../../../lib/sports';
 import { useCreateVenuePitchMutation } from '../../../../../lib/owner-queries';
 
+/** Schema messages are `courtNew.errors.*` catalog keys; the screen translates them. */
 const createCourtSchema = z.object({
-  name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres.'),
-  sportType: z.string().trim().min(2, 'El deporte es obligatorio.'),
+  name: z.string().trim().min(2, 'nameMin'),
+  sportType: z.string().trim().min(2, 'sportRequired'),
   capacity: z
     .string()
     .trim()
     .refine((value) => {
       const parsed = Number(value);
       return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100;
-    }, 'Capacidad inválida. Debe ser un número entero entre 1 y 100.'),
+    }, 'capacityInvalid'),
   slotDurationMinutes: z
     .string()
     .trim()
     .refine((value) => {
       const parsed = Number(value);
       return Number.isInteger(parsed) && parsed >= 30;
-    }, 'Duración inválida. Debe ser de al menos 30 minutos.'),
+    }, 'durationInvalid'),
 });
 
 type CreateCourtFormValues = z.infer<typeof createCourtSchema>;
 
-const sportOptions = SPORTS.map(({ value, label }) => ({ value, label }));
-
-/** The usual sizes, plus whatever each sport defaults to (Fútbol 7 needs 14). */
-const capacityOptions = Array.from(
+/** The usual sizes, plus whatever each sport defaults to (soccer 7 needs 14). */
+const CAPACITY_VALUES = Array.from(
   new Set([2, 4, 6, 8, 10, 12, ...SPORTS.map((sport) => sport.defaultCapacity)]),
-)
-  .sort((a, b) => a - b)
-  .map((count) => ({ value: String(count), label: `${count} jugadores` }));
+).sort((a, b) => a - b);
 
-const durationOptions = [
-  { value: '30', label: '30 minutos' },
-  { value: '45', label: '45 minutos' },
-  { value: '60', label: '60 minutos' },
-  { value: '75', label: '75 minutos' },
-  { value: '90', label: '90 minutos' },
-  { value: '120', label: '120 minutos' },
-] as const;
+const DURATION_VALUES = [30, 45, 60, 75, 90, 120] as const;
 
 export default function CreateCourtScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
+  const sportOptions = SPORTS.map(({ value, labelKey }) => ({ value, label: t(labelKey) }));
+  const capacityOptions = CAPACITY_VALUES.map((count) => ({
+    value: String(count),
+    label: t('courtNew.players', { count }),
+  }));
+  const durationOptions = DURATION_VALUES.map((minutes) => ({
+    value: String(minutes),
+    label: t('common.minutes', { minutes }),
+  }));
+  const errorText = (code?: string) => (code ? t(`courtNew.errors.${code}`) : null);
   const { user } = useUser();
   const { role, isLoading } = useCurrentUserRoleQuery({
     userId: user?.id,
@@ -79,7 +81,7 @@ export default function CreateCourtScreen() {
 
   if (isLoading || !user) {
     return (
-      <Screen title="Nueva cancha">
+      <Screen title={t('courtNew.title')}>
         <AppSkeleton height={220} rounded="lg" />
       </Screen>
     );
@@ -87,12 +89,9 @@ export default function CreateCourtScreen() {
 
   if (role !== 'OWNER' || !venueId) {
     return (
-      <Screen
-        title="Nueva cancha"
-        subtitle="No encontramos el complejo o tu cuenta no puede administrarlo."
-      >
+      <Screen title={t('courtNew.title')} subtitle={t('courtNew.forbidden')}>
         <GapView gap="md">
-          <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
+          <AppButton onPress={() => router.replace('/home')}>{t('common.backHome')}</AppButton>
         </GapView>
       </Screen>
     );
@@ -107,17 +106,17 @@ export default function CreateCourtScreen() {
         capacity: Number(values.capacity),
         slotDurationMinutes: Number(values.slotDurationMinutes),
       });
-      feedback.success('Cancha creada', 'La cancha ya aparece en el complejo.');
+      feedback.success(t('courtNew.createdTitle'), t('courtNew.createdMessage'));
       router.replace(`/complexes/${venueId}/courts/${created.id}/slots`);
     } catch (error) {
-      setSubmitError(humanizeError(error, 'save'));
+      setSubmitError(humanizeError(error, t, 'save'));
     }
   });
 
   return (
     <Screen
-      title="Nueva cancha"
-      subtitle="Agrega una cancha a este complejo."
+      title={t('courtNew.title')}
+      subtitle={t('courtNew.subtitle')}
       footer={
         <>
           <FormError message={submitError} />
@@ -126,14 +125,14 @@ export default function CreateCourtScreen() {
             disabled={!formState.isValid || formState.isSubmitting}
             busy={formState.isSubmitting}
           >
-            {formState.isSubmitting ? 'Creando…' : 'Guardar cancha'}
+            {formState.isSubmitting ? t('common.creating') : t('courtNew.save')}
           </AppButton>
           <AppButton
             variant="neutral"
             onPress={() => router.back()}
             disabled={formState.isSubmitting}
           >
-            Cancelar
+            {t('common.cancel')}
           </AppButton>
         </>
       }
@@ -147,11 +146,11 @@ export default function CreateCourtScreen() {
               <AppInput
                 value={field.value}
                 onChangeText={field.onChange}
-                label="Nombre de la cancha"
-                placeholder="Ej. Cancha 1"
+                label={t('courtNew.nameLabel')}
+                placeholder={t('courtNew.namePlaceholder')}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />
@@ -172,11 +171,11 @@ export default function CreateCourtScreen() {
                   });
                 }}
                 options={sportOptions}
-                label="Deporte"
-                placeholder="Seleccionar deporte"
+                label={t('courtNew.sportLabel')}
+                placeholder={t('courtNew.sportPlaceholder')}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />
@@ -189,11 +188,11 @@ export default function CreateCourtScreen() {
                 value={field.value}
                 onChangeValue={field.onChange}
                 options={capacityOptions}
-                label="Capacidad"
-                placeholder="Seleccionar capacidad"
+                label={t('courtNew.capacityLabel')}
+                placeholder={t('courtNew.capacityPlaceholder')}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />
@@ -205,12 +204,12 @@ export default function CreateCourtScreen() {
               <AppSelect
                 value={field.value}
                 onChangeValue={field.onChange}
-                options={durationOptions as unknown as { value: string; label: string }[]}
-                label="Duración por turno"
-                placeholder="Seleccionar duración"
+                options={durationOptions}
+                label={t('slots.durationLabel')}
+                placeholder={t('slots.durationPlaceholder')}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />

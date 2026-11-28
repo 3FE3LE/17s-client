@@ -9,6 +9,7 @@ import {
   useAppTheme,
 } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from '@17suit/i18n/react';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VenueLinks } from '../../../components/venue-links';
@@ -24,10 +25,11 @@ import { useVenueSnapshot, venueRouteParams } from '../../../lib/venue-params';
 export default function VenueSheetScreen() {
   const { theme } = useAppTheme();
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const insets = useSafeAreaInsets();
   const { venueId, venue } = useVenueSnapshot();
   const pitchesQuery = usePlayerVenuePitchesQuery(venueId);
-  const venueName = venue?.name ?? 'Complejo';
+  const venueName = venue?.name ?? t('common.venue');
   // Unknown while the venue loads; only a loaded venue can be missing an address.
   const isAddressMissing = Boolean(venue) && !venue?.address?.trim();
   const subtitleType = theme.typography.styles.subtitle1;
@@ -85,14 +87,14 @@ export default function VenueSheetScreen() {
                 letterSpacing: captionType.letterSpacingPx,
               }}
             >
-              Dirección pendiente
+              {t('common.pendingAddress')}
             </Text>
           ) : null}
         </View>
         <Pressable
           onPress={close}
           accessibilityRole="button"
-          accessibilityLabel="Cerrar"
+          accessibilityLabel={t('common.close')}
           hitSlop={8}
           style={{
             width: 44,
@@ -140,8 +142,8 @@ export default function VenueSheetScreen() {
           {pitchesQuery.error ? (
             <AppAlert
               variant="warning"
-              title="No pudimos cargar las canchas"
-              description={humanizeError(pitchesQuery.error, 'load')}
+              title={t('venueOwner.courtsError')}
+              description={humanizeError(pitchesQuery.error, t, 'load')}
               action={
                 <AppButton
                   variant="warning"
@@ -149,7 +151,7 @@ export default function VenueSheetScreen() {
                     void pitchesQuery.refetch();
                   }}
                 >
-                  Reintentar
+                  {t('common.retry')}
                 </AppButton>
               }
             />
@@ -159,20 +161,20 @@ export default function VenueSheetScreen() {
           !pitchesQuery.error &&
           (pitchesQuery.data ?? []).length === 0 ? (
             <AppEmpty
-              title="Este complejo aún no tiene canchas"
-              description="Vuelve pronto o elige otro complejo."
+              title={t('venueOwner.noCourtsTitle')}
+              description={t('venueSheet.noCourtsDescription')}
               icon={<Feather name="grid" size={20} color={theme.colors.brandPrimary} />}
             />
           ) : null}
 
           {(pitchesQuery.data ?? []).map((pitch) => {
-            const detail = pitchSummary(pitch);
+            const detail = pitchSummary(pitch, t);
             return (
               <Pressable
                 key={pitch.id}
                 onPress={() => book(pitch.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`Reservar ${pitch.name}. ${detail}`}
+                accessibilityLabel={t('venueSheet.bookCourtA11y', { name: pitch.name, detail })}
                 style={({ pressed }) => ({
                   minHeight: 44,
                   flexDirection: 'row',
@@ -225,7 +227,7 @@ export default function VenueSheetScreen() {
 
       <View style={{ paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.sm }}>
         <AppButton onPress={() => book()} disabled={!venueId}>
-          Reservar en este complejo
+          {t('venueSheet.bookHere')}
         </AppButton>
       </View>
     </View>

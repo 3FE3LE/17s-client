@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from '@17suit/i18n/react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
@@ -11,27 +12,13 @@ import { InlineError } from '@/components/seven-rc-ui';
 import { describeError } from '@/lib/seven-rc-errors';
 import { getRoleHomePath, type AppRole } from '@/lib/role';
 
-const ROLE_OPTIONS: ReadonlyArray<{
-  role: AppRole;
-  title: string;
-  description: string;
-  cta: string;
-}> = [
-  {
-    role: 'PLAYER',
-    title: 'Quiero reservar canchas',
-    description: 'Busca complejos, elige un horario libre y sigue el estado de tus reservas.',
-    cta: 'Continuar como jugador',
-  },
-  {
-    role: 'OWNER',
-    title: 'Administro un complejo',
-    description: 'Publica tus canchas y horarios, y confirma o rechaza las solicitudes.',
-    cta: 'Continuar como dueño de complejo',
-  },
+const ROLE_OPTIONS: ReadonlyArray<{ role: AppRole; key: 'player' | 'owner' }> = [
+  { role: 'PLAYER', key: 'player' },
+  { role: 'OWNER', key: 'owner' },
 ];
 
 export function RoleSelectorClient({ preferredRole = null }: { preferredRole?: AppRole | null }) {
+  const { t } = useTranslation('shell');
   const router = useRouter();
   const { error: roleError, refetch } = useCurrentUserRoleQuery();
   const setRoleMutation = useSetCurrentUserRoleMutation();
@@ -50,24 +37,21 @@ export function RoleSelectorClient({ preferredRole = null }: { preferredRole?: A
     setSubmittingRole(role);
     try {
       await setRoleMutation.mutateAsync(role);
-      setStatus('Listo. Te llevamos a tu panel…');
+      setStatus(t('onboarding.done'));
       router.replace(getRoleHomePath(role));
     } catch (error) {
-      setSubmitError(describeError(error, 'No se pudo guardar tu elección. Intenta de nuevo.'));
+      setSubmitError(describeError(error, t('onboarding.saveError')));
       setSubmittingRole(null);
     }
   }
 
   return (
-    <AppFrame
-      appName="¿Cómo vas a usar Seven Reservations Club?"
-      subtitle="Elige una opción. Define qué ves al entrar, y puedes cambiarla cuando quieras arriba, junto a “Cerrar sesión”."
-    >
+    <AppFrame appName={t('onboarding.title')} subtitle={t('onboarding.subtitle')}>
       {roleError ? (
         <div className="grid gap-sm">
-          <InlineError message="No pudimos revisar tu cuenta. Puedes elegir igual o reintentar." />
+          <InlineError message={t('onboarding.roleCheckError')} />
           <AppButton variant="neutral" fullWidth={false} onPress={() => void refetch()}>
-            Reintentar
+            {t('onboarding.retry')}
           </AppButton>
         </div>
       ) : null}
@@ -83,15 +67,21 @@ export function RoleSelectorClient({ preferredRole = null }: { preferredRole?: A
             }
           >
             <div className="grid gap-xs">
-              <h2 className="m-0 font-arvo text-lg leading-[1.3] text-text">{option.title}</h2>
-              <p className="m-0 text-md leading-[1.5] text-muted">{option.description}</p>
+              <h2 className="m-0 font-arvo text-lg leading-[1.3] text-text">
+                {t(`onboarding.${option.key}.title`)}
+              </h2>
+              <p className="m-0 text-md leading-[1.5] text-muted">
+                {t(`onboarding.${option.key}.description`)}
+              </p>
             </div>
             <AppButton
               variant={preferredRole && option.role !== preferredRole ? 'neutral' : 'primary'}
               disabled={submittingRole !== null}
               onPress={() => void handleSetRole(option.role)}
             >
-              {submittingRole === option.role ? 'Guardando…' : option.cta}
+              {submittingRole === option.role
+                ? t('onboarding.saving')
+                : t(`onboarding.${option.key}.cta`)}
             </AppButton>
           </li>
         ))}

@@ -12,11 +12,12 @@ import {
   effectiveBands,
   findOverlaps,
   MAX_PRICE_RULES,
-  validateRule,
+  validateRuleCode,
   type PriceRuleInput,
 } from '@/lib/pricing-rules';
 import { describeError } from '@/lib/seven-rc-errors';
-import { formatMoneyMinor, WEEKDAYS } from '@/lib/seven-rc-format';
+import { formatMoneyMinor, weekdayOptions } from '@/lib/seven-rc-format';
+import { useTranslation } from '@17suit/i18n/react';
 
 const ruleDraftSchema = z.object({
   days: z.array(z.number()),
@@ -45,38 +46,81 @@ function toRule(draft: RuleDraft): PriceRuleInput {
   };
 }
 
+const WEEKDAY_KEY: Record<number, string> = {
+  0: 'weekdays.sunday',
+  1: 'weekdays.monday',
+  2: 'weekdays.tuesday',
+  3: 'weekdays.wednesday',
+  4: 'weekdays.thursday',
+  5: 'weekdays.friday',
+  6: 'weekdays.saturday',
+};
+
+/** A rule problem as a stable key plus params; the form resolves it with `t`. */
+interface RuleProblem {
+  key: string;
+  params: Record<string, number | string>;
+}
+
 /**
  * Per-rule rules live in `validateRule` and `findOverlaps` (shared with the server mirror).
- * Each message is attached to `rules[i].root` so react-hook-form keeps one entry per rule.
+ * Each problem list (JSON of {@link RuleProblem}) is attached to `rules[i].root` so
+ * react-hook-form keeps one entry per rule.
  */
 const priceRulesSchema = z
   .object({ rules: z.array(ruleDraftSchema).max(MAX_PRICE_RULES) })
   .superRefine(({ rules: drafts }, issues) => {
     const rules = drafts.map(toRule);
-    const messages = new Map<number, string[]>();
-    const add = (index: number, message: string) =>
-      messages.set(index, [...(messages.get(index) ?? []), message]);
+    const problems = new Map<number, RuleProblem[]>();
+    const add = (index: number, problem: RuleProblem) =>
+      problems.set(index, [...(problems.get(index) ?? []), problem]);
     rules.forEach((rule, index) => {
-      const message = validateRule(rule);
-      if (message) add(index, `Regla ${index + 1}: ${message}`);
+      const code = validateRuleCode(rule);
+      if (code) add(index, { key: `priceRules.errors.${code}`, params: { n: index + 1 } });
     });
-    if (messages.size === 0) {
+    if (problems.size === 0) {
       for (const [a, b] of findOverlaps(rules)) {
-        add(b, `Las reglas ${a + 1} y ${b + 1} se solapan: comparten día y horario.`);
+        add(b, { key: 'priceRules.errors.overlap', params: { a: a + 1, b: b + 1 } });
       }
     }
-    for (const [index, list] of messages) {
-      issues.addIssue({ code: 'custom', path: ['rules', index, 'root'], message: list.join(' ') });
+    for (const [index, list] of problems) {
+      issues.addIssue({
+        code: 'custom',
+        path: ['rules', index, 'root'],
+        message: JSON.stringify(list),
+      });
     }
   });
 type PriceRulesValues = z.infer<typeof priceRulesSchema>;
 
-function ruleMessages(errors: FieldErrors<PriceRulesValues>): string[] {
+function ruleMessages(
+  errors: FieldErrors<PriceRulesValues>,
+  t: (key: string, params: Record<string, number | string>) => string,
+): string[] {
   const list = errors.rules;
   if (!Array.isArray(list)) return [];
   return list.flatMap((entry: unknown) => {
     const message = (entry as { root?: { message?: string } } | undefined)?.root?.message;
-    return message ? [message] : [];
+    if (!message) return [];
+    let problems: RuleProblem[];
+    try {
+      problems = JSON.parse(message) as RuleProblem[];
+    } catch {
+      return [message];
+    }
+    // Overlap problems already name both rules; the rest are prefixed with their own rule number.
+    return [
+      problems
+        .map((problem) =>
+          problem.key === 'priceRules.errors.overlap'
+            ? t(problem.key, problem.params)
+            : t('priceRules.errors.ruleN', {
+                n: problem.params.n ?? 0,
+                message: t(problem.key, problem.params),
+              }),
+        )
+        .join(' '),
+    ];
   });
 }
 
@@ -90,6 +134,9 @@ export function PitchPriceRules({
   currency: string;
   pitch: PitchWithPricing;
 }) {
+  const { t, i18n } = useTranslation('venue');
+  const locale = i18n.language;
+  const dayLabel = (value: number) => t(WEEKDAY_KEY[value] ?? 'weekdays.monday');
   const mutation = useConfigurePitchPricingMutation(pitch.id, venueId);
   const [serverError, setServerError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -100,7 +147,7 @@ export function PitchPriceRules({
   const { fields, append, remove } = useFieldArray({ control, name: 'rules' });
 
   const drafts = watch('rules');
-  const validRules = drafts.map(toRule).filter((rule) => validateRule(rule) === null);
+  const validRules = drafts.map(toRule).filter((rule) => validateRuleCode(rule) === null);
 
   const onSubmit = handleSubmit(async (values) => {
     setNotice(null);
@@ -111,16 +158,19 @@ export function PitchPriceRules({
       await mutation.mutateAsync({ basePriceMinor: pitch.basePriceMinor, rules });
       setNotice(
         rules.length === 0
-          ? `${pitch.name} ya no tiene tarifas por horario.`
-          : `Guardaste ${rules.length === 1 ? '1 tarifa' : `${rules.length} tarifas`} para ${pitch.name}.`,
+          ? t('priceRules.savedNone', { pitch: pitch.name })
+          : t('priceRules.saved', { count: rules.length, pitch: pitch.name }),
       );
     } catch (caught) {
-      setServerError(describeError(caught, 'No se pudieron guardar las tarifas.'));
+      setServerError(describeError(caught, t('priceRules.saveFailed')));
     }
   });
-  const errors = [...ruleMessages(formState.errors), ...(serverError ? [serverError] : [])];
+  const errors = [
+    ...ruleMessages(formState.errors, (key, params) => t(key, params)),
+    ...(serverError ? [serverError] : []),
+  ];
 
-  const openDays = WEEKDAYS.filter((day) => {
+  const openDays = weekdayOptions(t).filter((day) => {
     const hours = pitch.openingHours?.[String(day.value)];
     return Boolean(hours?.openTime && hours.closeTime);
   });
@@ -133,17 +183,12 @@ export function PitchPriceRules({
       noValidate
     >
       <h3 id="tarifas-title" className="m-0 font-arvo text-md text-text">
-        Tarifas por día y horario
+        {t('priceRules.title')}
       </h3>
-      <p className="m-0 text-sm leading-[18px] text-muted">
-        Una tarifa reemplaza el precio base en los turnos que empiezan dentro de su horario. Las
-        tarifas no pueden solaparse.
-      </p>
+      <p className="m-0 text-sm leading-[18px] text-muted">{t('priceRules.intro')}</p>
 
       {fields.length === 0 ? (
-        <p className="m-0 text-md leading-[1.5] text-muted">
-          Sin tarifas: todos los turnos cuestan el precio base.
-        </p>
+        <p className="m-0 text-md leading-[1.5] text-muted">{t('priceRules.none')}</p>
       ) : (
         <ol className="m-0 grid list-none gap-sm p-0">
           {fields.map((item, index) => (
@@ -157,9 +202,9 @@ export function PitchPriceRules({
                 render={({ field }) => (
                   <fieldset className="m-0 flex flex-wrap gap-sm border-0 p-0">
                     <legend className="mb-xs p-0 text-sm font-bold text-text">
-                      Tarifa {index + 1} · días
+                      {t('priceRules.days', { n: index + 1 })}
                     </legend>
-                    {WEEKDAYS.map((day) => (
+                    {weekdayOptions(t).map((day) => (
                       <label key={day.value} className="inline-flex items-center gap-xs text-md">
                         <input
                           type="checkbox"
@@ -174,7 +219,7 @@ export function PitchPriceRules({
                             setNotice(null);
                           }}
                         />
-                        {day.label}
+                        {dayLabel(day.value)}
                       </label>
                     ))}
                   </fieldset>
@@ -188,7 +233,7 @@ export function PitchPriceRules({
                     <AppInput
                       type="time"
                       name={`tarifa-${index + 1}-desde`}
-                      label="Desde"
+                      label={t('priceRules.from')}
                       value={field.value}
                       onChangeText={(value) => {
                         field.onChange(value);
@@ -204,7 +249,7 @@ export function PitchPriceRules({
                     <AppInput
                       type="time"
                       name={`tarifa-${index + 1}-hasta`}
-                      label="Hasta (00:00 = medianoche)"
+                      label={t('priceRules.to')}
                       value={field.value}
                       onChangeText={(value) => {
                         field.onChange(value);
@@ -219,10 +264,10 @@ export function PitchPriceRules({
                   render={({ field }) => (
                     <HintedInput
                       name={`tarifa-${index + 1}-precio`}
-                      label={`Precio por turno (${currency})`}
+                      label={t('priceRules.priceLabel', { currency })}
                       inputMode="decimal"
                       autoComplete="off"
-                      placeholder="150.000"
+                      placeholder={t('priceRules.pricePlaceholder')}
                       value={field.value}
                       onChangeText={(value) => {
                         field.onChange(value);
@@ -230,8 +275,8 @@ export function PitchPriceRules({
                       }}
                       hint={
                         parseAmount(field.value) === null
-                          ? 'Ej. 150.000'
-                          : formatMoneyMinor(parseAmount(field.value) ?? 0, currency)
+                          ? t('priceRules.priceExample')
+                          : formatMoneyMinor(parseAmount(field.value) ?? 0, currency, locale)
                       }
                     />
                   )}
@@ -247,7 +292,7 @@ export function PitchPriceRules({
                     setNotice(null);
                   }}
                 >
-                  Quitar tarifa {index + 1}
+                  {t('priceRules.remove', { n: index + 1 })}
                 </AppButton>
               </div>
             </li>
@@ -265,14 +310,14 @@ export function PitchPriceRules({
             setNotice(null);
           }}
         >
-          Agregar tarifa
+          {t('priceRules.add')}
         </AppButton>
         <AppButton
           type="submit"
           fullWidth={false}
           disabled={mutation.isPending || formState.isSubmitting}
         >
-          {mutation.isPending || formState.isSubmitting ? 'Guardando…' : 'Guardar tarifas'}
+          {mutation.isPending || formState.isSubmitting ? t('common.saving') : t('priceRules.save')}
         </AppButton>
       </div>
       {errors.length > 0 ? (
@@ -286,15 +331,15 @@ export function PitchPriceRules({
 
       <section aria-labelledby="precio-efectivo-title" className="grid gap-xs">
         <h4 id="precio-efectivo-title" className="m-0 text-md font-bold text-text">
-          Precio efectivo por turno
+          {t('priceRules.effectiveTitle')}
         </h4>
         {pitch.basePriceMinor === 0 && validRules.length === 0 ? (
           <p className="m-0 text-sm leading-[18px] text-muted">
-            Sin precio base ni tarifas: los jugadores verán “Precio a confirmar con el complejo”.
+            {t('priceRules.effectiveNoPrice')}
           </p>
         ) : openDays.length === 0 ? (
           <p className="m-0 text-sm leading-[18px] text-muted">
-            Define los horarios de apertura para ver el precio de cada turno.
+            {t('priceRules.effectiveNoHours')}
           </p>
         ) : (
           <ul className="m-0 grid list-none gap-xs p-0 text-sm leading-[18px] text-text">
@@ -310,13 +355,13 @@ export function PitchPriceRules({
               });
               return (
                 <li key={day.value}>
-                  <span className="font-bold">{day.label}:</span>{' '}
+                  <span className="font-bold">{dayLabel(day.value)}:</span>{' '}
                   {bands.length === 0
-                    ? 'sin turnos'
+                    ? t('priceRules.noSlots')
                     : bands
                         .map(
                           (band) =>
-                            `${band.from}–${band.to} ${formatMoneyMinor(band.priceMinor, currency)}`,
+                            `${band.from}–${band.to} ${formatMoneyMinor(band.priceMinor, currency, locale)}`,
                         )
                         .join(' · ')}
                 </li>

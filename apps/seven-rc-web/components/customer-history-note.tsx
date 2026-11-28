@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslation } from '@17suit/i18n/react';
+import type { TranslateFn } from '@17suit/i18n';
 import { useCustomerHistoryQuery } from '@/lib/owner-queries';
 
 interface HistorySummary {
@@ -10,13 +12,13 @@ interface HistorySummary {
 }
 
 /** One line a decision can lean on; `null` when there is nothing worth saying. */
-export function describeHistory(history: HistorySummary): string | null {
+export function describeHistory(history: HistorySummary, t: TranslateFn): string | null {
   if (history.total <= 1 && history.noShows === 0 && history.lateCancels === 0) return null;
   const parts = [
-    `${history.total} ${history.total === 1 ? 'reserva' : 'reservas'} en este complejo`,
-    `${history.completed} ${history.completed === 1 ? 'jugada' : 'jugadas'}`,
-    `${history.noShows} ${history.noShows === 1 ? 'inasistencia' : 'inasistencias'}`,
-    `${history.lateCancels} ${history.lateCancels === 1 ? 'cancelación tardía' : 'cancelaciones tardías'}`,
+    t('customerHistory.reservations', { count: history.total }),
+    t('customerHistory.completed', { count: history.completed }),
+    t('customerHistory.noShows', { count: history.noShows }),
+    t('customerHistory.lateCancels', { count: history.lateCancels }),
   ];
   return parts.join(' · ');
 }
@@ -29,8 +31,9 @@ export function CustomerHistoryNote({
   venueId: string | null | undefined;
   phone: string | null | undefined;
 }) {
+  const { t } = useTranslation('owner');
   const query = useCustomerHistoryQuery(venueId, phone);
-  const line = query.data ? describeHistory(query.data) : null;
+  const line = query.data ? describeHistory(query.data, t) : null;
   if (!line) return null;
   const warn = (query.data?.noShows ?? 0) > 0 || (query.data?.lateCancels ?? 0) > 0;
   return (
@@ -38,7 +41,7 @@ export function CustomerHistoryNote({
       className={`m-0 text-sm leading-[18px] ${warn ? 'text-text' : 'text-muted'}`}
       aria-live="polite"
     >
-      <span className="font-bold">Historial: </span>
+      <span className="font-bold">{t('customerHistory.label')} </span>
       {line}.
     </p>
   );

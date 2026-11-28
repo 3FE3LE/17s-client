@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from '@17suit/i18n/react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -19,7 +20,7 @@ import {
   type OwnerVenue,
   type PitchWithPricing,
 } from '@/lib/owner-queries';
-import { PAYMENT_METHOD_OPTIONS, formatAmountInput, parseAmount } from '@/lib/owner-payment';
+import { paymentMethodOptions, formatAmountInput, parseAmount } from '@/lib/owner-payment';
 import { normalizePhone, E164_PATTERN } from '@/lib/phone';
 import { usePitchAvailabilityQuery } from '@/lib/player-queries';
 import { describeError } from '@/lib/seven-rc-errors';
@@ -28,11 +29,7 @@ import type { ReservationPaymentMethod } from '@/lib/owner-queries';
 
 const RECURRING_DEFAULT_WEEKS = 8;
 const RECURRING_MAX_WEEKS = 52;
-const SKIP_REASON_LABEL: Record<string, string> = {
-  BLOCKED: 'cancha bloqueada',
-  RESERVED: 'ya reservado',
-  UNAVAILABLE: 'fuera de horario',
-};
+const SKIP_REASONS = new Set(['BLOCKED', 'RESERVED', 'UNAVAILABLE']);
 interface ReservationSchemaContext {
   countryCode: string;
   hasSlot: boolean;
@@ -43,11 +40,7 @@ interface ReservationSchemaContext {
 function buildReservationSchema(ctx: ReservationSchemaContext) {
   return z
     .object({
-      customerName: z
-        .string()
-        .trim()
-        .min(2, 'Escribe el nombre del cliente (mínimo 2 letras).')
-        .max(120),
+      customerName: z.string().trim().min(2, 'nameRequired').max(120),
       customerPhone: z.string(),
       notes: z.string().max(500),
       deposit: z.string(),
@@ -64,7 +57,7 @@ function buildReservationSchema(ctx: ReservationSchemaContext) {
           issues.addIssue({
             code: 'custom',
             path: ['customerPhone'],
-            message: 'El teléfono debe incluir el código de país, p. ej. +57 300 123 4567.',
+            message: 'phoneInvalid',
           });
         }
       }
@@ -72,7 +65,7 @@ function buildReservationSchema(ctx: ReservationSchemaContext) {
         issues.addIssue({
           code: 'custom',
           path: ['slot'],
-          message: 'Elige un horario disponible.',
+          message: 'slotRequired',
         });
       }
       if (values.repeat) {
@@ -81,7 +74,7 @@ function buildReservationSchema(ctx: ReservationSchemaContext) {
           issues.addIssue({
             code: 'custom',
             path: ['weeks'],
-            message: `Usa entre 2 y ${RECURRING_MAX_WEEKS} semanas.`,
+            message: 'weeksRange',
           });
         }
       } else if (values.deposit.trim()) {
@@ -90,13 +83,13 @@ function buildReservationSchema(ctx: ReservationSchemaContext) {
           issues.addIssue({
             code: 'custom',
             path: ['deposit'],
-            message: 'Escribe un anticipo mayor que cero, p. ej. 30.000, o déjalo vacío.',
+            message: 'depositInvalid',
           });
         } else if (ctx.slotPriceMinor > 0 && amount > ctx.slotPriceMinor) {
           issues.addIssue({
             code: 'custom',
             path: ['deposit'],
-            message: 'El anticipo supera el precio del turno.',
+            message: 'depositTooHigh',
           });
         }
       }
@@ -105,11 +98,7 @@ function buildReservationSchema(ctx: ReservationSchemaContext) {
 type ReservationValues = z.infer<ReturnType<typeof buildReservationSchema>>;
 
 const HEADING_ID = 'nueva-reserva-title';
-const SLOT_UNAVAILABLE_LABEL: Record<string, string> = {
-  RESERVED: 'ocupado',
-  BLOCKED: 'bloqueado',
-  PAST: 'ya pasó',
-};
+const SLOT_UNAVAILABLE_STATUSES = new Set(['RESERVED', 'BLOCKED', 'PAST']);
 
 export interface OwnerReservationSectionProps {
   venue: OwnerVenue;
@@ -131,6 +120,7 @@ export function OwnerReservationSection({
   timeZone,
   todayKey,
 }: OwnerReservationSectionProps) {
+  const { t } = useTranslation('owner');
   const [explicitPitchId, setExplicitPitchId] = useState<string | null>(null);
   const pitch = pitches.find((item) => item.id === explicitPitchId) ?? pitches[0] ?? null;
 
@@ -138,31 +128,29 @@ export function OwnerReservationSection({
     <section aria-labelledby={HEADING_ID} className="mt-lg grid gap-md">
       <SectionHeader
         id={HEADING_ID}
-        title="Nueva reserva"
-        description="Anota una reserva que te llegó por WhatsApp, llamada o en persona. El turno queda confirmado y deja de ofrecerse en la página pública."
+        title={t('reservationForm.title')}
+        description={t('reservationForm.description')}
       />
       {!pitch ? (
-        <p className="m-0 text-md leading-[1.5] text-muted">
-          Agrega una cancha para poder registrar reservas.
-        </p>
+        <p className="m-0 text-md leading-[1.5] text-muted">{t('reservationForm.noPitch')}</p>
       ) : (
         <>
           {pitches.length > 1 ? (
             <div className="max-w-[var(--container-form)]">
               <SelectField
-                label="Cancha"
+                label={t('reservationForm.pitch')}
                 name="reservationPitch"
                 value={pitch.id}
                 onChangeValue={setExplicitPitchId}
                 options={pitches.map((item) => ({
                   value: item.id,
-                  label: `${item.name} · ${sportLabel(item.sportType)}`,
+                  label: `${item.name} · ${sportLabel(item.sportType, t)}`,
                 }))}
               />
             </div>
           ) : (
             <p className="m-0 text-md font-bold leading-[1.5] text-text">
-              {pitch.name} · {sportLabel(pitch.sportType)}
+              {pitch.name} · {sportLabel(pitch.sportType, t)}
             </p>
           )}
           <OwnerReservationForm
@@ -189,6 +177,8 @@ function OwnerReservationForm({
   timeZone: string;
   todayKey: string;
 }) {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   const [date, setDate] = useState(todayKey);
   const [explicitSlot, setExplicitSlot] = useState<string | null>(null);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -231,6 +221,8 @@ function OwnerReservationForm({
   const repeat = watch('repeat');
   const deposit = watch('deposit');
   const depositMinor = deposit.trim() ? parseAmount(deposit) : null;
+  const errorText = (message: string | undefined) =>
+    message ? t(`reservationForm.errors.${message}`, { max: RECURRING_MAX_WEEKS }) : null;
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -258,17 +250,26 @@ function OwnerReservationForm({
         setSkipped(
           series.skipped.map(
             (item) =>
-              `${formatSlotWhen(item.startAt, item.startAt, timeZone)} (${SKIP_REASON_LABEL[item.reason] ?? 'no disponible'})`,
+              `${formatSlotWhen(item.startAt, item.startAt, timeZone, locale)} (${
+                SKIP_REASONS.has(item.reason)
+                  ? t(`reservationForm.skipReason.${item.reason}`)
+                  : t('reservationForm.unavailable')
+              })`,
           ),
         );
         setNotice(
-          `Serie de ${name} creada: ${pitch.name}, ${series.created.length} de ${weekCount} semanas reservadas.`,
+          t('reservationForm.seriesCreated', {
+            name,
+            pitch: pitch.name,
+            created: series.created.length,
+            total: weekCount,
+          }),
         );
         setExplicitSlot(null);
         reset({ ...getValues(), customerName: '', customerPhone: '', notes: '', repeat: false });
       } catch (caught) {
         void availabilityQuery.refetch();
-        setError(describeError(caught, 'No se pudo crear la serie.'));
+        setError(describeError(caught, t('reservationForm.seriesError')));
       }
       return;
     }
@@ -286,11 +287,11 @@ function OwnerReservationForm({
     } catch (caught) {
       // Nothing was created. Refresh the slots so a taken turn shows as occupied.
       void availabilityQuery.refetch();
-      setError(describeError(caught, 'No se pudo crear la reserva.'));
+      setError(describeError(caught, t('reservationForm.createError')));
       return;
     }
 
-    const when = formatSlotWhen(created.startAt, created.endAt, timeZone);
+    const when = formatSlotWhen(created.startAt, created.endAt, timeZone, locale);
     let paymentFailed = false;
     if (depositAmount) {
       try {
@@ -301,15 +302,19 @@ function OwnerReservationForm({
       } catch (caught) {
         paymentFailed = true;
         setError(
-          `La reserva quedó creada, pero no se pudo anotar el anticipo: ${describeError(caught, 'error desconocido')} Regístralo desde la agenda con “Registrar pago”.`,
+          t('reservationForm.depositFailed', {
+            error: describeError(caught, t('reservationForm.unknownError')),
+          }),
         );
       }
     }
 
     setNotice(
-      `Reserva de ${name} creada: ${pitch.name}, ${when}.${
+      `${t('reservationForm.created', { name, pitch: pitch.name, when })}${
         depositAmount && !paymentFailed
-          ? ` Anticipo de ${formatMoneyMinor(depositAmount, currency)} anotado.`
+          ? ` ${t('reservationForm.depositRecorded', {
+              amount: formatMoneyMinor(depositAmount, currency, locale),
+            })}`
           : ''
       }`,
     );
@@ -325,13 +330,13 @@ function OwnerReservationForm({
       noValidate
     >
       <h3 id={`${HEADING_ID}-form`} className="m-0 font-arvo text-md text-text">
-        Datos de la reserva
+        {t('reservationForm.details')}
       </h3>
       <div className="max-w-[var(--container-form)]">
         <AppInput
           type="date"
           name="reservationDate"
-          label="Fecha"
+          label={t('reservationForm.date')}
           required
           min={todayKey}
           max={undefined}
@@ -344,35 +349,38 @@ function OwnerReservationForm({
       </div>
 
       <fieldset className="m-0 grid gap-xs border-0 p-0">
-        <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">Horario</legend>
+        <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">
+          {t('reservationForm.slot')}
+        </legend>
         {availabilityQuery.isLoading ? (
-          <p className="m-0 text-sm leading-[18px] text-muted">Cargando horarios…</p>
+          <p className="m-0 text-sm leading-[18px] text-muted">
+            {t('reservationForm.loadingSlots')}
+          </p>
         ) : availabilityQuery.error && !availabilityQuery.data ? (
           <div className="grid gap-sm">
             <InlineError
-              message={describeError(
-                availabilityQuery.error,
-                'No se pudieron cargar los horarios.',
-              )}
+              message={describeError(availabilityQuery.error, t('reservationForm.slotsLoadError'))}
             />
             <AppButton
               variant="neutral"
               fullWidth={false}
               onPress={() => void availabilityQuery.refetch()}
             >
-              Reintentar
+              {t('reservationForm.retry')}
             </AppButton>
           </div>
         ) : slots.length === 0 ? (
           <p className="m-0 text-md leading-[1.5] text-muted">
-            {pitch.name} no tiene horarios ese día.
+            {t('reservationForm.noSlots', { pitch: pitch.name })}
           </p>
         ) : (
           <div className="grid grid-cols-3 gap-sm sm:grid-cols-4 lg:grid-cols-6">
             {slots.map((slot) => {
               const available = slot.status === 'AVAILABLE';
-              const start = formatTime(slot.startAt, timeZone);
-              const unavailable = SLOT_UNAVAILABLE_LABEL[slot.status] ?? 'no disponible';
+              const start = formatTime(slot.startAt, timeZone, locale);
+              const unavailable = SLOT_UNAVAILABLE_STATUSES.has(slot.status)
+                ? t(`reservationForm.slotStatus.${slot.status}`)
+                : t('reservationForm.unavailable');
               return (
                 <label
                   key={slot.startAt}
@@ -393,7 +401,7 @@ function OwnerReservationForm({
                     onChange={() => setExplicitSlot(slot.startAt)}
                     aria-label={
                       available
-                        ? `${start}, ${formatMoneyMinor(slot.priceMinor, currency)}`
+                        ? `${start}, ${formatMoneyMinor(slot.priceMinor, currency, locale)}`
                         : `${start}, ${unavailable}`
                     }
                     className="sr-only"
@@ -404,8 +412,8 @@ function OwnerReservationForm({
                   <span className="text-xs leading-[1.3] text-muted">
                     {available
                       ? slot.priceMinor > 0
-                        ? formatMoneyMinor(slot.priceMinor, currency)
-                        : 'libre'
+                        ? formatMoneyMinor(slot.priceMinor, currency, locale)
+                        : t('reservationForm.free')
                       : unavailable}
                   </span>
                 </label>
@@ -413,7 +421,7 @@ function OwnerReservationForm({
             })}
           </div>
         )}
-        <InlineError message={formState.errors.slot?.message ?? null} />
+        <InlineError message={errorText(formState.errors.slot?.message)} />
       </fieldset>
 
       <div className="grid max-w-[var(--container-form)] gap-sm sm:grid-cols-2">
@@ -425,7 +433,7 @@ function OwnerReservationForm({
               <AppInput
                 type="text"
                 name="customerName"
-                label="Nombre del cliente"
+                label={t('reservationForm.customerName')}
                 maxLength={120}
                 autoComplete="off"
                 error={Boolean(fieldState.error)}
@@ -433,7 +441,7 @@ function OwnerReservationForm({
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
               />
-              <InlineError message={fieldState.error?.message ?? null} />
+              <InlineError message={errorText(fieldState.error?.message)} />
             </div>
           )}
         />
@@ -444,14 +452,14 @@ function OwnerReservationForm({
             <HintedInput
               type="tel"
               name="customerPhone"
-              label="Teléfono (opcional)"
+              label={t('reservationForm.phone')}
               inputMode="tel"
               autoComplete="off"
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              hint="Ej.: 300 123 4567 o +57 300 123 4567."
-              errorMessage={fieldState.error?.message ?? null}
+              hint={t('reservationForm.phoneHint')}
+              errorMessage={errorText(fieldState.error?.message)}
             />
           )}
         />
@@ -468,7 +476,7 @@ function OwnerReservationForm({
                 checked={field.value}
                 onChange={(event) => field.onChange(event.target.checked)}
               />
-              Repetir cada semana (cancha fija)
+              {t('reservationForm.repeat')}
             </label>
           )}
         />
@@ -480,7 +488,7 @@ function OwnerReservationForm({
               <HintedInput
                 type="number"
                 name="repeatWeeks"
-                label="Semanas (incluye la primera)"
+                label={t('reservationForm.weeks')}
                 inputMode="numeric"
                 min={2}
                 max={RECURRING_MAX_WEEKS}
@@ -488,8 +496,8 @@ function OwnerReservationForm({
                 value={field.value}
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
-                hint="Mismo día y hora cada semana. Los turnos ocupados o bloqueados se omiten y te los mostramos."
-                errorMessage={fieldState.error?.message ?? null}
+                hint={t('reservationForm.weeksHint')}
+                errorMessage={errorText(fieldState.error?.message)}
               />
             )}
           />
@@ -502,20 +510,24 @@ function OwnerReservationForm({
           render={({ field, fieldState }) => (
             <HintedInput
               name="deposit"
-              label={`Anticipo (${currency}, opcional)`}
+              label={t('reservationForm.deposit', { currency })}
               inputMode="decimal"
               autoComplete="off"
               value={field.value}
               disabled={repeat}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              errorMessage={fieldState.error?.message ?? null}
+              errorMessage={errorText(fieldState.error?.message)}
               hint={
                 depositMinor
-                  ? `Se anotará ${formatMoneyMinor(depositMinor, currency)}.`
+                  ? t('reservationForm.willRecord', {
+                      amount: formatMoneyMinor(depositMinor, currency, locale),
+                    })
                   : selectedSlot && selectedSlot.priceMinor > 0
-                    ? `Precio del turno ${formatAmountInput(selectedSlot.priceMinor)}. 17Suit no mueve dinero: solo lo anota.`
-                    : 'Ej.: 30.000. 17Suit no mueve dinero: solo lo anota.'
+                    ? t('reservationForm.slotPriceHint', {
+                        amount: formatAmountInput(selectedSlot.priceMinor),
+                      })
+                    : t('reservationForm.depositHint')
               }
             />
           )}
@@ -525,11 +537,11 @@ function OwnerReservationForm({
           name="method"
           render={({ field }) => (
             <SelectField
-              label="Medio del anticipo"
+              label={t('reservationForm.depositMethod')}
               name="depositMethod"
               value={field.value}
               onChangeValue={field.onChange}
-              options={PAYMENT_METHOD_OPTIONS}
+              options={paymentMethodOptions(t)}
               disabled={!depositMinor || repeat}
             />
           )}
@@ -543,7 +555,7 @@ function OwnerReservationForm({
             <AppInput
               type="text"
               name="notes"
-              label="Nota (opcional)"
+              label={t('reservationForm.note')}
               maxLength={500}
               autoComplete="off"
               value={field.value}
@@ -555,14 +567,18 @@ function OwnerReservationForm({
       </div>
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={isPending || formState.isSubmitting}>
-          {isPending || formState.isSubmitting ? 'Guardando…' : 'Crear reserva'}
+          {isPending || formState.isSubmitting
+            ? t('reservationForm.saving')
+            : t('reservationForm.submit')}
         </AppButton>
       </div>
       <InlineError message={error} />
       <InlineStatus message={notice} />
       {skipped.length > 0 ? (
         <div role="status" className="grid gap-xs text-sm leading-[18px] text-muted">
-          <p className="m-0 font-bold text-text">Semanas omitidas ({skipped.length}):</p>
+          <p className="m-0 font-bold text-text">
+            {t('reservationForm.skippedWeeks', { count: skipped.length })}
+          </p>
           <ul className="m-0 grid gap-0 pl-md">
             {skipped.map((item) => (
               <li key={item}>{item}</li>

@@ -1,22 +1,30 @@
 import type { VenueReservation } from '@/lib/owner-queries';
+import type { Translate } from '@/lib/seven-rc-format';
 import { outstandingMinor } from '@/lib/owner-report';
 
 export type PaymentFilter = 'all' | VenueReservation['paymentStatus'];
 
-export const PAYMENT_FILTER_OPTIONS: ReadonlyArray<{ value: PaymentFilter; label: string }> = [
-  { value: 'all', label: 'Todas' },
-  { value: 'unpaid', label: 'Sin pagar' },
-  { value: 'deposit_paid', label: 'Anticipo pagado' },
-  { value: 'paid', label: 'Pagadas' },
-  { value: 'refunded', label: 'Reembolsadas' },
+const PAYMENT_FILTERS: ReadonlyArray<PaymentFilter> = [
+  'all',
+  'unpaid',
+  'deposit_paid',
+  'paid',
+  'refunded',
 ];
 
-export function isPaymentFilter(value: string): value is PaymentFilter {
-  return PAYMENT_FILTER_OPTIONS.some((option) => option.value === value);
+export function paymentFilterOptions(t: Translate): Array<{ value: PaymentFilter; label: string }> {
+  return PAYMENT_FILTERS.map((value) => ({ value, label: t(`format:payment.filter.${value}`) }));
 }
 
-export function paymentStatusLabel(status: VenueReservation['paymentStatus']): string {
-  return PAYMENT_FILTER_OPTIONS.find((option) => option.value === status)?.label ?? status;
+export function isPaymentFilter(value: string): value is PaymentFilter {
+  return PAYMENT_FILTERS.some((option) => option === value);
+}
+
+export function paymentStatusLabel(
+  status: VenueReservation['paymentStatus'],
+  t: Translate,
+): string {
+  return PAYMENT_FILTERS.includes(status) ? t(`format:payment.filter.${status}`) : status;
 }
 
 /** Reservations matching the payment filter, oldest first. */

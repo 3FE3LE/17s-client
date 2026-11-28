@@ -1,4 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
+import type { MobileT } from './i18n';
 import { usePlayerVenueQuery, type PublicVenue } from './player-queries';
 
 /**
@@ -151,24 +152,24 @@ export function useVenueSnapshot(): VenueSnapshotResult {
  * a deposit makes the booking wait for the venue; no deposit (or a free slot)
  * confirms at once. `priceMinor` is the selected slot's price, when known.
  */
-export function bookingPolicyLine(venue: VenueSnapshot, priceMinor?: number): string {
+export function bookingPolicyLine(venue: VenueSnapshot, t: MobileT, priceMinor?: number): string {
   const { depositPercent, cancellationWindowHours, holdMinutes } = venue;
   if (depositPercent === null || cancellationWindowHours === null) {
-    return 'El complejo puede pedir anticipo para confirmar · el plazo para cancelar queda en tu reserva.';
+    return t('bookingPolicy.unknown');
   }
   const parts: string[] = [];
   if (depositPercent > 0 && priceMinor !== 0) {
-    parts.push(`Anticipo del ${depositPercent} %; el complejo confirma al recibirlo`);
+    parts.push(t('bookingPolicy.deposit', { percent: depositPercent }));
     if (holdMinutes) {
-      parts.push(`te guardamos el horario ${holdMinutes} min`);
+      parts.push(t('bookingPolicy.hold', { minutes: holdMinutes }));
     }
   } else {
-    parts.push('Se confirma al instante');
+    parts.push(t('bookingPolicy.instant'));
   }
   parts.push(
     cancellationWindowHours > 0
-      ? `puedes cancelar hasta ${cancellationWindowHours} h antes`
-      : 'puedes cancelar hasta la hora de inicio',
+      ? t('bookingPolicy.cancelWindow', { hours: cancellationWindowHours })
+      : t('bookingPolicy.cancelUntilStart'),
   );
   return `${parts.join(' · ')}.`;
 }

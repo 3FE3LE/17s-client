@@ -9,6 +9,7 @@ import { AppBadge, AppButton, cx } from '@17suit/ui';
 import { HintedInput, InlineError, InlineStatus } from '@/components/seven-rc-ui';
 import { useUpdateVenueSettingsMutation, type OwnerVenue } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
+import { useTranslation } from '@17suit/i18n/react';
 
 /** Mirrors the server rule (`VENUE_SLUG_PATTERN`, max 60). */
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -29,12 +30,9 @@ const slugSchema = z.object({
   slug: z
     .string()
     .trim()
-    .min(1, 'Escribe el enlace de tu complejo.')
-    .max(SLUG_MAX, `Usa máximo ${SLUG_MAX} caracteres.`)
-    .regex(
-      SLUG_PATTERN,
-      'Usa solo minúsculas, números y guiones, sin guiones al inicio, al final ni repetidos.',
-    ),
+    .min(1, 'publish.errors.slugRequired')
+    .max(SLUG_MAX, 'publish.errors.slugMax')
+    .regex(SLUG_PATTERN, 'publish.errors.slugPattern'),
 });
 type SlugValues = z.infer<typeof slugSchema>;
 
@@ -50,6 +48,7 @@ export interface PublishVenueFormProps {
 }
 
 export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
+  const { t } = useTranslation('venue');
   const mutation = useUpdateVenueSettingsMutation(venue.id);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -72,19 +71,19 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
       setNotice(success);
     } catch (caught) {
       if (input.slug !== undefined && isSlugTaken(caught)) {
-        setError('slug', { message: 'Ese enlace ya lo usa otro complejo. Prueba con otro.' });
+        setError('slug', { message: 'publish.slugTaken' });
         return;
       }
-      setFormError(describeError(caught, 'No se pudo guardar. Intenta de nuevo.'));
+      setFormError(describeError(caught, t('publish.saveFailed')));
     }
   }
 
   const onSubmit = handleSubmit(async (values) => {
     if (values.slug === savedSlug) {
-      setNotice('Ese ya es el enlace de tu complejo.');
+      setNotice(t('publish.sameSlug'));
       return;
     }
-    await save({ slug: values.slug }, 'Guardaste el enlace.');
+    await save({ slug: values.slug }, t('publish.linkSaved'));
   });
 
   async function copyLink() {
@@ -92,10 +91,10 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
     setFormError(null);
     try {
       await navigator.clipboard.writeText(`${window.location.origin}${publicPath}`);
-      setNotice('Enlace copiado.');
+      setNotice(t('publish.linkCopied'));
     } catch {
       setNotice(null);
-      setFormError('No se pudo copiar. Selecciona el enlace y cópialo a mano.');
+      setFormError(t('publish.copyFailed'));
     }
   }
 
@@ -106,15 +105,14 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
       <div className="grid gap-xs">
         <div className="flex flex-wrap items-center gap-sm">
           <h3 id="publicar-title" className="m-0 font-arvo text-md text-text">
-            Página pública
+            {t('publish.title')}
           </h3>
           <AppBadge variant={published ? 'success' : 'neutral'}>
-            {published ? 'Publicada' : 'Sin publicar'}
+            {published ? t('publish.published') : t('publish.unpublished')}
           </AppBadge>
         </div>
         <p className="m-0 max-w-[var(--container-measure)] text-sm leading-[18px] text-muted">
-          Los jugadores ven tus canchas y horarios libres sin crear cuenta. Compártela por WhatsApp
-          o redes.
+          {t('publish.intro')}
         </p>
       </div>
 
@@ -130,29 +128,36 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
             <HintedInput
               type="text"
               name="slug"
-              label="Enlace de tu complejo"
+              label={t('publish.slug.label')}
               autoComplete="off"
               autoCapitalize="none"
               spellCheck={false}
               maxLength={SLUG_MAX}
-              placeholder="cancha-la-70"
-              errorMessage={fieldState.error?.message ?? null}
+              placeholder={t('publish.slug.placeholder')}
+              errorMessage={
+                fieldState.error?.message
+                  ? t(fieldState.error.message, {
+                      max: SLUG_MAX,
+                      defaultValue: fieldState.error.message,
+                    })
+                  : null
+              }
               value={field.value}
               onChangeText={(value) => field.onChange(value.toLowerCase())}
               onBlur={field.onBlur}
-              hint={`Quedará como /c/${slug.trim() || 'tu-enlace'}. Solo minúsculas, números y guiones.`}
+              hint={t('publish.slug.hint', { slug: slug.trim() || t('publish.slug.fallback') })}
             />
           )}
         />
         <AppButton type="submit" variant="neutral" fullWidth={false} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Guardando…' : 'Guardar enlace'}
+          {mutation.isPending ? t('common.saving') : t('publish.saveLink')}
         </AppButton>
       </form>
 
       <div className="grid gap-sm rounded-[var(--radius-md)] border border-border-default p-md">
         <div className="flex flex-wrap items-center justify-between gap-sm">
           <p id="publicar-switch-label" className="m-0 font-bold leading-[1.3] text-text">
-            Mostrar mi página a los jugadores
+            {t('publish.showPage')}
           </p>
           <button
             type="button"
@@ -164,9 +169,7 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
             onClick={() =>
               void save(
                 { isPublished: !published },
-                published
-                  ? 'Despublicaste el complejo. El enlace ya no abre.'
-                  : 'Publicaste el complejo. Ya pueden verlo y reservar.',
+                published ? t('publish.unpublishedDone') : t('publish.publishedDone'),
               )
             }
             className={cx(
@@ -181,22 +184,19 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
                 published ? 'translate-x-7' : 'translate-x-0',
               )}
             />
-            <span className="sr-only">{published ? 'Publicada' : 'Sin publicar'}</span>
+            <span className="sr-only">
+              {published ? t('publish.published') : t('publish.unpublished')}
+            </span>
           </button>
         </div>
         <div id="publicar-switch-help" className="grid gap-xs">
           {published ? (
-            <p className="m-0 text-sm leading-[18px] text-muted">
-              Al despublicar, el enlace deja de abrir (error 404) y no entran reservas nuevas por
-              ahí.
-            </p>
+            <p className="m-0 text-sm leading-[18px] text-muted">{t('publish.unpublishHelp')}</p>
           ) : !savedSlug ? (
-            <p className="m-0 text-sm leading-[18px] text-muted">
-              Primero guarda el enlace de tu complejo.
-            </p>
+            <p className="m-0 text-sm leading-[18px] text-muted">{t('publish.saveSlugFirst')}</p>
           ) : missing.length > 0 ? (
             <>
-              <p className="m-0 text-sm leading-[18px] text-text">Para publicar falta:</p>
+              <p className="m-0 text-sm leading-[18px] text-text">{t('publish.missingIntro')}</p>
               <ul className="m-0 grid list-disc gap-[2px] pl-md text-sm leading-[18px] text-muted">
                 {missing.map((item) => (
                   <li key={item}>{item}</li>
@@ -204,9 +204,7 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
               </ul>
             </>
           ) : (
-            <p className="m-0 text-sm leading-[18px] text-muted">
-              Todo listo. Al publicar, cualquiera con el enlace verá tus horarios.
-            </p>
+            <p className="m-0 text-sm leading-[18px] text-muted">{t('publish.allReady')}</p>
           )}
         </div>
 
@@ -219,7 +217,7 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
               className="min-w-0 break-all text-sm text-text underline underline-offset-4"
             >
               {publicPath}
-              <span className="sr-only"> (vista previa, se abre en otra pestaña)</span>
+              <span className="sr-only">{t('publish.previewSr')}</span>
             </a>
             <AppButton
               type="button"
@@ -227,14 +225,12 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
               fullWidth={false}
               onPress={() => void copyLink()}
             >
-              Copiar enlace
+              {t('publish.copyLink')}
             </AppButton>
           </div>
         ) : null}
         {publicPath && !published ? (
-          <p className="m-0 text-sm leading-[18px] text-muted">
-            Mientras no publiques, la vista previa muestra “no encontrado”.
-          </p>
+          <p className="m-0 text-sm leading-[18px] text-muted">{t('publish.previewNotFound')}</p>
         ) : null}
       </div>
 

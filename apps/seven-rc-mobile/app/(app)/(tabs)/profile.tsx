@@ -1,4 +1,5 @@
 import { useClerk, useUser } from '@clerk/clerk-expo';
+import { useTranslation } from '@17suit/i18n/react';
 import {
   useCurrentUserRoleQuery,
   useSetCurrentUserRoleMutation,
@@ -21,6 +22,7 @@ import { humanizeError } from '../../../lib/error-messages';
 import { feedback } from '../../../lib/feedback';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation('mobile');
   const { signOut } = useClerk();
   const { user } = useUser();
   const queryClient = useQueryClient();
@@ -30,44 +32,42 @@ export default function ProfileScreen() {
   const { mode, setMode, theme } = useAppTheme();
   const [selectorWidth, setSelectorWidth] = useState(0);
 
-  const roleBadgeLabel = role === 'OWNER' ? 'Administras un complejo' : 'Reservas como jugador';
+  const roleBadgeLabel = role === 'OWNER' ? t('profile.badgeOwner') : t('profile.badgePlayer');
   const nextRole = role === 'OWNER' ? 'PLAYER' : 'OWNER';
-  const nextRoleLabel = nextRole === 'OWNER' ? 'Administrar un complejo' : 'Reservar como jugador';
+  const nextRoleLabel = nextRole === 'OWNER' ? t('profile.nextOwner') : t('profile.nextPlayer');
 
   const switchRole = async () => {
     try {
       await setRoleMutation.mutateAsync(nextRole);
       feedback.success(
-        'Modo cambiado',
-        nextRole === 'OWNER' ? 'Ahora administras complejos.' : 'Ahora reservas como jugador.',
+        t('profile.switched'),
+        nextRole === 'OWNER' ? t('profile.nowOwner') : t('profile.nowPlayer'),
       );
       router.replace('/home');
     } catch (error) {
-      feedback.error('No se pudo cambiar el modo', humanizeError(error, 'save'));
+      feedback.error(t('profile.switchFailed'), humanizeError(error, t, 'save'));
     }
   };
 
   const askSwitchRole = () => {
-    const title = '¿Cambiar de modo?';
+    const title = t('profile.askTitle');
     const message =
-      nextRole === 'OWNER'
-        ? 'Verás tus complejos y las reservas que reciben. Tus reservas como jugador se mantienen.'
-        : 'Verás los complejos disponibles y tus reservas. Tus complejos se mantienen.';
+      nextRole === 'OWNER' ? t('profile.askMessageOwner') : t('profile.askMessagePlayer');
     if (Platform.OS === 'web') {
       const confirmFn = (globalThis as { confirm?: (text: string) => boolean }).confirm;
       if (confirmFn?.(`${title}\n\n${message}`)) void switchRole();
       return;
     }
     Alert.alert(title, message, [
-      { text: 'Volver', style: 'cancel' },
-      { text: 'Cambiar', onPress: () => void switchRole() },
+      { text: t('common.back'), style: 'cancel' },
+      { text: t('profile.change'), onPress: () => void switchRole() },
     ]);
   };
 
   const options = [
-    { key: 'system', label: 'Sistema', icon: 'smartphone' },
-    { key: 'dark', label: 'Oscuro', icon: 'moon' },
-    { key: 'light', label: 'Claro', icon: 'sun' },
+    { key: 'system', label: t('profile.themeSystem'), icon: 'smartphone' },
+    { key: 'dark', label: t('profile.themeDark'), icon: 'moon' },
+    { key: 'light', label: t('profile.themeLight'), icon: 'sun' },
   ] as const;
 
   const activeIndex = options.findIndex((item) => item.key === mode);
@@ -88,7 +88,12 @@ export default function ProfileScreen() {
   };
 
   return (
-    <Screen title="Perfil" subtitle="Tu cuenta y preferencias" back={false}>
+    <Screen
+      title={t('profile.title')}
+      subtitle={t('profile.subtitle')}
+      back={false}
+      showLanguageSelect
+    >
       <GapView gap="md">
         {role ? (
           <View style={{ gap: theme.spacing.sm }}>
@@ -100,9 +105,11 @@ export default function ProfileScreen() {
               onPress={askSwitchRole}
               disabled={setRoleMutation.isPending}
               busy={setRoleMutation.isPending}
-              accessibilityLabel={`Cambiar modo: ${nextRoleLabel}`}
+              accessibilityLabel={t('profile.switchA11y', { mode: nextRoleLabel })}
             >
-              {setRoleMutation.isPending ? 'Cambiando…' : `Cambiar modo · ${nextRoleLabel}`}
+              {setRoleMutation.isPending
+                ? t('profile.switching')
+                : t('profile.switchButton', { mode: nextRoleLabel })}
             </AppButton>
           </View>
         ) : null}
@@ -125,7 +132,7 @@ export default function ProfileScreen() {
               marginBottom: theme.spacing.sm,
             }}
           >
-            Tema
+            {t('profile.theme')}
           </Text>
           <View
             onLayout={(event) => setSelectorWidth(event.nativeEvent.layout.width)}
@@ -165,7 +172,7 @@ export default function ProfileScreen() {
                     key={item.key}
                     onPress={() => setMode(item.key)}
                     accessibilityRole="radio"
-                    accessibilityLabel={`Tema ${item.label.toLowerCase()}`}
+                    accessibilityLabel={t('profile.themeA11y', { theme: item.label.toLowerCase() })}
                     accessibilityState={{ checked: isActive }}
                     style={{
                       flex: 1,

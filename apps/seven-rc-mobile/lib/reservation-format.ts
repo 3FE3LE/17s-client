@@ -1,19 +1,22 @@
+import type { MobileT } from './i18n';
 import type { ReservationStatus } from './seven-rc-api';
 
 export type ReservationBadgeVariant = 'neutral' | 'success' | 'destructive' | 'warning' | 'info';
 
-const STATUS_LABELS: Record<ReservationStatus, string> = {
-  pending_confirmation: 'Pendiente de confirmación',
-  confirmed: 'Confirmada',
-  rejected: 'Rechazada',
-  cancelled: 'Cancelada',
-  completed: 'Completada',
-  expired: 'Vencida',
-  no_show: 'No asistió',
+const KNOWN_STATUSES: Record<ReservationStatus, true> = {
+  pending_confirmation: true,
+  confirmed: true,
+  rejected: true,
+  cancelled: true,
+  completed: true,
+  expired: true,
+  no_show: true,
 };
 
-export function reservationStatusLabel(status: string): string {
-  return STATUS_LABELS[status as ReservationStatus] ?? 'Estado desconocido';
+export function reservationStatusLabel(status: string, t: MobileT): string {
+  return status in KNOWN_STATUSES
+    ? t(`reservationStatus.${status}`)
+    : t('reservationStatus.unknown');
 }
 
 export function reservationBadgeVariant(status: string): ReservationBadgeVariant {
@@ -97,10 +100,14 @@ function safeTimeZone(timeZone?: string | null): string | undefined {
 }
 
 /** "sáb, 22 nov" in the venue timezone. */
-export function formatVenueDay(value: string, timeZone?: string | null): string {
+export function formatVenueDay(
+  value: string,
+  timeZone: string | null | undefined,
+  locale: string,
+): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('es-CO', {
+  return new Intl.DateTimeFormat(locale, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -109,10 +116,14 @@ export function formatVenueDay(value: string, timeZone?: string | null): string 
 }
 
 /** "sábado, 22 de noviembre de 2026" in the venue timezone. */
-export function formatVenueLongDay(value: string, timeZone?: string | null): string {
+export function formatVenueLongDay(
+  value: string,
+  timeZone: string | null | undefined,
+  locale: string,
+): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('es-CO', {
+  return new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -122,10 +133,14 @@ export function formatVenueLongDay(value: string, timeZone?: string | null): str
 }
 
 /** "18:00" in the venue timezone. */
-export function formatVenueTime(value: string, timeZone?: string | null): string {
+export function formatVenueTime(
+  value: string,
+  timeZone: string | null | undefined,
+  locale: string,
+): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat('es-CO', {
+  return new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
@@ -133,8 +148,13 @@ export function formatVenueTime(value: string, timeZone?: string | null): string
   }).format(date);
 }
 
-export function formatVenueRange(startAt: string, endAt: string, timeZone?: string | null): string {
-  return `${formatVenueDay(startAt, timeZone)} · ${formatVenueTime(startAt, timeZone)}–${formatVenueTime(endAt, timeZone)}`;
+export function formatVenueRange(
+  startAt: string,
+  endAt: string,
+  timeZone: string | null | undefined,
+  locale: string,
+): string {
+  return `${formatVenueDay(startAt, timeZone, locale)} · ${formatVenueTime(startAt, timeZone, locale)}–${formatVenueTime(endAt, timeZone, locale)}`;
 }
 
 /** `YYYY-MM-DD` of `value` in the venue timezone (device zone if unknown). */
@@ -152,11 +172,11 @@ export function venueDateKey(value: string | Date, timeZone?: string | null): st
   return `${get('year')}-${get('month')}-${get('day')}`;
 }
 
-/** "$120.000" in es-CO for an amount in minor units. Null when zero or the currency is unknown. */
-export function formatMoney(minor: number, currency: string): string | null {
+/** "$120.000" (es-CO) for an amount in minor units. Null when zero or the currency is unknown. */
+export function formatMoney(minor: number, currency: string, locale: string): string | null {
   if (!minor) return null;
   try {
-    return new Intl.NumberFormat('es-CO', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
       // Whole amounts stay "$120.000"; cents show only when there are some.

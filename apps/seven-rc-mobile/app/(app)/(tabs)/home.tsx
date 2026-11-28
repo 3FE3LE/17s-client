@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useTranslation } from '@17suit/i18n/react';
 import { Feather } from '@expo/vector-icons';
 import {
   sevenRcQueryKeys,
@@ -111,6 +112,7 @@ function DisclosureLink({
  */
 export default function HomeScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { user } = useUser();
   const { role, isLoading, error, refetch } = useCurrentUserRoleQuery({
     userId: user?.id ?? null,
@@ -122,7 +124,7 @@ export default function HomeScreen() {
 
   if (isLoading) {
     return (
-      <Screen title="Inicio" subtitle="Cargando tu panel…" back={false}>
+      <Screen title={t('home.title')} subtitle={t('home.loading')} back={false}>
         <GapView gap="md">
           <AppSpinner size={28} />
         </GapView>
@@ -132,18 +134,18 @@ export default function HomeScreen() {
 
   if (error) {
     return (
-      <Screen title="Inicio" back={false}>
+      <Screen title={t('home.title')} back={false}>
         <AppAlert
           variant="destructive"
-          title="No pudimos cargar tu cuenta"
-          description={humanizeError(error, 'load')}
+          title={t('home.accountError')}
+          description={humanizeError(error, t, 'load')}
           action={
             <AppButton
               onPress={() => {
                 void refetch();
               }}
             >
-              Reintentar
+              {t('common.retry')}
             </AppButton>
           }
         />
@@ -156,7 +158,7 @@ export default function HomeScreen() {
 
   // No role yet: `useRoleGate` is redirecting to onboarding.
   return (
-    <Screen title="Inicio" back={false}>
+    <Screen title={t('home.title')} back={false}>
       <AppSpinner size={28} />
     </Screen>
   );
@@ -170,6 +172,7 @@ interface InboxItem {
 
 function OwnerHome() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const queryClient = useQueryClient();
   const { theme } = useAppTheme();
   const venuesQuery = useOwnerVenuesQuery();
@@ -230,15 +233,15 @@ function OwnerHome() {
     .map((query) => query.dataUpdatedAt)
     .filter((updatedAt) => updatedAt > 0);
   const updatedLabel =
-    updateTimes.length > 0 ? formatUpdatedAgo(Math.min(...updateTimes), now) : null;
+    updateTimes.length > 0 ? formatUpdatedAgo(Math.min(...updateTimes), now, t) : null;
 
   const visibleInbox = inbox.slice(0, MAX_INBOX_ITEMS);
   const hiddenInbox = inbox.length - visibleInbox.length;
 
   return (
     <Screen
-      title="Inicio"
-      subtitle="Administras tus complejos"
+      title={t('home.title')}
+      subtitle={t('home.ownerSubtitle')}
       back={false}
       onRefresh={pullRefresh.onRefresh}
       refreshing={pullRefresh.refreshing}
@@ -248,7 +251,9 @@ function OwnerHome() {
         {venues.length > 0 ? (
           <GapView gap="sm">
             <SectionTitle>
-              {inbox.length > 0 ? `Por confirmar (${inbox.length})` : 'Por confirmar'}
+              {inbox.length > 0
+                ? t('home.toConfirmCount', { count: inbox.length })
+                : t('home.toConfirm')}
             </SectionTitle>
             {updatedLabel ? <Caption>{updatedLabel}</Caption> : null}
 
@@ -257,18 +262,18 @@ function OwnerHome() {
             {inboxError ? (
               <AppAlert
                 variant="warning"
-                title="No pudimos cargar algunas solicitudes"
-                description={humanizeError(inboxError, 'load')}
+                title={t('home.inboxError')}
+                description={humanizeError(inboxError, t, 'load')}
                 action={
                   <AppButton variant="warning" onPress={() => void refreshOwnerData()}>
-                    Reintentar
+                    {t('common.retry')}
                   </AppButton>
                 }
               />
             ) : null}
 
             {!inboxLoading && !inboxError && inbox.length === 0 ? (
-              <Caption>No tienes solicitudes pendientes. Las nuevas aparecerán aquí.</Caption>
+              <Caption>{t('home.inboxEmpty')}</Caption>
             ) : null}
 
             {visibleInbox.map((item) => (
@@ -283,17 +288,15 @@ function OwnerHome() {
             ))}
 
             {hiddenInbox > 0 ? (
-              <Caption>
-                {`Y ${hiddenInbox} ${hiddenInbox === 1 ? 'solicitud más' : 'solicitudes más'}. Ábrelas desde cada complejo.`}
-              </Caption>
+              <Caption>{t('home.inboxHidden', { count: hiddenInbox })}</Caption>
             ) : null}
             {venues.length > OWNER_INBOX_MAX_VENUES ? (
-              <Caption>{`Mostramos las solicitudes de tus primeros ${OWNER_INBOX_MAX_VENUES} complejos.`}</Caption>
+              <Caption>{t('home.inboxVenueCap', { count: OWNER_INBOX_MAX_VENUES })}</Caption>
             ) : null}
           </GapView>
         ) : null}
 
-        <SectionTitle>Mis complejos</SectionTitle>
+        <SectionTitle>{t('home.myVenues')}</SectionTitle>
 
         {venuesQuery.isLoading ? (
           <GapView gap="sm">
@@ -305,8 +308,8 @@ function OwnerHome() {
         {venuesQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No pudimos cargar tus complejos"
-            description={humanizeError(venuesQuery.error, 'load')}
+            title={t('home.venuesError')}
+            description={humanizeError(venuesQuery.error, t, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -314,7 +317,7 @@ function OwnerHome() {
                   void venuesQuery.refetch();
                 }}
               >
-                Reintentar
+                {t('common.retry')}
               </AppButton>
             }
           />
@@ -322,10 +325,10 @@ function OwnerHome() {
 
         {!venuesQuery.isLoading && !venuesQuery.error && venues.length === 0 ? (
           <AppEmpty
-            title="Aún no tienes complejos"
-            description="Crea tu primer complejo para habilitar canchas y recibir reservas."
+            title={t('home.noVenuesTitle')}
+            description={t('home.noVenuesDescription')}
             icon={<Feather name="plus" size={20} color={theme.colors.brandPrimary} />}
-            actionLabel="Crear complejo"
+            actionLabel={t('home.createVenue')}
             onAction={() => router.push('/complexes/new')}
           />
         ) : null}
@@ -340,7 +343,7 @@ function OwnerHome() {
 
         {venues.length > 0 ? (
           <AppButton variant="neutral" onPress={() => router.push('/complexes/new')}>
-            Crear complejo
+            {t('home.createVenue')}
           </AppButton>
         ) : null}
       </GapView>
@@ -350,6 +353,7 @@ function OwnerHome() {
 
 function PlayerHome() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { theme } = useAppTheme();
   const iconColor = theme.colors.brandPrimary;
   const [searchText, setSearchText] = useState('');
@@ -395,7 +399,7 @@ function PlayerHome() {
   if (lastPast?.venue) {
     const venue = lastPast.venue;
     emptyAction = {
-      label: `Reservar de nuevo en ${venue.name}`,
+      label: t('home.bookAgain', { venue: venue.name }),
       onPress: () =>
         router.push({
           pathname: '/reservations/new',
@@ -404,7 +408,7 @@ function PlayerHome() {
     };
   } else if (firstVenue) {
     emptyAction = {
-      label: `Ver canchas en ${firstVenue.name}`,
+      label: t('home.seeCourts', { venue: firstVenue.name }),
       onPress: () =>
         router.push({ pathname: '/venues/[venueId]', params: venueRouteParams(firstVenue) }),
     };
@@ -412,22 +416,22 @@ function PlayerHome() {
 
   return (
     <Screen
-      title="Inicio"
-      subtitle="Reservas como jugador"
+      title={t('home.title')}
+      subtitle={t('home.playerSubtitle')}
       back={false}
       onRefresh={pullRefresh.onRefresh}
       refreshing={pullRefresh.refreshing}
     >
       <GapView gap="md">
-        <SectionTitle>Próxima reserva</SectionTitle>
+        <SectionTitle>{t('home.nextReservation')}</SectionTitle>
 
         {myReservationsQuery.isLoading ? <AppSkeleton height={120} rounded="lg" /> : null}
 
         {myReservationsQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No pudimos cargar tus reservas"
-            description={humanizeError(myReservationsQuery.error, 'load')}
+            title={t('home.reservationsError')}
+            description={humanizeError(myReservationsQuery.error, t, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -435,7 +439,7 @@ function PlayerHome() {
                   void myReservationsQuery.refetch();
                 }}
               >
-                Reintentar
+                {t('common.retry')}
               </AppButton>
             }
           />
@@ -451,8 +455,8 @@ function PlayerHome() {
 
         {!myReservationsQuery.isLoading && !myReservationsQuery.error && !nextReservation ? (
           <AppEmpty
-            title="No tienes reservas próximas"
-            description="Elige un complejo y reserva tu cancha."
+            title={t('home.noUpcomingTitle')}
+            description={t('home.noUpcomingDescription')}
             icon={<Feather name="calendar" size={20} color={iconColor} />}
             {...(emptyAction
               ? { actionLabel: emptyAction.label, onAction: emptyAction.onPress }
@@ -460,7 +464,7 @@ function PlayerHome() {
           />
         ) : null}
 
-        <SectionTitle>Complejos</SectionTitle>
+        <SectionTitle>{t('home.venues')}</SectionTitle>
 
         <AppInput
           value={searchText}
@@ -468,8 +472,8 @@ function PlayerHome() {
             setSearchText(value);
             if (value.trim().length === 0) setSearchQuery('');
           }}
-          label="Buscar complejo"
-          placeholder="Nombre o zona"
+          label={t('home.searchLabel')}
+          placeholder={t('home.searchPlaceholder')}
           autoCorrect={false}
           autoCapitalize="none"
           returnKeyType="search"
@@ -479,7 +483,7 @@ function PlayerHome() {
             ? {
                 rightIcon: <Feather name="x" size={16} color={theme.colors.muted} />,
                 onRightIconPress: clearSearch,
-                rightIconAccessibilityLabel: 'Borrar búsqueda',
+                rightIconAccessibilityLabel: t('home.clearSearch'),
               }
             : {})}
         />
@@ -494,8 +498,8 @@ function PlayerHome() {
         {playerVenuesQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No pudimos cargar los complejos"
-            description={humanizeError(playerVenuesQuery.error, 'load')}
+            title={t('home.playerVenuesError')}
+            description={humanizeError(playerVenuesQuery.error, t, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -503,7 +507,7 @@ function PlayerHome() {
                   void playerVenuesQuery.refetch();
                 }}
               >
-                Reintentar
+                {t('common.retry')}
               </AppButton>
             }
           />
@@ -512,16 +516,16 @@ function PlayerHome() {
         {!playerVenuesQuery.isLoading && !playerVenuesQuery.error && playerVenues.length === 0 ? (
           searchQuery ? (
             <AppEmpty
-              title={`Sin resultados para “${searchQuery}”`}
-              description="Prueba con otro nombre o zona."
+              title={t('home.noResults', { query: searchQuery })}
+              description={t('home.noResultsDescription')}
               icon={<Feather name="search" size={20} color={iconColor} />}
-              actionLabel="Ver todos"
+              actionLabel={t('home.seeAll')}
               onAction={clearSearch}
             />
           ) : (
             <AppEmpty
-              title="No hay complejos disponibles"
-              description="Cuando un complejo publique sus canchas, aparecerá aquí."
+              title={t('home.noPlayerVenuesTitle')}
+              description={t('home.noPlayerVenuesDescription')}
               icon={<Feather name="map-pin" size={20} color={iconColor} />}
             />
           )
@@ -532,18 +536,24 @@ function PlayerHome() {
         ))}
         {playerVenues.length > MAX_VENUES ? (
           <DisclosureLink
-            label={showAllVenues ? 'Ver menos' : `Ver los ${playerVenues.length} complejos`}
+            label={
+              showAllVenues
+                ? t('common.seeLess')
+                : t('home.seeAllVenues', { count: playerVenues.length })
+            }
             expanded={showAllVenues}
             onPress={() => setShowAllVenues((current) => !current)}
           />
         ) : null}
 
-        {upcoming.length > 0 || past.length > 0 ? <SectionTitle>Mis reservas</SectionTitle> : null}
+        {upcoming.length > 0 || past.length > 0 ? (
+          <SectionTitle>{t('home.myReservations')}</SectionTitle>
+        ) : null}
 
         {upcoming.length > 0 ? (
           <GapView gap="sm">
             <AppTypography variant="body" color={theme.colors.muted} accessibilityRole="header">
-              {`Próximas (${upcoming.length})`}
+              {t('home.upcomingCount', { count: upcoming.length })}
             </AppTypography>
             {visibleUpcoming.map((reservation) => (
               <ReservationRow
@@ -554,7 +564,11 @@ function PlayerHome() {
             ))}
             {upcoming.length > MAX_UPCOMING ? (
               <DisclosureLink
-                label={showAllUpcoming ? 'Ver menos' : `Ver las ${upcoming.length} próximas`}
+                label={
+                  showAllUpcoming
+                    ? t('common.seeLess')
+                    : t('home.seeAllUpcoming', { count: upcoming.length })
+                }
                 expanded={showAllUpcoming}
                 onPress={() => setShowAllUpcoming((current) => !current)}
               />
@@ -565,7 +579,9 @@ function PlayerHome() {
         {past.length > 0 ? (
           <GapView gap="sm">
             <DisclosureLink
-              label={showHistory ? 'Ocultar historial' : `Ver historial (${past.length})`}
+              label={
+                showHistory ? t('home.hideHistory') : t('home.showHistory', { count: past.length })
+              }
               expanded={showHistory}
               onPress={() => setShowHistory((current) => !current)}
             />
@@ -579,7 +595,7 @@ function PlayerHome() {
                 ))
               : null}
             {showHistory && past.length > MAX_HISTORY ? (
-              <Caption>{`Mostramos tus últimas ${MAX_HISTORY} reservas.`}</Caption>
+              <Caption>{t('home.historyCap', { count: MAX_HISTORY })}</Caption>
             ) : null}
           </GapView>
         ) : null}

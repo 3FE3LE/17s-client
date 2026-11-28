@@ -1,5 +1,5 @@
 import type { VenueReservation } from '@/lib/owner-queries';
-import { dateKeyInTimeZone, minutesBetween } from '@/lib/seven-rc-format';
+import { dateKeyInTimeZone, minutesBetween, type Translate } from '@/lib/seven-rc-format';
 
 /** Statuses whose unpaid balance still counts as owed. Mirrors the server report. */
 const PENDING_STATUSES = new Set(['pending_confirmation', 'confirmed', 'completed']);
@@ -54,12 +54,12 @@ export function countDateKeys(dateFrom: string, dateTo: string): number | null {
   return Math.round((to - from) / 86_400_000) + 1;
 }
 
-/** Spanish validation message for a period, or null when valid. */
-export function validatePeriod(dateFrom: string, dateTo: string): string | null {
+/** Localized validation message for a period, or null when valid. */
+export function validatePeriod(dateFrom: string, dateTo: string, t: Translate): string | null {
   const days = countDateKeys(dateFrom, dateTo);
-  if (days === null) return 'Elige fecha de inicio y de fin.';
-  if (days < 1) return 'La fecha de fin no puede ser anterior a la de inicio.';
-  if (days > REPORT_MAX_DAYS) return `El período no puede superar ${REPORT_MAX_DAYS} días.`;
+  if (days === null) return t('format:period.missing');
+  if (days < 1) return t('format:period.reversed');
+  if (days > REPORT_MAX_DAYS) return t('format:period.tooLong', { max: REPORT_MAX_DAYS });
   return null;
 }
 

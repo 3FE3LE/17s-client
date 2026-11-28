@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton, AppInput } from '@17suit/ui';
+import { useTranslation } from '@17suit/i18n/react';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -12,8 +13,8 @@ import {
   type VenueReservation,
 } from '@/lib/owner-queries';
 import {
-  PAYMENT_KIND_OPTIONS,
-  PAYMENT_METHOD_OPTIONS,
+  paymentKindOptions,
+  paymentMethodOptions,
   formatAmountInput,
   parseAmount,
 } from '@/lib/owner-payment';
@@ -38,13 +39,13 @@ function buildPaymentSchema(paidMinor: number) {
         issues.addIssue({
           code: 'custom',
           path: ['amount'],
-          message: 'Escribe un monto mayor que cero, p. ej. 30.000.',
+          message: 'amountInvalid',
         });
       } else if (values.kind === 'refund' && amount > paidMinor) {
         issues.addIssue({
           code: 'custom',
           path: ['amount'],
-          message: 'La devolución supera lo que el jugador ha pagado.',
+          message: 'refundTooHigh',
         });
       }
     });
@@ -69,10 +70,12 @@ export function PaymentForm({
     note?: string;
   }) => Promise<void>;
 }) {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   const depositDue = Math.max(0, reservation.depositMinor - reservation.paidMinor);
   const balanceDue = Math.max(0, reservation.priceMinor - reservation.paidMinor);
   const payable = PAYABLE_STATUSES.has(reservation.status);
-  const kindOptions = PAYMENT_KIND_OPTIONS.filter((option) =>
+  const kindOptions = paymentKindOptions(t).filter((option) =>
     option.value === 'refund' ? reservation.paidMinor > 0 : payable,
   );
   const dueByKind: Record<ReservationPaymentKind, number> = {
@@ -110,7 +113,7 @@ export function PaymentForm({
         ...(note ? { note } : {}),
       });
     } catch (caught) {
-      setError(describeError(caught, 'No se pudo registrar el pago.'));
+      setError(describeError(caught, t('payment.error')));
     }
   });
 
@@ -118,20 +121,26 @@ export function PaymentForm({
     <form onSubmit={(event) => void submit(event)} className="grid gap-md" noValidate>
       <div className="grid gap-xs">
         <h2 id="pago-title" className="m-0 font-arvo text-lg leading-[1.3]">
-          Registrar pago
+          {t('payment.title')}
         </h2>
         <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
-          {customerLabel(reservation)} · {reservation.pitch.name} ·{' '}
-          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+          {customerLabel(reservation, t)} · {reservation.pitch.name} ·{' '}
+          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone, locale)}
         </p>
         <p className="m-0 text-sm leading-[18px] text-muted">
           {reservation.priceMinor > 0
-            ? `Precio ${formatMoneyMinor(reservation.priceMinor, reservation.currency)}`
-            : 'Precio sin definir'}
+            ? t('payment.price', {
+                amount: formatMoneyMinor(reservation.priceMinor, reservation.currency, locale),
+              })
+            : t('payment.priceUndefined')}
           {reservation.depositMinor > 0
-            ? ` · anticipo ${formatMoneyMinor(reservation.depositMinor, reservation.currency)}`
+            ? ` · ${t('payment.deposit', {
+                amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+              })}`
             : ''}
-          {` · pagado ${formatMoneyMinor(reservation.paidMinor, reservation.currency)}`}
+          {` · ${t('payment.paid', {
+            amount: formatMoneyMinor(reservation.paidMinor, reservation.currency, locale),
+          })}`}
         </p>
       </div>
       <div className="grid gap-sm sm:grid-cols-2">
@@ -140,7 +149,7 @@ export function PaymentForm({
           name="kind"
           render={({ field }) => (
             <SelectField
-              label="Concepto"
+              label={t('payment.kind')}
               name="kind"
               value={field.value}
               onChangeValue={(value) => {
@@ -157,11 +166,11 @@ export function PaymentForm({
           name="method"
           render={({ field }) => (
             <SelectField
-              label="Medio"
+              label={t('payment.method')}
               name="method"
               value={field.value}
               onChangeValue={(value) => field.onChange(value)}
-              options={PAYMENT_METHOD_OPTIONS}
+              options={paymentMethodOptions(t)}
             />
           )}
         />
@@ -173,7 +182,7 @@ export function PaymentForm({
           <div className="grid gap-xs">
             <HintedInput
               name="amount"
-              label={`Monto (${reservation.currency})`}
+              label={t('payment.amount', { currency: reservation.currency })}
               inputMode="decimal"
               autoComplete="off"
               required
@@ -183,15 +192,21 @@ export function PaymentForm({
               onBlur={field.onBlur}
               hint={
                 preview
-                  ? `Se anotará ${formatMoneyMinor(preview, reservation.currency)}.${
+                  ? `${t('payment.willRecord', {
+                      amount: formatMoneyMinor(preview, reservation.currency, locale),
+                    })}${
                       kind === 'deposit' && reservation.status === 'pending_confirmation'
-                        ? ' Si cubre el anticipo, la reserva se confirma.'
+                        ? ` ${t('payment.confirmsOnDeposit')}`
                         : ''
                     }`
-                  : 'Ej.: 30.000. 17Suit no mueve dinero: solo lo anota.'
+                  : t('payment.amountHint')
               }
             />
-            <InlineError message={fieldState.error?.message ?? null} />
+            <InlineError
+              message={
+                fieldState.error?.message ? t(`payment.errors.${fieldState.error.message}`) : null
+              }
+            />
           </div>
         )}
       />
@@ -201,8 +216,8 @@ export function PaymentForm({
         render={({ field }) => (
           <AppInput
             name="note"
-            label="Nota (opcional)"
-            placeholder="Ej.: comprobante Nequi 4821"
+            label={t('payment.note')}
+            placeholder={t('payment.notePlaceholder')}
             maxLength={300}
             autoComplete="off"
             value={field.value}
@@ -214,10 +229,10 @@ export function PaymentForm({
       <InlineError message={error} />
       <div className="flex flex-col-reverse gap-sm sm:flex-row sm:justify-end">
         <AppButton variant="neutral" fullWidth={false} disabled={isPending} onPress={onCancel}>
-          Volver
+          {t('payment.back')}
         </AppButton>
         <AppButton type="submit" fullWidth={false} disabled={isPending}>
-          {isPending ? 'Guardando…' : 'Registrar pago'}
+          {isPending ? t('payment.saving') : t('payment.title')}
         </AppButton>
       </div>
     </form>

@@ -1,11 +1,13 @@
 import type { ComponentProps } from 'react';
 import type { MaterialCommunityIcons } from '@expo/vector-icons';
+import type { MobileT } from './i18n';
 
 type SportIconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 interface SportDefinition {
   value: string;
-  label: string;
+  /** Catalog key (`mobile` namespace) of the display name. */
+  labelKey: string;
   /** Players on the court for a normal match; seeds the capacity field. */
   defaultCapacity: number;
   /** Typical booking length; pádel is played in 90-minute turns. */
@@ -16,56 +18,56 @@ interface SportDefinition {
 export const SPORTS: readonly SportDefinition[] = [
   {
     value: 'futbol-5',
-    label: 'Fútbol 5',
+    labelKey: 'sports.futbol5',
     defaultCapacity: 10,
     defaultDurationMinutes: 60,
     icon: 'soccer',
   },
   {
     value: 'futbol-7',
-    label: 'Fútbol 7',
+    labelKey: 'sports.futbol7',
     defaultCapacity: 14,
     defaultDurationMinutes: 60,
     icon: 'soccer',
   },
   {
     value: 'futbol-8',
-    label: 'Fútbol 8',
+    labelKey: 'sports.futbol8',
     defaultCapacity: 16,
     defaultDurationMinutes: 60,
     icon: 'soccer',
   },
   {
     value: 'futbol-11',
-    label: 'Fútbol 11',
+    labelKey: 'sports.futbol11',
     defaultCapacity: 22,
     defaultDurationMinutes: 90,
     icon: 'soccer',
   },
   {
     value: 'padel',
-    label: 'Pádel',
+    labelKey: 'sports.padel',
     defaultCapacity: 4,
     defaultDurationMinutes: 90,
     icon: 'racquetball',
   },
   {
     value: 'tenis',
-    label: 'Tenis',
+    labelKey: 'sports.tenis',
     defaultCapacity: 4,
     defaultDurationMinutes: 60,
     icon: 'tennis',
   },
   {
     value: 'baloncesto',
-    label: 'Baloncesto',
+    labelKey: 'sports.baloncesto',
     defaultCapacity: 10,
     defaultDurationMinutes: 60,
     icon: 'basketball',
   },
   {
     value: 'voleibol',
-    label: 'Voleibol',
+    labelKey: 'sports.voleibol',
     defaultCapacity: 12,
     defaultDurationMinutes: 60,
     icon: 'volleyball',
@@ -95,10 +97,12 @@ export function findSport(slug?: string | null): SportDefinition | undefined {
 }
 
 /** "futbol-5" -> "Fútbol 5". Unknown slugs are humanized instead of shown raw. */
-export function sportLabel(slug?: string | null): string {
+export function sportLabel(slug: string | null | undefined, t: MobileT): string {
   const known = findSport(slug);
-  if (known) return known.label;
-  if (!slug?.trim() || SLUG_ALIASES[normalize(slug)] === 'multideporte') return 'Multideporte';
+  if (known) return t(known.labelKey);
+  if (!slug?.trim() || SLUG_ALIASES[normalize(slug)] === 'multideporte') {
+    return t('sports.multiSport');
+  }
   const words = slug.trim().replace(/[-_]+/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
@@ -115,11 +119,18 @@ export function sportIcon(slug?: string | null): SportIconName {
   return 'soccer-field';
 }
 
-/** "Fútbol 5 · 10 jugadores · 60 min por turno" */
-export function pitchSummary(pitch: {
-  sportType?: string | null;
-  capacity: number;
-  slotDurationMinutes: number;
-}): string {
-  return `${sportLabel(pitch.sportType)} · ${pitch.capacity} jugadores · ${pitch.slotDurationMinutes} min por turno`;
+/** "Fútbol 5 · 10 jugadores · 60 min por turno" (per locale). */
+export function pitchSummary(
+  pitch: {
+    sportType?: string | null;
+    capacity: number;
+    slotDurationMinutes: number;
+  },
+  t: MobileT,
+): string {
+  return t('sports.pitchSummary', {
+    sport: sportLabel(pitch.sportType, t),
+    count: pitch.capacity,
+    minutes: pitch.slotDurationMinutes,
+  });
 }

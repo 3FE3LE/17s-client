@@ -13,29 +13,33 @@ import {
   SelectField,
   TextAreaField,
 } from '@/components/seven-rc-ui';
-import { asDepositPolicy, DEPOSIT_POLICY_OPTIONS, type DepositPolicy } from '@/lib/deposit-policy';
+import { asDepositPolicy, DEPOSIT_POLICY_VALUES, type DepositPolicy } from '@/lib/deposit-policy';
 import { useUpdateVenueSettingsMutation, type OwnerVenue } from '@/lib/owner-queries';
 import { normalizePhone } from '@/lib/phone';
 import { describeError } from '@/lib/seven-rc-errors';
+import { useTranslation } from '@17suit/i18n/react';
 
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
-const POLICY_VALUES = DEPOSIT_POLICY_OPTIONS.map((option) => option.value) as [
-  DepositPolicy,
-  ...DepositPolicy[],
-];
+const POLICY_VALUES = DEPOSIT_POLICY_VALUES as unknown as [DepositPolicy, ...DepositPolicy[]];
+
+const POLICY_LABEL_KEY: Record<DepositPolicy, string> = {
+  refund: 'depositPolicy.refund',
+  retain: 'depositPolicy.retain',
+  owner_decides: 'depositPolicy.ownerDecides',
+};
 
 function buildSettingsSchema(countryCode: string, hadPhone: boolean) {
   return z
     .object({
       contactPhone: z.string(),
       paymentInstructions: z.string().max(500),
-      depositPercent: intInRange(0, 100, 'Usa un número entero entre 0 y 100.'),
-      holdMinutes: intInRange(5, 1440, 'Usa entre 5 y 1440 minutos (24 h).'),
-      cancellationWindowHours: intInRange(0, 168, 'Usa entre 0 y 168 horas (7 días).'),
+      depositPercent: intInRange(0, 100, 'policyErrors.depositPercent'),
+      holdMinutes: intInRange(5, 1440, 'policyErrors.holdMinutes'),
+      cancellationWindowHours: intInRange(0, 168, 'policyErrors.cancellationWindowHours'),
       lateCancelDeposit: z.enum(POLICY_VALUES),
       noShowDeposit: z.enum(POLICY_VALUES),
       conditionsText: z.string().max(1000),
-      bookingHorizonDays: intInRange(1, 180, 'Usa entre 1 y 180 días.'),
+      bookingHorizonDays: intInRange(1, 180, 'settings.errors.bookingHorizonDays'),
     })
     .superRefine((values, issues) => {
       const phone = normalizePhone(values.contactPhone, countryCode);
@@ -43,13 +47,13 @@ function buildSettingsSchema(countryCode: string, hadPhone: boolean) {
         issues.addIssue({
           code: 'custom',
           path: ['contactPhone'],
-          message: 'Escribe el número con indicativo, p. ej. +57 300 123 4567.',
+          message: 'settings.errors.phoneFormat',
         });
       } else if (!phone && hadPhone) {
         issues.addIssue({
           code: 'custom',
           path: ['contactPhone'],
-          message: 'Deja un teléfono: los jugadores lo usan para pagar o avisar.',
+          message: 'settings.errors.phoneRequired',
         });
       }
     });
@@ -73,6 +77,7 @@ function NumberField({
   step: number;
   hint: string;
 }) {
+  const { t } = useTranslation('venue');
   return (
     <Controller
       control={control}
@@ -86,7 +91,7 @@ function NumberField({
           min={min}
           max={max}
           step={step}
-          errorMessage={fieldState.error?.message ?? null}
+          errorMessage={fieldState.error?.message ? t(fieldState.error.message) : null}
           value={field.value}
           onChangeText={field.onChange}
           onBlur={field.onBlur}
@@ -98,6 +103,11 @@ function NumberField({
 }
 
 export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
+  const { t } = useTranslation('venue');
+  const policyOptions = DEPOSIT_POLICY_VALUES.map((value) => ({
+    value,
+    label: t(POLICY_LABEL_KEY[value]),
+  }));
   const mutation = useUpdateVenueSettingsMutation(venue.id);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -137,19 +147,15 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
         if (phone) setValue('contactPhone', phone);
         const keeping = saved.reservationsKeepingPolicy ?? 0;
         setNotice(
-          keeping > 0
-            ? `Guardaste los ajustes. Las próximas reservas usan las reglas nuevas; ${keeping} ${
-                keeping === 1 ? 'reserva activa conserva' : 'reservas activas conservan'
-              } las condiciones con que se hicieron.`
-            : 'Guardaste los ajustes. Las próximas reservas ya usan estas reglas.',
+          keeping > 0 ? t('settings.savedKeeping', { count: keeping }) : t('settings.saved'),
         );
       } catch (caught) {
-        setFormError(describeError(caught, 'No se pudieron guardar los ajustes.'));
+        setFormError(describeError(caught, t('settings.saveFailed')));
       }
     },
     () => {
       setNotice(null);
-      setFormError('Revisa los campos marcados.');
+      setFormError(t('common.checkFields'));
     },
   );
 
@@ -162,10 +168,10 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
     >
       <div className="grid gap-xs">
         <h3 id="ajustes-title" className="m-0 font-arvo text-md text-text">
-          Ajustes del complejo
+          {t('settings.title')}
         </h3>
         <p className="m-0 max-w-[var(--container-measure)] text-sm leading-[18px] text-muted">
-          Reglas que ven los jugadores al reservar en {venue.name}.
+          {t('settings.subtitle', { name: venue.name })}
         </p>
       </div>
       <div className="grid gap-md md:grid-cols-2">
@@ -176,16 +182,16 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
             <HintedInput
               type="tel"
               name="contactPhone"
-              label="Teléfono o WhatsApp de contacto"
+              label={t('settings.contactPhone.label')}
               autoComplete="tel"
               inputMode="tel"
               spellCheck={false}
-              placeholder="+57 300 123 4567"
-              errorMessage={fieldState.error?.message ?? null}
+              placeholder={t('settings.contactPhone.placeholder')}
+              errorMessage={fieldState.error?.message ? t(fieldState.error.message) : null}
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              hint="Aparece en las reservas pendientes para que el jugador pague o avise."
+              hint={t('settings.contactPhone.hint')}
             />
           )}
         />
@@ -194,58 +200,58 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
           name="paymentInstructions"
           render={({ field }) => (
             <TextAreaField
-              label="Instrucciones de pago"
+              label={t('policyFields.paymentInstructions')}
               name="paymentInstructions"
               value={field.value}
               onChangeValue={field.onChange}
               maxLength={500}
-              placeholder="Ej.: Llave Bre-B @micancha · Nequi 300 123 4567"
-              hint="El jugador las ve mientras su reserva espera el anticipo."
+              placeholder={t('settings.paymentInstructions.placeholder')}
+              hint={t('settings.paymentInstructions.hint')}
             />
           )}
         />
         <NumberField
           control={control}
           name="depositPercent"
-          label="Anticipo (% del precio)"
+          label={t('policyFields.depositPercent')}
           min={0}
           max={100}
           step={1}
           hint={
             depositValue === 0
-              ? 'Con 0 %, cada reserva se confirma al instante, sin pasar por ti.'
-              : 'La reserva queda pendiente hasta que registres el anticipo o la confirmes.'
+              ? t('settings.depositPercent.hintZero')
+              : t('settings.depositPercent.hintPending')
           }
         />
         <NumberField
           control={control}
           name="holdMinutes"
-          label="Minutos para pagar el anticipo"
+          label={t('policyFields.holdMinutes')}
           min={5}
           max={1440}
           step={5}
-          hint="El turno queda apartado este tiempo. Si vence sin anticipo, el horario se libera."
+          hint={t('settings.holdMinutes.hint')}
         />
         <NumberField
           control={control}
           name="cancellationWindowHours"
-          label="Cancelación en línea (horas antes)"
+          label={t('policyFields.cancellationWindowHours')}
           min={0}
           max={168}
           step={1}
-          hint="Hasta cuántas horas antes del turno el jugador puede cancelar sin escribirte."
+          hint={t('settings.cancellationWindowHours.hint')}
         />
         <Controller
           control={control}
           name="lateCancelDeposit"
           render={({ field }) => (
             <SelectField
-              label="Cancelación tardía: anticipo"
+              label={t('policyFields.lateCancelDeposit')}
               name="lateCancelDeposit"
               value={field.value}
               onChangeValue={(value) => field.onChange(asDepositPolicy(value))}
-              options={DEPOSIT_POLICY_OPTIONS}
-              hint="Lo que el jugador lee antes de reservar. La plataforma no mueve dinero: tú lo resuelves."
+              options={policyOptions}
+              hint={t('settings.lateCancelDeposit.hint')}
             />
           )}
         />
@@ -254,12 +260,12 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
           name="noShowDeposit"
           render={({ field }) => (
             <SelectField
-              label="No asistencia: anticipo"
+              label={t('policyFields.noShowDeposit')}
               name="noShowDeposit"
               value={field.value}
               onChangeValue={(value) => field.onChange(asDepositPolicy(value))}
-              options={DEPOSIT_POLICY_OPTIONS}
-              hint="Aplica cuando el jugador no llega y no cancela."
+              options={policyOptions}
+              hint={t('settings.noShowDeposit.hint')}
             />
           )}
         />
@@ -268,29 +274,29 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
           name="conditionsText"
           render={({ field }) => (
             <TextAreaField
-              label="Condiciones adicionales"
+              label={t('policyFields.conditionsText')}
               name="conditionsText"
               value={field.value}
               onChangeValue={field.onChange}
               maxLength={1000}
-              placeholder="Ej.: Llegar 10 min antes. Si llueve, se reprograma sin costo."
-              hint="Texto libre que el jugador ve antes de confirmar."
+              placeholder={t('settings.conditionsText.placeholder')}
+              hint={t('settings.conditionsText.hint')}
             />
           )}
         />
         <NumberField
           control={control}
           name="bookingHorizonDays"
-          label="Reservas con anticipación (días)"
+          label={t('settings.bookingHorizonDays.label')}
           min={1}
           max={180}
           step={1}
-          hint="Hasta cuántos días adelante pueden reservar los jugadores."
+          hint={t('settings.bookingHorizonDays.hint')}
         />
       </div>
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={mutation.isPending || formState.isSubmitting}>
-          {mutation.isPending || formState.isSubmitting ? 'Guardando…' : 'Guardar ajustes'}
+          {mutation.isPending || formState.isSubmitting ? t('common.saving') : t('settings.save')}
         </AppButton>
       </div>
       <InlineError message={formError} />

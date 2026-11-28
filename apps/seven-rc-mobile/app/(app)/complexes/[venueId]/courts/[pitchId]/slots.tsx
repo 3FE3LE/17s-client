@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from '@17suit/i18n/react';
 import { useLocalSearchParams, usePreventRemove, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import type { Pitch } from '@17suit/module-seven-reservations-club/client';
@@ -21,31 +22,17 @@ import { feedback } from '../../../../../../lib/feedback';
 import { confirmDestructive } from '../../../../../../lib/confirm';
 import { Screen } from '../../../../../../components/screen';
 import { FormError } from '../../../../../../components/form-field';
+import type { MobileT } from '../../../../../../lib/i18n';
 
 /** Monday-first display order; `dayOfWeek` stays 0=Sunday per the API. */
 const DAY_ORDER = ['1', '2', '3', '4', '5', '6', '0'] as const;
 const WEEKDAYS = ['1', '2', '3', '4', '5'] as const;
 type DayKey = (typeof DAY_ORDER)[number];
 
-const DAY_LABELS: Record<DayKey, string> = {
-  '1': 'Lunes',
-  '2': 'Martes',
-  '3': 'Miércoles',
-  '4': 'Jueves',
-  '5': 'Viernes',
-  '6': 'Sábado',
-  '0': 'Domingo',
-};
+const dayLabel = (day: DayKey, t: MobileT) => t(`slots.days.${day}`);
 
 /** Same options as court creation so both screens speak one vocabulary. */
-const durationOptions = [
-  { value: '30', label: '30 minutos' },
-  { value: '45', label: '45 minutos' },
-  { value: '60', label: '60 minutos' },
-  { value: '75', label: '75 minutos' },
-  { value: '90', label: '90 minutos' },
-  { value: '120', label: '120 minutos' },
-] as const;
+const DURATION_VALUES = ['30', '45', '60', '75', '90', '120'] as const;
 
 const DEFAULT_OPEN = '10:00';
 const DEFAULT_CLOSE = '22:00';
@@ -74,14 +61,14 @@ function fromMinutes(total: number) {
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-function closeLabel(value: string) {
-  return value === MIDNIGHT ? '00:00 (medianoche)' : value;
+function closeLabel(value: string, t: MobileT) {
+  return value === MIDNIGHT ? t('slots.midnight') : value;
 }
 
-function hoursLabel(day: DayHours) {
+function hoursLabel(day: DayHours, t: MobileT) {
   return day.open
     ? `${day.openTime}–${day.closeTime === MIDNIGHT ? '24:00' : day.closeTime}`
-    : 'Cerrado';
+    : t('slots.closed');
 }
 
 function weekFromPitch(pitch: Pitch): Week {
@@ -111,12 +98,12 @@ function serialize(week: Week, duration: string) {
   });
 }
 
-function dayError(day: DayHours): string | null {
+function dayError(day: DayHours, t: MobileT): string | null {
   if (!day.open) return null;
   const open = toMinutes(day.openTime, 'open');
   const close = toMinutes(day.closeTime, 'close');
-  if (open === null || close === null) return 'Elige una hora de apertura y una de cierre.';
-  if (close <= open) return 'El cierre debe ser después de la apertura.';
+  if (open === null || close === null) return t('slots.errorPickTimes');
+  if (close <= open) return t('slots.errorCloseAfterOpen');
   return null;
 }
 
@@ -124,7 +111,7 @@ function dayError(day: DayHours): string | null {
  * Times on a grid that lines up with the turn length: 30-minute steps for
  * durations that are multiples of 30, else 15. Off-grid saved values are kept.
  */
-function timeOptions(step: number, field: 'open' | 'close', current: string) {
+function timeOptions(step: number, field: 'open' | 'close', current: string, t: MobileT) {
   const values: string[] = [];
   const startAt = field === 'open' ? 0 : step;
   const endAt = field === 'open' ? 24 * 60 - step : 24 * 60;
@@ -137,7 +124,7 @@ function timeOptions(step: number, field: 'open' | 'close', current: string) {
   }
   return values.map((value) => ({
     value,
-    label: field === 'close' ? closeLabel(value) : value,
+    label: field === 'close' ? closeLabel(value, t) : value,
   }));
 }
 
@@ -153,6 +140,7 @@ function useRouteIds() {
 
 export default function PitchSlotsScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { venueId, pitchId } = useRouteIds();
   const pitchesQuery = useOwnerVenuePitchesQuery(venueId);
   const pitch = useMemo(
@@ -162,18 +150,18 @@ export default function PitchSlotsScreen() {
 
   // The form mounts only once the pitch is loaded, so its initial state is the
   // pitch's real configuration. Saving a default week over a configured pitch
-  // is impossible because Guardar does not exist until then.
+  // is impossible because Save does not exist until then.
   if (pitch && venueId) {
     return <PitchSlotsForm key={pitch.id} pitch={pitch} venueId={venueId} />;
   }
 
-  const subtitle = 'Define qué días y a qué horas abre la cancha.';
+  const subtitle = t('slots.subtitle');
 
   // A court created seconds ago arrives with the post-mutation refetch.
   if (pitchesQuery.isLoading || (!pitchesQuery.error && pitchesQuery.isFetching)) {
     return (
-      <Screen title="Horarios" subtitle={subtitle}>
-        <View accessibilityLabel="Cargando horarios de la cancha" accessible>
+      <Screen title={t('slots.title')} subtitle={subtitle}>
+        <View accessibilityLabel={t('slots.loadingA11y')} accessible>
           <GapView gap="md">
             <AppSkeleton height={56} rounded="md" />
             <AppSkeleton height={336} rounded="md" />
@@ -185,11 +173,13 @@ export default function PitchSlotsScreen() {
 
   if (pitchesQuery.error) {
     return (
-      <Screen title="Horarios" subtitle={subtitle}>
+      <Screen title={t('slots.title')} subtitle={subtitle}>
         <AppAlert
           variant="warning"
-          title="No pudimos cargar los horarios"
-          description={`${humanizeError(pitchesQuery.error, 'load')} No guardes cambios hasta ver la configuración actual.`}
+          title={t('slots.loadError')}
+          description={t('slots.loadErrorDescription', {
+            error: humanizeError(pitchesQuery.error, t, 'load'),
+          })}
           action={
             <AppButton
               variant="warning"
@@ -198,7 +188,7 @@ export default function PitchSlotsScreen() {
                 void pitchesQuery.refetch();
               }}
             >
-              {pitchesQuery.isFetching ? 'Reintentando…' : 'Reintentar'}
+              {pitchesQuery.isFetching ? t('slots.retrying') : t('common.retry')}
             </AppButton>
           }
         />
@@ -207,18 +197,18 @@ export default function PitchSlotsScreen() {
   }
 
   return (
-    <Screen title="Horarios" subtitle={subtitle}>
+    <Screen title={t('slots.title')} subtitle={subtitle}>
       <GapView gap="md">
         <AppAlert
           variant="warning"
-          title="No encontramos esta cancha"
-          description="Puede que la hayan eliminado. Vuelve al complejo y elígela otra vez."
+          title={t('slots.notFoundTitle')}
+          description={t('slots.notFoundDescription')}
         />
         <AppButton
           variant="neutral"
           onPress={() => router.replace(venueId ? `/complexes/${venueId}` : '/home')}
         >
-          Volver al complejo
+          {t('slots.backToVenue')}
         </AppButton>
       </GapView>
     </Screen>
@@ -232,6 +222,7 @@ interface PitchSlotsFormProps {
 
 function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { theme } = useAppTheme();
 
   // Captured on mount: a background refetch must not move the "unsaved changes" baseline.
@@ -254,15 +245,15 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
   const errors = useMemo(() => {
     const result: Partial<Record<DayKey, string>> = {};
     for (const day of DAY_ORDER) {
-      const message = dayError(week[day]);
+      const message = dayError(week[day], t);
       if (message) result[day] = message;
     }
     return result;
-  }, [week]);
+  }, [week, t]);
   const hasErrors = Object.keys(errors).length > 0;
   const openDays = DAY_ORDER.filter((day) => week[day].open);
 
-  // Back gesture, Android Back and Cancelar all land here while there are edits.
+  // Back gesture, Android Back and Cancel all land here while there are edits.
   const isSaving = configureMutation.isPending;
   const disablePrevention = usePreventRemove((isDirty || isSaving) && !leaving, ({ repeat }) => {
     // The request is already sent, so "discard" would be a lie. Stay until it settles.
@@ -273,24 +264,24 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
     };
     if (Platform.OS === 'web') {
       const confirmFn = (globalThis as { confirm?: (text: string) => boolean }).confirm;
-      if (confirmFn?.('¿Salir sin guardar? Perderás los cambios en los horarios.')) discard();
+      if (confirmFn?.(`${t('slots.leaveTitle')} ${t('slots.leaveMessage')}`)) discard();
       return;
     }
-    Alert.alert('¿Salir sin guardar?', 'Perderás los cambios en los horarios.', [
-      { text: 'Seguir editando', style: 'cancel' },
-      { text: 'Descartar cambios', style: 'destructive', onPress: discard },
+    Alert.alert(t('slots.leaveTitle'), t('slots.leaveMessage'), [
+      { text: t('slots.keepEditing'), style: 'cancel' },
+      { text: t('slots.discard'), style: 'destructive', onPress: discard },
     ]);
   });
 
   // A legacy duration outside the preset list must still show as selected.
   const durationSelectOptions = useMemo(() => {
-    const options: { value: string; label: string }[] = [...durationOptions];
-    if (!options.some((option) => option.value === slotDurationMinutes)) {
-      options.push({ value: slotDurationMinutes, label: `${slotDurationMinutes} minutos` });
-      options.sort((a, b) => Number(a.value) - Number(b.value));
+    const values: string[] = [...DURATION_VALUES];
+    if (!values.includes(slotDurationMinutes)) {
+      values.push(slotDurationMinutes);
+      values.sort((a, b) => Number(a) - Number(b));
     }
-    return options;
-  }, [slotDurationMinutes]);
+    return values.map((value) => ({ value, label: t('common.minutes', { minutes: value }) }));
+  }, [slotDurationMinutes, t]);
 
   const updateDay = (day: DayKey, patch: Partial<DayHours>) => {
     setSaveError(null);
@@ -329,13 +320,13 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
           closeTime: week[day].closeTime,
         })),
       });
-      feedback.success('Horarios guardados', 'La cancha quedó configurada.');
+      feedback.success(t('slots.savedTitle'), t('slots.savedMessage'));
       setLeaving(true);
       disablePrevention();
       // Back to the complex already on the stack, instead of a second copy of it.
       router.dismissTo(`/complexes/${venueId}`);
     } catch (error) {
-      setSaveError(humanizeError(error, 'save'));
+      setSaveError(humanizeError(error, t, 'save'));
     }
   };
 
@@ -345,7 +336,7 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
     if (hasErrors) {
       const firstWithError = DAY_ORDER.find((day) => errors[day]);
       if (firstWithError) setExpanded(firstWithError);
-      setSaveError('Revisa los días en rojo: el cierre debe ser después de la apertura.');
+      setSaveError(t('slots.reviewDays'));
       return;
     }
 
@@ -354,10 +345,10 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
     if (openDays.length === 0) {
       confirmDestructive(
         {
-          title: '¿Dejar la cancha sin horarios?',
-          message: 'Nadie podrá reservar esta cancha hasta que abras al menos un día.',
-          confirmText: 'Guardar sin horarios',
-          cancelText: 'Seguir editando',
+          title: t('slots.noHoursTitle'),
+          message: t('slots.noHoursMessage'),
+          confirmText: t('slots.saveNoHours'),
+          cancelText: t('slots.keepEditing'),
         },
         () => void save(),
       );
@@ -367,10 +358,12 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
     if (removedDays.length > 0) {
       confirmDestructive(
         {
-          title: '¿Cerrar estos días?',
-          message: `${removedDays.map((day) => DAY_LABELS[day]).join(', ')} ya no aceptarán reservas nuevas. Las reservas existentes se mantienen.`,
-          confirmText: 'Cerrar y guardar',
-          cancelText: 'Seguir editando',
+          title: t('slots.closeDaysTitle'),
+          message: t('slots.closeDaysMessage', {
+            days: removedDays.map((day) => dayLabel(day, t)).join(', '),
+          }),
+          confirmText: t('slots.closeAndSave'),
+          cancelText: t('slots.keepEditing'),
         },
         () => void save(),
       );
@@ -385,8 +378,8 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
 
   return (
     <Screen
-      title="Horarios"
-      subtitle={`${pitch.name}: toca un día para cambiar sus horas.`}
+      title={t('slots.title')}
+      subtitle={t('slots.formSubtitle', { name: pitch.name })}
       footer={
         <GapView gap="sm">
           <FormError message={saveError} />
@@ -396,17 +389,17 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
             busy={configureMutation.isPending}
           >
             {configureMutation.isPending
-              ? 'Guardando…'
+              ? t('slots.saving')
               : isDirty
-                ? 'Guardar horarios'
-                : 'Sin cambios'}
+                ? t('slots.save')
+                : t('slots.noChanges')}
           </AppButton>
           <AppButton
             variant="neutral"
             onPress={() => router.back()}
             disabled={configureMutation.isPending}
           >
-            Cancelar
+            {t('common.cancel')}
           </AppButton>
         </GapView>
       }
@@ -416,13 +409,13 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
           value={slotDurationMinutes}
           onChangeValue={setSlotDurationMinutes}
           options={durationSelectOptions}
-          label="Duración por turno"
-          placeholder="Seleccionar duración"
+          label={t('slots.durationLabel')}
+          placeholder={t('slots.durationPlaceholder')}
         />
 
         <GapView gap="sm">
           <AppTypography variant="subtitle2" accessibilityRole="header">
-            Semana
+            {t('slots.week')}
           </AppTypography>
           <View
             style={{
@@ -468,9 +461,9 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                       }}
                       accessibilityRole="button"
                       accessibilityState={{ expanded: isExpanded }}
-                      accessibilityLabel={`${DAY_LABELS[day]}, ${hoursLabel(hours)}`}
+                      accessibilityLabel={`${dayLabel(day, t)}, ${hoursLabel(hours, t)}`}
                       accessibilityHint={
-                        hours.open ? 'Muestra las horas de este día' : 'Abre este día'
+                        hours.open ? t('slots.dayShowHint') : t('slots.dayOpenHint')
                       }
                       style={({ pressed }) => ({
                         flex: 1,
@@ -491,7 +484,7 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                           fontSize: bodyType.fontSize,
                         }}
                       >
-                        {DAY_LABELS[day]}
+                        {dayLabel(day, t)}
                       </Text>
                       <Text
                         style={{
@@ -506,7 +499,7 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                           fontVariant: ['tabular-nums'],
                         }}
                       >
-                        {hoursLabel(hours)}
+                        {hoursLabel(hours, t)}
                       </Text>
                       {hours.open ? (
                         <Feather
@@ -519,7 +512,7 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                     <Switch
                       value={hours.open}
                       onValueChange={(value) => toggleDay(day, value)}
-                      accessibilityLabel={`${DAY_LABELS[day]} abierto`}
+                      accessibilityLabel={t('slots.dayOpenA11y', { day: dayLabel(day, t) })}
                       trackColor={{ true: theme.colors.brandPrimary, false: theme.grayscale[3] }}
                       style={{ marginLeft: theme.spacing.sm }}
                     />
@@ -538,10 +531,10 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                           <AppSelect
                             value={hours.openTime}
                             onChangeValue={(value) => updateDay(day, { openTime: value })}
-                            options={timeOptions(step, 'open', hours.openTime)}
-                            label="Abre"
-                            placeholder="Hora"
-                            searchPlaceholder="Buscar hora, ej. 08:00"
+                            options={timeOptions(step, 'open', hours.openTime, t)}
+                            label={t('slots.opens')}
+                            placeholder={t('slots.timePlaceholder')}
+                            searchPlaceholder={t('slots.searchOpen')}
                             error={Boolean(error)}
                           />
                         </View>
@@ -549,10 +542,10 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                           <AppSelect
                             value={hours.closeTime}
                             onChangeValue={(value) => updateDay(day, { closeTime: value })}
-                            options={timeOptions(step, 'close', hours.closeTime)}
-                            label="Cierra"
-                            placeholder="Hora"
-                            searchPlaceholder="Buscar hora, ej. 22:00"
+                            options={timeOptions(step, 'close', hours.closeTime, t)}
+                            label={t('slots.closes')}
+                            placeholder={t('slots.timePlaceholder')}
+                            searchPlaceholder={t('slots.searchClose')}
                             error={Boolean(error)}
                           />
                         </View>
@@ -561,9 +554,7 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
                         <FormError message={error} />
                       ) : (
                         <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
-                          {turns === 1
-                            ? `1 turno de ${duration} min.`
-                            : `${turns} turnos de ${duration} min.`}
+                          {t('slots.turns', { count: turns, minutes: duration })}
                         </Text>
                       )}
                     </View>
@@ -577,18 +568,21 @@ function PitchSlotsForm({ pitch, venueId }: PitchSlotsFormProps) {
         <GapView gap="sm">
           <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
             {presetSource
-              ? `Copiar ${presetHours.openTime}–${closeLabel(presetHours.closeTime)} (${DAY_LABELS[presetSource]}) a:`
-              : `Abrir de ${DEFAULT_OPEN} a ${DEFAULT_CLOSE}:`}
+              ? t('slots.copyHours', {
+                  hours: `${presetHours.openTime}–${closeLabel(presetHours.closeTime, t)}`,
+                  day: dayLabel(presetSource, t),
+                })
+              : t('slots.openFromTo', { open: DEFAULT_OPEN, close: DEFAULT_CLOSE })}
           </Text>
           <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
             <View style={{ flex: 1 }}>
               <AppButton variant="neutral" onPress={() => applyPreset(WEEKDAYS)}>
-                Lunes a viernes
+                {t('slots.weekdays')}
               </AppButton>
             </View>
             <View style={{ flex: 1 }}>
               <AppButton variant="neutral" onPress={() => applyPreset(DAY_ORDER)}>
-                Todos los días
+                {t('slots.everyDay')}
               </AppButton>
             </View>
           </View>

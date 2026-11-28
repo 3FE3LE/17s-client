@@ -1,3 +1,4 @@
+import { useTranslation } from '@17suit/i18n/react';
 import {
   sevenRcQueryKeys,
   useCurrentUserRoleQuery,
@@ -48,6 +49,7 @@ function byStart(a: VenueReservation, b: VenueReservation) {
  */
 export default function VenueDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const params = useLocalSearchParams<{ venueId?: string | string[] }>();
   const venueId = Array.isArray(params.venueId)
     ? (params.venueId[0] ?? null)
@@ -60,7 +62,7 @@ export default function VenueDetailScreen() {
 
   if (isLoading || !user) {
     return (
-      <Screen title="Complejo">
+      <Screen title={t('common.venue')}>
         <GapView gap="sm">
           <AppSkeleton height={44} rounded="md" />
           <AppSkeleton height={120} rounded="lg" />
@@ -72,12 +74,9 @@ export default function VenueDetailScreen() {
 
   if (role !== 'OWNER' || !venueId) {
     return (
-      <Screen
-        title="Complejo"
-        subtitle="Solo las cuentas que administran complejos pueden ver esta pantalla."
-      >
+      <Screen title={t('common.venue')} subtitle={t('venueOwner.ownersOnly')}>
         <GapView gap="md">
-          <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
+          <AppButton onPress={() => router.replace('/home')}>{t('common.backHome')}</AppButton>
         </GapView>
       </Screen>
     );
@@ -88,6 +87,7 @@ export default function VenueDetailScreen() {
 
 function OwnerVenueDetail({ venueId }: { venueId: string }) {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const queryClient = useQueryClient();
   const { theme } = useAppTheme();
   const iconColor = theme.colors.brandPrimary;
@@ -151,7 +151,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
       sections.upcoming.length +
       sections.history.length >
     0;
-  const updatedLabel = formatUpdatedAgo(reservationsQuery.dataUpdatedAt, now);
+  const updatedLabel = formatUpdatedAgo(reservationsQuery.dataUpdatedAt, now, t);
 
   function renderReservation(reservation: VenueReservation) {
     return (
@@ -179,8 +179,8 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
 
   return (
     <Screen
-      title={venue?.name ?? 'Complejo'}
-      subtitle={updatedLabel ?? 'Canchas y reservas del complejo'}
+      title={venue?.name ?? t('common.venue')}
+      subtitle={updatedLabel ?? t('venueOwner.subtitle')}
       onRefresh={pullRefresh.onRefresh}
       refreshing={pullRefresh.refreshing}
     >
@@ -189,15 +189,15 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
         {!timeZone && !venuesQuery.isFetching ? (
           <AppAlert
             variant="warning"
-            title="No pudimos cargar este complejo"
+            title={t('venueOwner.loadError')}
             description={
               venuesQuery.error
-                ? humanizeError(venuesQuery.error, 'load')
-                : 'No lo encontramos entre tus complejos.'
+                ? humanizeError(venuesQuery.error, t, 'load')
+                : t('venueOwner.notFound')
             }
             action={
               <AppButton variant="warning" onPress={() => void venuesQuery.refetch()}>
-                Reintentar
+                {t('common.retry')}
               </AppButton>
             }
           />
@@ -213,8 +213,8 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
         {reservationsQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No pudimos cargar las reservas"
-            description={humanizeError(reservationsQuery.error, 'load')}
+            title={t('venueOwner.reservationsError')}
+            description={humanizeError(reservationsQuery.error, t, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -222,7 +222,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
                   void reservationsQuery.refetch();
                 }}
               >
-                Reintentar
+                {t('common.retry')}
               </AppButton>
             }
           />
@@ -231,15 +231,15 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
         {timeZone && !loadingAgenda && !reservationsQuery.error ? (
           hasAnyReservation ? (
             <GapView gap="lg">
-              {renderSection('Por confirmar', sections.pending)}
-              {renderSection('Hoy', sections.today)}
-              {renderSection('Próximas', sections.upcoming)}
-              {renderSection('Historial reciente', sections.history)}
+              {renderSection(t('venueOwner.sectionPending'), sections.pending)}
+              {renderSection(t('venueOwner.sectionToday'), sections.today)}
+              {renderSection(t('venueOwner.sectionUpcoming'), sections.upcoming)}
+              {renderSection(t('venueOwner.sectionHistory'), sections.history)}
             </GapView>
           ) : (
             <AppEmpty
-              title="Aún no hay reservas"
-              description="Aquí verás primero las reservas por confirmar, y luego las de hoy, las próximas y las de los últimos 30 días."
+              title={t('venueOwner.noReservationsTitle')}
+              description={t('venueOwner.noReservationsDescription')}
               icon={<Feather name="calendar" size={20} color={iconColor} />}
             />
           )
@@ -247,7 +247,9 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
 
         <AppSeparator />
         <AppTypography variant="subtitle2" accessibilityRole="header">
-          {pitches.length > 0 ? `Canchas (${pitches.length})` : 'Canchas'}
+          {pitches.length > 0
+            ? t('venueOwner.courtsCount', { count: pitches.length })
+            : t('venueOwner.courts')}
         </AppTypography>
 
         {pitchesQuery.isLoading ? (
@@ -260,8 +262,8 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
         {pitchesQuery.error ? (
           <AppAlert
             variant="warning"
-            title="No pudimos cargar las canchas"
-            description={humanizeError(pitchesQuery.error, 'load')}
+            title={t('venueOwner.courtsError')}
+            description={humanizeError(pitchesQuery.error, t, 'load')}
             action={
               <AppButton
                 variant="warning"
@@ -269,7 +271,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
                   void pitchesQuery.refetch();
                 }}
               >
-                Reintentar
+                {t('common.retry')}
               </AppButton>
             }
           />
@@ -277,10 +279,10 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
 
         {!pitchesQuery.isLoading && !pitchesQuery.error && pitches.length === 0 ? (
           <AppEmpty
-            title="Este complejo aún no tiene canchas"
-            description="Crea la primera cancha para empezar a recibir reservas."
+            title={t('venueOwner.noCourtsTitle')}
+            description={t('venueOwner.noCourtsDescription')}
             icon={<Feather name="plus" size={20} color={iconColor} />}
-            actionLabel="Crear cancha"
+            actionLabel={t('venueOwner.createCourt')}
             onAction={() => router.push(`/complexes/${venueId}/courts/new`)}
           />
         ) : null}
@@ -294,7 +296,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
                 variant="info"
                 onPress={() => router.push(`/complexes/${venueId}/courts/${pitch.id}/slots`)}
               >
-                Configurar horarios
+                {t('venueOwner.configureSlots')}
               </AppButton>
             }
           >
@@ -307,7 +309,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
                 importantForAccessibility="no"
               />
               <AppTypography variant="body" color={theme.colors.muted} style={{ flex: 1 }}>
-                {pitchSummary(pitch)}
+                {pitchSummary(pitch, t)}
               </AppTypography>
             </View>
           </AppCard>
@@ -318,7 +320,7 @@ function OwnerVenueDetail({ venueId }: { venueId: string }) {
             variant="neutral"
             onPress={() => router.push(`/complexes/${venueId}/courts/new`)}
           >
-            Crear cancha
+            {t('venueOwner.createCourt')}
           </AppButton>
         ) : null}
       </GapView>

@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signInSchema, type SignInValues } from '@17suit/core';
 import { useOAuth, useSignIn } from '@clerk/clerk-expo';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, AppDivider, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -16,6 +17,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function SignInScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { isLoaded, signIn, setActive } = useSignIn();
   const { startOAuthFlow } = useOAuth({ strategy: 'oauth_google' });
   const [formError, setFormError] = useState<string | null>(null);
@@ -36,9 +38,9 @@ export default function SignInScreen() {
         return;
       }
 
-      setFormError('Tu cuenta requiere un paso adicional de verificación para iniciar sesión.');
+      setFormError(t('auth.signIn.needsVerification'));
     } catch (err) {
-      setFormError(humanizeClerkError(err, 'No pudimos iniciar sesión. Inténtalo de nuevo.'));
+      setFormError(humanizeClerkError(err, t('auth.signIn.failed'), t));
     }
   });
 
@@ -51,7 +53,7 @@ export default function SignInScreen() {
         router.replace('/');
       }
     } catch {
-      setFormError('No pudimos iniciar sesión con Google. Inténtalo de nuevo.');
+      setFormError(t('auth.signIn.googleFailed'));
     }
   };
 
@@ -60,11 +62,11 @@ export default function SignInScreen() {
       back={false}
       showLanguageSelect
       title="Seven Reservations Club"
-      subtitle="Inicia sesión para reservar o administrar tus canchas."
+      subtitle={t('auth.signIn.subtitle')}
     >
       <GapView gap="sm">
         <AppButton variant="neutral" onPress={handleGoogleSignIn}>
-          Continuar con Google
+          {t('auth.signIn.google')}
         </AppButton>
 
         <AppDivider />
@@ -74,12 +76,12 @@ export default function SignInScreen() {
           name="email"
           render={({ field, fieldState }) => (
             <FormField
-              label="Correo"
+              label={t('auth.email')}
               kind="email"
               value={field.value}
               onChangeText={field.onChange}
-              placeholder="tu@correo.com"
-              error={authErrorText(fieldState.error?.message)}
+              placeholder={t('auth.emailPlaceholder')}
+              error={authErrorText(fieldState.error?.message, t)}
               returnKeyType="next"
             />
           )}
@@ -89,11 +91,11 @@ export default function SignInScreen() {
           name="password"
           render={({ field, fieldState }) => (
             <FormField
-              label="Contraseña"
+              label={t('auth.password')}
               kind="password"
               value={field.value}
               onChangeText={field.onChange}
-              error={authErrorText(fieldState.error?.message)}
+              error={authErrorText(fieldState.error?.message, t)}
               returnKeyType="go"
               onSubmitEditing={() => {
                 void handlePasswordSignIn();
@@ -103,12 +105,14 @@ export default function SignInScreen() {
         />
         <FormError message={formError} />
         <AppButton onPress={handlePasswordSignIn} disabled={formState.isSubmitting}>
-          {formState.isSubmitting ? 'Iniciando sesión…' : 'Iniciar sesión'}
+          {formState.isSubmitting ? t('auth.signIn.submitting') : t('auth.signIn.submit')}
         </AppButton>
         <View className="mt-2 flex-row flex-wrap items-center gap-4">
-          <AppLinkAction onPress={() => router.push('/sign-up')}>Crear cuenta</AppLinkAction>
+          <AppLinkAction onPress={() => router.push('/sign-up')}>
+            {t('auth.createAccount')}
+          </AppLinkAction>
           <AppLinkAction onPress={() => router.push('/forgot-password')}>
-            Olvidé mi contraseña
+            {t('auth.signIn.forgot')}
           </AppLinkAction>
         </View>
       </GapView>

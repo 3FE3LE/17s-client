@@ -6,6 +6,7 @@ import {
   type ResetPasswordValues,
 } from '@17suit/core';
 import { useSignIn } from '@clerk/clerk-expo';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -17,6 +18,7 @@ import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { isLoaded, signIn, setActive } = useSignIn();
   const [step, setStep] = useState<'request' | 'reset'>('request');
   const [sentTo, setSentTo] = useState('');
@@ -38,7 +40,7 @@ export default function ForgotPasswordScreen() {
       setSentTo(values.email);
       setStep('reset');
     } catch (err) {
-      setFormError(humanizeClerkError(err, 'No pudimos enviar el código. Inténtalo de nuevo.'));
+      setFormError(humanizeClerkError(err, t('auth.forgot.sendFailed'), t));
     }
   });
 
@@ -58,22 +60,20 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
-      setFormError('No pudimos completar el cambio de contraseña. Inténtalo de nuevo.');
+      setFormError(t('auth.forgot.incomplete'));
     } catch (err) {
-      setFormError(
-        humanizeClerkError(err, 'No pudimos cambiar la contraseña. Inténtalo de nuevo.'),
-      );
+      setFormError(humanizeClerkError(err, t('auth.forgot.resetFailed'), t));
     }
   });
 
   return (
     <Screen
       back={false}
-      title="Recuperar contraseña"
+      title={t('auth.forgot.title')}
       subtitle={
         step === 'request'
-          ? 'Te enviaremos un código a tu correo.'
-          : `Escribe el código que enviamos a ${sentTo} y tu nueva contraseña.`
+          ? t('auth.forgot.subtitleRequest')
+          : t('auth.forgot.subtitleReset', { email: sentTo })
       }
     >
       <GapView gap="sm">
@@ -84,22 +84,24 @@ export default function ForgotPasswordScreen() {
               name="email"
               render={({ field, fieldState }) => (
                 <FormField
-                  label="Correo"
+                  label={t('auth.email')}
                   kind="email"
                   value={field.value}
                   onChangeText={field.onChange}
-                  placeholder="tu@correo.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   returnKeyType="send"
                   onSubmitEditing={() => {
                     void sendResetCode();
                   }}
-                  error={authErrorText(fieldState.error?.message)}
+                  error={authErrorText(fieldState.error?.message, t)}
                 />
               )}
             />
             <FormError message={formError} />
             <AppButton onPress={sendResetCode} disabled={requestForm.formState.isSubmitting}>
-              {requestForm.formState.isSubmitting ? 'Enviando…' : 'Enviar código'}
+              {requestForm.formState.isSubmitting
+                ? t('auth.forgot.sending')
+                : t('auth.forgot.send')}
             </AppButton>
           </>
         ) : (
@@ -109,11 +111,11 @@ export default function ForgotPasswordScreen() {
               name="code"
               render={({ field, fieldState }) => (
                 <FormField
-                  label="Código de verificación"
+                  label={t('auth.verificationCode')}
                   kind="code"
                   value={field.value}
                   onChangeText={field.onChange}
-                  error={authErrorText(fieldState.error?.message)}
+                  error={authErrorText(fieldState.error?.message, t)}
                 />
               )}
             />
@@ -122,12 +124,12 @@ export default function ForgotPasswordScreen() {
               name="password"
               render={({ field, fieldState }) => (
                 <FormField
-                  label="Nueva contraseña"
+                  label={t('auth.newPassword')}
                   kind="new-password"
                   value={field.value}
                   onChangeText={field.onChange}
-                  placeholder="Mínimo 8 caracteres"
-                  error={authErrorText(fieldState.error?.message)}
+                  placeholder={t('auth.passwordHint')}
+                  error={authErrorText(fieldState.error?.message, t)}
                 />
               )}
             />
@@ -136,7 +138,7 @@ export default function ForgotPasswordScreen() {
               name="confirmPassword"
               render={({ field, fieldState }) => (
                 <FormField
-                  label="Repetir nueva contraseña"
+                  label={t('auth.repeatNewPassword')}
                   kind="new-password"
                   value={field.value}
                   onChangeText={field.onChange}
@@ -144,18 +146,20 @@ export default function ForgotPasswordScreen() {
                   onSubmitEditing={() => {
                     void resetPassword();
                   }}
-                  error={authErrorText(fieldState.error?.message)}
+                  error={authErrorText(fieldState.error?.message, t)}
                 />
               )}
             />
             <FormError message={formError} />
             <AppButton onPress={resetPassword} disabled={resetForm.formState.isSubmitting}>
-              {resetForm.formState.isSubmitting ? 'Actualizando…' : 'Cambiar contraseña'}
+              {resetForm.formState.isSubmitting
+                ? t('auth.forgot.updating')
+                : t('auth.forgot.submit')}
             </AppButton>
           </>
         )}
 
-        <AppLinkAction onPress={() => router.back()}>Volver a iniciar sesión</AppLinkAction>
+        <AppLinkAction onPress={() => router.back()}>{t('auth.forgot.backToSignIn')}</AppLinkAction>
       </GapView>
     </Screen>
   );

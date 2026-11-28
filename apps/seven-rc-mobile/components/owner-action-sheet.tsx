@@ -1,3 +1,4 @@
+import { useTranslation } from '@17suit/i18n/react';
 import {
   AppButton,
   AppInput,
@@ -23,7 +24,7 @@ import type {
 } from '../lib/owner-queries';
 import { formatMoney, formatVenueRange } from '../lib/reservation-format';
 import {
-  AGENDA_ACTION_LABELS,
+  AGENDA_ACTION_LABEL_KEYS,
   agendaActionsFor,
   paymentKindsFor,
   reservationPlayerName,
@@ -32,17 +33,18 @@ import {
 import { ChoiceChip } from './choice-chip';
 import { FormError } from './form-field';
 
-const KIND_LABELS: Record<ReservationPaymentKind, string> = {
-  deposit: 'Anticipo',
-  balance: 'Saldo',
-  refund: 'Devolución',
+/** Catalog keys (`mobile` namespace). */
+const KIND_LABEL_KEYS: Record<ReservationPaymentKind, string> = {
+  deposit: 'ownerSheet.kinds.deposit',
+  balance: 'ownerSheet.kinds.balance',
+  refund: 'ownerSheet.kinds.refund',
 };
 
-const METHOD_OPTIONS: ReadonlyArray<{ value: ReservationPaymentMethod; label: string }> = [
-  { value: 'transfer', label: 'Transferencia' },
-  { value: 'cash', label: 'Efectivo' },
-  { value: 'card', label: 'Tarjeta' },
-  { value: 'other', label: 'Otro' },
+const METHOD_OPTIONS: ReadonlyArray<{ value: ReservationPaymentMethod; labelKey: string }> = [
+  { value: 'transfer', labelKey: 'ownerSheet.methods.transfer' },
+  { value: 'cash', labelKey: 'ownerSheet.methods.cash' },
+  { value: 'card', labelKey: 'ownerSheet.methods.card' },
+  { value: 'other', labelKey: 'ownerSheet.methods.other' },
 ];
 
 /**
@@ -70,6 +72,7 @@ interface ActionSheetProps {
 
 function ActionSheet({ reservation, timeZone, actions }: ActionSheetProps) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation('mobile');
   const insets = useSafeAreaInsets();
   const now = useNow();
   const [showPayment, setShowPayment] = useState(false);
@@ -87,7 +90,7 @@ function ActionSheet({ reservation, timeZone, actions }: ActionSheetProps) {
         <Pressable
           onPress={close}
           accessibilityRole="button"
-          accessibilityLabel="Cerrar acciones"
+          accessibilityLabel={t('ownerSheet.closeActions')}
           style={{
             position: 'absolute',
             top: 0,
@@ -115,13 +118,14 @@ function ActionSheet({ reservation, timeZone, actions }: ActionSheetProps) {
           >
             <GapView gap="sm">
               <AppTypography variant="subtitle2" accessibilityRole="header">
-                {reservationPlayerName(reservation) ?? 'Jugador sin nombre'}
+                {reservationPlayerName(reservation) ?? t('common.unnamedPlayer')}
               </AppTypography>
               <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
-                {`${reservation.pitch?.name ?? 'Cancha'} · ${formatVenueRange(
+                {`${reservation.pitch?.name ?? t('common.court')} · ${formatVenueRange(
                   reservation.startAt,
                   reservation.endAt,
                   timeZone,
+                  t('intlLocale'),
                 )}`}
               </Text>
 
@@ -135,7 +139,9 @@ function ActionSheet({ reservation, timeZone, actions }: ActionSheetProps) {
               ) : (
                 <>
                   {canRecordPayment ? (
-                    <AppButton onPress={() => setShowPayment(true)}>Registrar pago</AppButton>
+                    <AppButton onPress={() => setShowPayment(true)}>
+                      {t('ownerSheet.recordPayment')}
+                    </AppButton>
                   ) : null}
                   {agendaActions.map((action) => (
                     <AppButton
@@ -144,11 +150,11 @@ function ActionSheet({ reservation, timeZone, actions }: ActionSheetProps) {
                       disabled={isSaving}
                       onPress={() => actions.askAgendaAction(reservation, action, timeZone)}
                     >
-                      {AGENDA_ACTION_LABELS[action]}
+                      {t(AGENDA_ACTION_LABEL_KEYS[action])}
                     </AppButton>
                   ))}
                   <AppButton variant="neutral" onPress={close}>
-                    Cerrar
+                    {t('common.close')}
                   </AppButton>
                 </>
               )}
@@ -175,6 +181,7 @@ function dueAmount(reservation: VenueReservation, kind: ReservationPaymentKind):
   return due > 0 ? String(due / 100) : '';
 }
 
+/** Messages are catalog codes (`ownerSheet.errors.*`), resolved with `t` at render. */
 function buildPaymentSchema(paidMinor: number) {
   return z
     .object({
@@ -188,13 +195,13 @@ function buildPaymentSchema(paidMinor: number) {
         ctx.addIssue({
           code: 'custom',
           path: ['amount'],
-          message: 'Escribe un monto mayor que cero, por ejemplo 30000.',
+          message: 'amountInvalid',
         });
       } else if (values.kind === 'refund' && amountMinor > paidMinor) {
         ctx.addIssue({
           code: 'custom',
           path: ['amount'],
-          message: 'La devolución supera lo que pagó el jugador.',
+          message: 'refundTooHigh',
         });
       }
     });
@@ -203,6 +210,8 @@ type PaymentValues = z.infer<ReturnType<typeof buildPaymentSchema>>;
 
 function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation('mobile');
+  const locale = t('intlLocale');
   const kinds = paymentKindsFor(reservation, now);
   const [error, setError] = useState<string | null>(null);
   const initialKind: ReservationPaymentKind = !kinds.includes('deposit')
@@ -229,15 +238,16 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
   const submit = handleSubmit((values) => {
     setError(null);
     const amountMinor = parseMoneyMinor(values.amount) ?? 0;
-    const money = formatMoney(amountMinor, reservation.currency) ?? values.amount;
+    const money = formatMoney(amountMinor, reservation.currency, locale) ?? values.amount;
     confirmAction(
       {
-        title: `¿Registrar ${KIND_LABELS[values.kind].toLowerCase()} de ${money}?`,
-        message: `La app no mueve dinero, solo lo anota.${
-          confirmsHold ? ' Este monto cubre el anticipo y confirma la reserva.' : ''
-        } El registro no se puede borrar.`,
-        confirmText: 'Registrar',
-        cancelText: 'Volver',
+        title: t('ownerSheet.askTitle', {
+          kind: t(KIND_LABEL_KEYS[values.kind]).toLowerCase(),
+          money,
+        }),
+        message: t(confirmsHold ? 'ownerSheet.askMessageHold' : 'ownerSheet.askMessage'),
+        confirmText: t('ownerSheet.record'),
+        cancelText: t('common.back'),
       },
       () => {
         void actions
@@ -255,13 +265,13 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
     <>
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel="Concepto"
+        accessibilityLabel={t('ownerSheet.kind')}
         style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}
       >
         {kinds.map((option) => (
           <ChoiceChip
             key={option}
-            label={KIND_LABELS[option]}
+            label={t(KIND_LABEL_KEYS[option])}
             selected={option === kind}
             onPress={() => {
               setValue('kind', option);
@@ -273,13 +283,13 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
       </View>
       <View
         accessibilityRole="radiogroup"
-        accessibilityLabel="Medio de pago"
+        accessibilityLabel={t('ownerSheet.method')}
         style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}
       >
         {METHOD_OPTIONS.map((option) => (
           <ChoiceChip
             key={option.value}
-            label={option.label}
+            label={t(option.labelKey)}
             selected={option.value === watch('method')}
             onPress={() => setValue('method', option.value)}
           />
@@ -295,23 +305,29 @@ function PaymentForm({ reservation, now, actions, onBack }: PaymentFormProps) {
               field.onChange(value);
               setError(null);
             }}
-            label={`Monto (${reservation.currency})`}
+            label={t('ownerSheet.amount', { currency: reservation.currency })}
             placeholder="30000"
             keyboardType="decimal-pad"
             error={Boolean(formState.errors.amount ?? error)}
           />
         )}
       />
-      <FormError message={formState.errors.amount?.message ?? error} />
+      <FormError
+        message={
+          formState.errors.amount?.message
+            ? t(`ownerSheet.errors.${formState.errors.amount.message}`)
+            : error
+        }
+      />
       <AppButton
         onPress={() => void submit()}
         disabled={actions.isPending}
         busy={actions.isPending}
       >
-        {actions.isPending ? 'Registrando…' : 'Registrar pago'}
+        {actions.isPending ? t('ownerSheet.recording') : t('ownerSheet.recordPayment')}
       </AppButton>
       <AppButton variant="neutral" onPress={onBack} disabled={actions.isPending}>
-        Volver
+        {t('common.back')}
       </AppButton>
     </>
   );

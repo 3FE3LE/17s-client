@@ -1,25 +1,28 @@
-import { DISPLAY_LOCALE } from '@/lib/seven-rc-format';
+import { DISPLAY_LOCALE, type Translate } from '@/lib/seven-rc-format';
 import type { ReservationPaymentKind, ReservationPaymentMethod } from '@/lib/owner-queries';
 
 /** Largest amount (minor units) the API accepts: a 32-bit signed int. */
 export const MAX_AMOUNT_MINOR = 2_147_483_647;
 
-export const PAYMENT_KIND_OPTIONS: ReadonlyArray<{ value: ReservationPaymentKind; label: string }> =
-  [
-    { value: 'deposit', label: 'Anticipo' },
-    { value: 'balance', label: 'Saldo' },
-    { value: 'refund', label: 'Devolución' },
-  ];
-
-export const PAYMENT_METHOD_OPTIONS: ReadonlyArray<{
-  value: ReservationPaymentMethod;
-  label: string;
-}> = [
-  { value: 'transfer', label: 'Transferencia' },
-  { value: 'cash', label: 'Efectivo' },
-  { value: 'card', label: 'Tarjeta' },
-  { value: 'other', label: 'Otro' },
+const PAYMENT_KINDS: ReadonlyArray<ReservationPaymentKind> = ['deposit', 'balance', 'refund'];
+const PAYMENT_METHODS: ReadonlyArray<ReservationPaymentMethod> = [
+  'transfer',
+  'cash',
+  'card',
+  'other',
 ];
+
+export function paymentKindOptions(
+  t: Translate,
+): Array<{ value: ReservationPaymentKind; label: string }> {
+  return PAYMENT_KINDS.map((value) => ({ value, label: t(`format:payment.kind.${value}`) }));
+}
+
+export function paymentMethodOptions(
+  t: Translate,
+): Array<{ value: ReservationPaymentMethod; label: string }> {
+  return PAYMENT_METHODS.map((value) => ({ value, label: t(`format:payment.method.${value}`) }));
+}
 
 /**
  * es-CO amount typed by the owner ("120.000", "120000", "12,50") to minor units. Anything

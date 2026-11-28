@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '@17suit/i18n/react';
 import { useAppTheme } from '@17suit/ui-native';
 import { Pressable, Text } from 'react-native';
 import { callPhone, hasDialablePhone, openMaps } from '../lib/links';
@@ -50,6 +51,7 @@ export function VenueLinks({
   address?: string | null | undefined;
   phone?: string | null | undefined;
 }) {
+  const { t } = useTranslation('mobile');
   const place = address?.trim();
   return (
     <>
@@ -57,16 +59,16 @@ export function VenueLinks({
         <LinkRow
           icon="map-pin"
           label={place}
-          accessibilityLabel={`${place}. Abrir en mapas`}
-          onPress={() => void openMaps(place)}
+          accessibilityLabel={t('venueLinks.openInMaps', { place })}
+          onPress={() => void openMaps(place, t)}
         />
       ) : null}
       {hasDialablePhone(phone) ? (
         <LinkRow
           icon="phone"
-          label={`Llamar al complejo: ${phone}`}
-          accessibilityLabel={`Llamar al complejo, ${phone}`}
-          onPress={() => void callPhone(phone)}
+          label={t('venueLinks.callLabel', { phone })}
+          accessibilityLabel={t('venueLinks.callA11y', { phone })}
+          onPress={() => void callPhone(phone, t)}
         />
       ) : null}
     </>

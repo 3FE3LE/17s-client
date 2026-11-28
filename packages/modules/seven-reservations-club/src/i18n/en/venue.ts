@@ -1,1 +1,342 @@
-export const venue = {} as const;
+export const venue = {
+  common: {
+    saving: 'Saving…',
+    checkFields: 'Check the highlighted fields.',
+    venueName: 'Venue name',
+    venueNameMin: 'The venue name needs at least 3 characters.',
+    durationRange: 'The slot duration must be between 30 and 240 minutes.',
+    noPriceConfirm: 'Price to be confirmed with the venue',
+  },
+  weekdays: {
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday',
+  },
+  depositPolicy: {
+    refund: 'The deposit is refunded',
+    retain: 'The venue keeps the deposit',
+    ownerDecides: 'The venue decides what happens to the deposit',
+  },
+  policyFields: {
+    paymentInstructions: 'Payment instructions',
+    depositPercent: 'Deposit (% of price)',
+    holdMinutes: 'Minutes to pay the deposit',
+    cancellationWindowHours: 'Online cancellation (hours before)',
+    lateCancelDeposit: 'Late cancellation: deposit',
+    noShowDeposit: 'No-show: deposit',
+    conditionsText: 'Additional conditions',
+  },
+  policyErrors: {
+    depositPercent: 'Use a whole number between 0 and 100.',
+    holdMinutes: 'Use between 5 and 1440 minutes (24 h).',
+    cancellationWindowHours: 'Use between 0 and 168 hours (7 days).',
+  },
+  settings: {
+    title: 'Venue settings',
+    subtitle: 'Rules players see when booking at {{name}}.',
+    contactPhone: {
+      label: 'Contact phone or WhatsApp',
+      placeholder: '+57 300 123 4567',
+      hint: 'Shown on pending bookings so the player can pay or get in touch.',
+    },
+    paymentInstructions: {
+      placeholder: 'E.g.: Bre-B key @mypitch · Nequi 300 123 4567',
+      hint: 'The player sees them while the booking waits for the deposit.',
+    },
+    depositPercent: {
+      hintZero: 'With 0 %, every booking is confirmed instantly, without going through you.',
+      hintPending: 'The booking stays pending until you record the deposit or confirm it.',
+    },
+    holdMinutes: {
+      hint: 'The slot is held for this long. If it expires without a deposit, the time is released.',
+    },
+    cancellationWindowHours: {
+      hint: 'Up to how many hours before the slot the player can cancel without contacting you.',
+    },
+    lateCancelDeposit: {
+      hint: 'What the player reads before booking. The platform does not move money: you settle it.',
+    },
+    noShowDeposit: {
+      hint: 'Applies when the player does not show up and does not cancel.',
+    },
+    conditionsText: {
+      placeholder: 'E.g.: Arrive 10 min early. If it rains, we reschedule at no cost.',
+      hint: 'Free text the player sees before confirming.',
+    },
+    bookingHorizonDays: {
+      label: 'Advance booking (days)',
+      hint: 'How many days ahead players can book.',
+    },
+    save: 'Save settings',
+    saved: 'Settings saved. Upcoming bookings already use these rules.',
+    savedKeeping_one:
+      'Settings saved. Upcoming bookings use the new rules; {{count}} active booking keeps the conditions it was made with.',
+    savedKeeping_other:
+      'Settings saved. Upcoming bookings use the new rules; {{count}} active bookings keep the conditions they were made with.',
+    saveFailed: 'Could not save the settings.',
+    errors: {
+      bookingHorizonDays: 'Use between 1 and 180 days.',
+      phoneFormat: 'Enter the number with country code, e.g. +57 300 123 4567.',
+      phoneRequired: 'Leave a phone number: players use it to pay or get in touch.',
+    },
+  },
+  publish: {
+    title: 'Public page',
+    published: 'Published',
+    unpublished: 'Unpublished',
+    intro:
+      'Players see your pitches and free times without creating an account. Share it on WhatsApp or social media.',
+    slug: {
+      label: 'Your venue link',
+      placeholder: 'la-70-pitch',
+      hint: 'It will be /c/{{slug}}. Lowercase letters, numbers and hyphens only.',
+      fallback: 'your-link',
+    },
+    saveLink: 'Save link',
+    showPage: 'Show my page to players',
+    unpublishedDone: 'You unpublished the venue. The link no longer opens.',
+    publishedDone: 'You published the venue. Players can now see it and book.',
+    unpublishHelp:
+      'When unpublished, the link stops opening (404 error) and no new bookings come in through it.',
+    saveSlugFirst: 'Save your venue link first.',
+    missingIntro: 'To publish you still need:',
+    allReady: 'All set. Once published, anyone with the link will see your times.',
+    previewSr: ' (preview, opens in a new tab)',
+    copyLink: 'Copy link',
+    previewNotFound: 'Until you publish, the preview shows “not found”.',
+    slugTaken: 'Another venue already uses that link. Try a different one.',
+    saveFailed: 'Could not save. Try again.',
+    sameSlug: 'That is already your venue link.',
+    linkSaved: 'Link saved.',
+    linkCopied: 'Link copied.',
+    copyFailed: 'Could not copy. Select the link and copy it by hand.',
+    errors: {
+      slugRequired: 'Enter your venue link.',
+      slugMax: 'Use at most {{max}} characters.',
+      slugPattern:
+        'Use only lowercase letters, numbers and hyphens, with no leading, trailing or repeated hyphens.',
+    },
+  },
+  openingHours: {
+    title: 'Opening hours',
+    currentWeek: 'Current week',
+    closed: 'Closed',
+    slotLength: 'Slots of {{duration}}.',
+    applyToDays: 'Days to apply the hours to',
+    weekdaysShortcut: 'Monday to Friday',
+    allWeekShortcut: 'Whole week',
+    eachDayStays: 'Each chosen day becomes',
+    open: 'Open',
+    opens: 'Opens',
+    closes: 'Closes',
+    markClosed: 'Mark as closed',
+    saveHours: 'Save hours',
+    savedOpen: 'Saved {{open}}–{{close}} for {{names}} at {{pitch}}.',
+    savedClosed:
+      'Closed days at {{pitch}}: {{names}}. Players will no longer see slots on those days.',
+    alreadyClosedOne: '{{day}} was already closed. No changes were made.',
+    alreadyClosedMany: 'Those days were already closed. No changes were made.',
+    saveFailed: 'Could not save the hours.',
+    dialog: {
+      title: 'Close these days?',
+      confirm: 'Yes, close',
+      dismiss: 'Go back',
+      stopsOpening: '{{pitch}} will stop opening on {{names}}.',
+      body: 'Players will no longer be able to book on those days. Existing bookings are not cancelled.',
+    },
+    errors: {
+      noDays: 'Choose at least one day.',
+      closeAfterOpen: 'The closing time must be later than the opening time.',
+    },
+  },
+  address: {
+    legend: 'Address (optional)',
+    viaTipo: {
+      label: 'Street',
+      placeholder: 'Street type',
+    },
+    viaNumero: {
+      label: 'Street number',
+      hint: 'E.g. 72, 72A, 72 Bis Sur',
+    },
+    cruceNumero: {
+      label: 'Number # (cross street)',
+      hint: 'What comes after the #',
+    },
+    placaNumero: {
+      label: 'Number - (plate)',
+      hint: 'What comes after the hyphen',
+    },
+    municipio: {
+      label: 'Municipality',
+      hint: 'City or municipality',
+    },
+    departamento: {
+      label: 'Department',
+      hint: 'E.g. Antioquia',
+    },
+    barrio: {
+      label: 'Neighborhood (optional)',
+      hint: 'Helps locate the venue',
+    },
+    complemento: {
+      label: 'Additional details (optional)',
+      hint: 'Unit, interior, landmark',
+    },
+    preview: 'It will look like this:',
+    errors: {
+      fallback: 'Check this field.',
+      viaTipo: {
+        required: 'Choose the street type.',
+      },
+      viaNumero: {
+        required: 'Enter the street number.',
+        viaNumero: 'Use a format like 72, 72A or 72 Bis Sur.',
+      },
+      cruceNumero: {
+        required: 'Enter the number after the #.',
+        cruceNumero: 'Use only the number, e.g. 10 or 10A.',
+      },
+      placaNumero: {
+        required: 'Enter the number after the hyphen.',
+        placaNumero: 'Use digits only, up to 3.',
+      },
+      complemento: {
+        tooLong: 'Use at most 80 characters.',
+      },
+      barrio: {
+        tooLong: 'Use at most 80 characters.',
+      },
+      municipio: {
+        required: 'Enter the municipality.',
+        tooShort: 'Enter at least 2 letters.',
+        tooLong: 'Use at most 80 characters.',
+      },
+      departamento: {
+        required: 'Enter the department.',
+        tooShort: 'Enter at least 2 letters.',
+        tooLong: 'Use at most 80 characters.',
+      },
+    },
+  },
+  pitchPolicy: {
+    title: 'Booking conditions for this pitch',
+    intro: 'Leave a field empty to use the venue value. Existing bookings keep their conditions.',
+    inheritedHint: 'Uses the venue value: {{value}}.',
+    ownHint: 'Value specific to this pitch.',
+    inheritedHintPlural: 'Uses the venue ones.',
+    ownHintPlural: 'Specific to this pitch.',
+    sameAsVenue: 'Same as the venue ({{policy}})',
+    save: 'Save conditions',
+    saved: 'Saved the conditions for {{pitch}}. Empty fields use the venue ones.',
+    saveFailed: 'Could not save the conditions.',
+  },
+  createPitch: {
+    title: 'New pitch at {{venue}}',
+    name: {
+      label: 'Pitch name',
+      placeholder: 'E.g.: Pitch 1',
+    },
+    sport: 'Sport',
+    capacity: 'Capacity (players)',
+    duration: 'Slot duration (minutes)',
+    add: 'Add pitch',
+    created: 'You added “{{name}}”. Set its price and hours above.',
+    failed: 'Could not create the pitch.',
+    errors: {
+      name: 'The pitch name needs at least 2 characters.',
+      capacity: 'The capacity must be between 1 and 100 players.',
+    },
+  },
+  identity: {
+    title: 'Venue details',
+    nameHint: 'This is the name players see.',
+    previousAddress: 'Previous address:',
+    replaceHint: '. Fill in the fields to replace it.',
+    save: 'Save details',
+    saved: 'Venue details saved.',
+    saveFailed: 'Could not save the venue details.',
+  },
+  price: {
+    title: 'Price per slot',
+    label: 'Price of a {{duration}} slot ({{currency}})',
+    placeholder: '120.000',
+    hintPreview: 'Players will see {{price}}. The deposit is calculated on this value.',
+    hintEmpty:
+      'Without a price, players see “Price to be confirmed with the venue” and the booking is confirmed without a deposit.',
+    rules_one: 'This pitch has 1 time-based rate (peak hours). They are kept when saving.',
+    rules_other:
+      'This pitch has {{count}} time-based rates (peak hours). They are kept when saving.',
+    save: 'Save price',
+    saved: '{{pitch}} costs {{price}} per slot.',
+    savedNoBase:
+      '{{pitch}} has no base price: outside the time-based rates, players will see “Price to be confirmed with the venue”.',
+    savedNoPrice:
+      '{{pitch}} has no price: players will see “Price to be confirmed with the venue”.',
+    saveFailed: 'Could not save the price.',
+    errors: {
+      amount: 'Enter a valid price, e.g. 120.000 (maximum 21.474.836).',
+    },
+  },
+  priceRules: {
+    title: 'Rates by day and time',
+    intro:
+      'A rate replaces the base price for slots that start within its time window. Rates cannot overlap.',
+    none: 'No rates: all slots cost the base price.',
+    days: 'Rate {{n}} · days',
+    from: 'From',
+    to: 'Until (00:00 = midnight)',
+    priceLabel: 'Price per slot ({{currency}})',
+    pricePlaceholder: '150.000',
+    priceExample: 'E.g. 150.000',
+    remove: 'Remove rate {{n}}',
+    add: 'Add rate',
+    save: 'Save rates',
+    savedNone: '{{pitch}} no longer has time-based rates.',
+    saved_one: 'Saved {{count}} rate for {{pitch}}.',
+    saved_other: 'Saved {{count}} rates for {{pitch}}.',
+    saveFailed: 'Could not save the rates.',
+    effectiveTitle: 'Effective price per slot',
+    effectiveNoPrice:
+      'No base price or rates: players will see “Price to be confirmed with the venue”.',
+    effectiveNoHours: 'Set the opening hours to see the price of each slot.',
+    noSlots: 'no slots',
+    errors: {
+      ruleN: 'Rule {{n}}: {{message}}',
+      overlap: 'Rules {{a}} and {{b}} overlap: they share a day and time.',
+      noDays: 'Choose at least one day.',
+      noTimes: 'Choose a start and end time.',
+      endBeforeStart: 'The end time must be later than the start time.',
+      badPrice: 'Enter a valid price.',
+    },
+  },
+  createVenue: {
+    title: 'New venue',
+    timezone: {
+      label: 'Venue time zone',
+      hint: 'Pitch times are shown in this time zone.',
+    },
+    create: 'Create venue',
+    creating: 'Creating…',
+    created: 'You created “{{name}}”. Now add its pitches.',
+    failed: 'Could not create the venue.',
+  },
+  slotDuration: {
+    title: 'Slot duration',
+    label: 'Minutes per slot',
+    hint: 'Each booking lasts this long. Existing bookings keep their time.',
+    unchanged: 'The duration was already that. No changes were made.',
+    saved: '{{pitch}} slots now last {{duration}}.',
+    save: 'Save duration',
+    failed: 'Could not save the slot duration.',
+  },
+  integration: {
+    title: 'Pending integration',
+    simulated: 'simulated',
+    manual: 'manual',
+  },
+} as const;

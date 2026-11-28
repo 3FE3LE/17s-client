@@ -1,9 +1,11 @@
+import { useTranslation } from '@17suit/i18n/react';
 import { Redirect, useRootNavigationState } from 'expo-router';
 import { useAuth } from '@clerk/clerk-expo';
 import { AppFrame, AppSpinner } from '@17suit/ui-native';
 import { View } from 'react-native';
 
 export default function NotFound() {
+  const { t } = useTranslation('mobile');
   const rootNavigationState = useRootNavigationState();
   const { isLoaded, isSignedIn } = useAuth();
 
@@ -13,8 +15,8 @@ export default function NotFound() {
   }
 
   return (
-    <AppFrame appName="Seven Reservations Club" subtitle="Ruta no encontrada.">
-      <View accessible accessibilityRole="progressbar" accessibilityLabel="Preparando navegación">
+    <AppFrame appName="Seven Reservations Club" subtitle={t('notFound.title')}>
+      <View accessible accessibilityRole="progressbar" accessibilityLabel={t('notFound.preparing')}>
         <AppSpinner size="large" />
       </View>
     </AppFrame>

@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppBadge, useAppTheme } from '@17suit/ui-native';
 import { Pressable, Text, View } from 'react-native';
 import {
@@ -12,21 +13,23 @@ import type { ReservationWithVenuePitch } from '../lib/player-queries';
 interface ReservationRowProps {
   reservation: ReservationWithVenuePitch;
   onPress: () => void;
-  /** Larger treatment for the "Próxima reserva" slot on home. */
+  /** Larger treatment for the "Next reservation" slot on home. */
   featured?: boolean;
 }
 
 export function ReservationRow({ reservation, onPress, featured = false }: ReservationRowProps) {
   const { theme } = useAppTheme();
-  const venueName = reservation.venue?.name ?? 'Complejo';
-  const pitchName = reservation.pitch?.name ?? 'Cancha';
+  const { t } = useTranslation('mobile');
+  const venueName = reservation.venue?.name ?? t('common.venue');
+  const pitchName = reservation.pitch?.name ?? t('common.court');
   const when = formatVenueRange(
     reservation.startAt,
     reservation.endAt,
     reservation.venue?.timezone,
+    t('intlLocale'),
   );
   const currentStatus = displayStatus(reservation);
-  const status = reservationStatusLabel(currentStatus);
+  const status = reservationStatusLabel(currentStatus, t);
   const titleType = featured
     ? theme.typography.styles.subtitle1
     : theme.typography.styles.subtitle2;
@@ -37,7 +40,7 @@ export function ReservationRow({ reservation, onPress, featured = false }: Reser
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${venueName}, ${pitchName}, ${when}, ${status}`}
-      accessibilityHint="Abre el detalle de la reserva"
+      accessibilityHint={t('reservationRow.hint')}
       style={({ pressed }) => ({
         width: '100%',
         minHeight: 44,

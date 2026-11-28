@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton } from '@17suit/ui';
 import { cancelReservationAction, type CancelFormState } from '@/app/c/[slug]/actions';
 import { InlineError, InlineStatus } from '@/components/seven-rc-ui';
@@ -23,20 +24,21 @@ export function ShareReservation({
   when,
   calendarUrl,
 }: ShareReservationProps) {
+  const { t } = useTranslation('play');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const text = `Mi reserva en ${venueName}`;
-  const details = `${text}: ${pitchName}, ${when}.`;
+  const text = t('links.shareText', { venue: venueName });
+  const details = t('links.shareDetails', { text, pitch: pitchName, when });
   const whatsapp = `https://wa.me/?text=${encodeURIComponent(`${details} ${url}`)}`;
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(url);
       setError(null);
-      setMessage('Enlace copiado.');
+      setMessage(t('links.copied'));
     } catch {
       setMessage(null);
-      setError('No pudimos copiar el enlace. Cópialo desde la barra de direcciones.');
+      setError(t('links.copyFailed'));
     }
   }
 
@@ -55,10 +57,10 @@ export function ShareReservation({
     <div className="grid gap-sm">
       <div className="flex flex-wrap gap-sm">
         <AppButton variant="neutral" fullWidth={false} onPress={share}>
-          Compartir
+          {t('links.share')}
         </AppButton>
         <AppButton variant="neutral" fullWidth={false} onPress={copy}>
-          Copiar enlace
+          {t('links.copy')}
         </AppButton>
         <a
           href={whatsapp}
@@ -66,14 +68,14 @@ export function ShareReservation({
           rel="noopener noreferrer"
           className="inline-flex items-center text-md text-text underline"
         >
-          Enviar por WhatsApp
+          {t('links.whatsapp')}
         </a>
         <a
           href={calendarUrl}
           download="reserva.ics"
           className="inline-flex items-center text-md text-text underline"
         >
-          Añadir al calendario
+          {t('links.calendar')}
         </a>
       </div>
       <InlineStatus message={message} />
@@ -85,6 +87,7 @@ export function ShareReservation({
 const INITIAL: CancelFormState = { error: null };
 
 export function CancelReservation({ slug, token }: { slug: string; token: string }) {
+  const { t } = useTranslation('play');
   const [state, formAction, isPending] = useActionState(
     cancelReservationAction.bind(null, slug, token),
     INITIAL,
@@ -94,17 +97,17 @@ export function CancelReservation({ slug, token }: { slug: string; token: string
   if (!confirming) {
     return (
       <AppButton variant="destructive" fullWidth={false} onPress={() => setConfirming(true)}>
-        Cancelar reserva
+        {t('links.cancel')}
       </AppButton>
     );
   }
   return (
-    <form action={formAction} aria-label="Confirmar cancelación" className="grid gap-sm">
-      <p className="m-0 text-md text-text">¿Seguro? Tu turno se libera y no se puede deshacer.</p>
+    <form action={formAction} aria-label={t('links.confirmLabel')} className="grid gap-sm">
+      <p className="m-0 text-md text-text">{t('links.sure')}</p>
       <InlineError message={state.error} />
       <div className="flex flex-wrap gap-sm">
         <AppButton type="submit" variant="destructive" fullWidth={false} disabled={isPending}>
-          {isPending ? 'Cancelando…' : 'Sí, cancelar'}
+          {isPending ? t('links.cancelling') : t('links.yes')}
         </AppButton>
         <AppButton
           variant="neutral"
@@ -112,7 +115,7 @@ export function CancelReservation({ slug, token }: { slug: string; token: string
           disabled={isPending}
           onPress={() => setConfirming(false)}
         >
-          Volver
+          {t('links.back')}
         </AppButton>
       </div>
     </form>

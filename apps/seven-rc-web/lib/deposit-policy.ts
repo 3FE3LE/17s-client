@@ -1,23 +1,24 @@
+import type { Translate } from '@/lib/seven-rc-format';
+
 export type DepositPolicy = 'refund' | 'retain' | 'owner_decides';
 export type DepositOutcome = 'none' | 'refunded' | 'retained';
 
-export const DEPOSIT_POLICY_LABEL: Record<DepositPolicy, string> = {
-  refund: 'Se devuelve el anticipo',
-  retain: 'El complejo conserva el anticipo',
-  owner_decides: 'El complejo decide qué pasa con el anticipo',
-};
+export function depositPolicyLabel(policy: DepositPolicy, t: Translate): string {
+  return t(`format:deposit.policy.${policy}`);
+}
 
-export const DEPOSIT_POLICY_OPTIONS: { value: DepositPolicy; label: string }[] = [
-  { value: 'owner_decides', label: DEPOSIT_POLICY_LABEL.owner_decides },
-  { value: 'refund', label: DEPOSIT_POLICY_LABEL.refund },
-  { value: 'retain', label: DEPOSIT_POLICY_LABEL.retain },
-];
+export const DEPOSIT_POLICY_VALUES = ['owner_decides', 'refund', 'retain'] as const;
 
-export const DEPOSIT_OUTCOME_LABEL: Record<DepositOutcome, string> = {
-  none: 'Sin anticipo que resolver',
-  refunded: 'Anticipo devuelto',
-  retained: 'Anticipo conservado',
-};
+export function depositPolicyOptions(t: Translate): { value: DepositPolicy; label: string }[] {
+  return DEPOSIT_POLICY_VALUES.map((value) => ({
+    value,
+    label: depositPolicyLabel(value, t),
+  }));
+}
+
+export function depositOutcomeLabel(outcome: DepositOutcome, t: Translate): string {
+  return t(`format:deposit.outcome.${outcome}`);
+}
 
 /** Conditions a player accepts when booking, in the order they read them. */
 export interface PolicySummaryInput {
@@ -27,14 +28,22 @@ export interface PolicySummaryInput {
   conditionsText?: string | null;
 }
 
-export function policySummaryLines(policy: PolicySummaryInput): string[] {
+export function policySummaryLines(policy: PolicySummaryInput, t: Translate): string[] {
   const hours = policy.cancellationWindowHours;
   return [
     hours > 0
-      ? `Puedes cancelar en línea hasta ${hours} ${hours === 1 ? 'hora' : 'horas'} antes del turno.`
-      : 'Puedes cancelar en línea hasta el inicio del turno.',
-    `Si cancelas tarde: ${DEPOSIT_POLICY_LABEL[policy.lateCancelDeposit].toLowerCase()}.`,
-    `Si no llegas y no avisas: ${DEPOSIT_POLICY_LABEL[policy.noShowDeposit].toLowerCase()}.`,
+      ? t('format:deposit.summary.windowHours', {
+          hours: t(`format:deposit.summary.${hours === 1 ? 'hourOne' : 'hourMany'}`, {
+            count: hours,
+          }),
+        })
+      : t('format:deposit.summary.windowStart'),
+    t('format:deposit.summary.lateCancel', {
+      policy: depositPolicyLabel(policy.lateCancelDeposit, t).toLowerCase(),
+    }),
+    t('format:deposit.summary.noShow', {
+      policy: depositPolicyLabel(policy.noShowDeposit, t).toLowerCase(),
+    }),
   ];
 }
 

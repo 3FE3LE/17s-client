@@ -4,6 +4,7 @@ import {
   useCurrentUserRoleQuery,
   useRoleGate,
 } from '@17suit/module-seven-reservations-club/client';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppBadge, AppFrame, AppButton, AppInput } from '@17suit/ui';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -12,7 +13,7 @@ import { InlineError, ListSkeleton, SectionHeader, SelectField } from '@/compone
 import {
   buildCustomerBook,
   clampInt,
-  CUSTOMER_FILTER_OPTIONS,
+  customerFilterOptions,
   DEFAULT_THRESHOLDS,
   filterCustomers,
   isCustomerFilter,
@@ -29,22 +30,19 @@ import {
   safeTimeZone,
 } from '@/lib/seven-rc-format';
 
-const WINDOWS = [
-  { value: '90', label: 'Últimos 90 días' },
-  { value: '180', label: 'Últimos 180 días' },
-  { value: '365', label: 'Último año' },
-];
+const WINDOW_VALUES = ['90', '180', '365'] as const;
 const FUTURE_DAYS = 30;
 
 export default function OwnerCustomersPage() {
   const router = useRouter();
+  const { t } = useTranslation('owner');
   const { role, isLoading } = useCurrentUserRoleQuery();
   useRoleGate({ required: 'OWNER', router });
 
   if (isLoading || role !== 'OWNER') {
     return (
-      <AppFrame appName="Clientes" subtitle="Cargando tu cuenta…">
-        <ListSkeleton rows={3} label="Cargando tu cuenta" />
+      <AppFrame appName={t('customers.title')} subtitle={t('customers.loadingAccount')}>
+        <ListSkeleton rows={3} label={t('customers.loadingAccountLabel')} />
       </AppFrame>
     );
   }
@@ -58,6 +56,8 @@ function formatPhone(key: string): string {
 }
 
 function CustomersWorkspace() {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   const venuesQuery = useOwnerVenuesQuery();
   const venues = venuesQuery.data ?? [];
   const [explicitVenueId, setExplicitVenueId] = useState<string | null>(null);
@@ -80,37 +80,33 @@ function CustomersWorkspace() {
     frequentMinBookings: clampInt(frequentMin, 1, 100, DEFAULT_THRESHOLDS.frequentMinBookings),
     lapsedAfterDays: clampInt(lapsedDays, 1, 730, DEFAULT_THRESHOLDS.lapsedAfterDays),
   };
-  const book = buildCustomerBook(query.data ?? [], mountedAt, thresholds);
+  const book = buildCustomerBook(query.data ?? [], mountedAt, t, thresholds);
   const customers = filterCustomers(book.customers, filter);
-  const loadError = query.error
-    ? describeError(query.error, 'No se pudieron cargar los clientes.')
-    : null;
+  const loadError = query.error ? describeError(query.error, t('customers.loadError')) : null;
 
   return (
     <AppFrame
-      appName="Clientes"
-      subtitle={venue ? `${venue.name} · agrupados por teléfono` : 'Sin complejo'}
+      appName={t('customers.title')}
+      subtitle={venue ? t('customers.subtitle', { venue: venue.name }) : t('customers.noVenue')}
     >
       <p className="m-0">
         <Link href="/owner" className="text-text underline">
-          Volver a mi complejo
+          {t('customers.backToVenue')}
         </Link>
       </p>
 
       {venuesQuery.error ? (
-        <InlineError
-          message={describeError(venuesQuery.error, 'No se pudieron cargar tus complejos.')}
-        />
+        <InlineError message={describeError(venuesQuery.error, t('customers.venuesLoadError'))} />
       ) : null}
 
       <section
         aria-labelledby="clientes-filtros"
         className="grid max-w-[var(--container-form)] gap-sm"
       >
-        <SectionHeader id="clientes-filtros" title="Filtros" />
+        <SectionHeader id="clientes-filtros" title={t('customers.filters.title')} />
         {venues.length > 1 ? (
           <SelectField
-            label="Complejo"
+            label={t('customers.filters.venue')}
             name="complejo"
             value={venue?.id ?? ''}
             onChangeValue={setExplicitVenueId}
@@ -118,20 +114,23 @@ function CustomersWorkspace() {
           />
         ) : null}
         <SelectField
-          label="Periodo"
+          label={t('customers.filters.period')}
           name="periodo"
           value={windowDays}
           onChangeValue={setWindowDays}
-          options={WINDOWS}
+          options={WINDOW_VALUES.map((value) => ({
+            value,
+            label: t(`customers.filters.window.${value}`),
+          }))}
         />
         <SelectField
-          label="Mostrar"
+          label={t('customers.filters.show')}
           name="mostrar"
           value={filter}
           onChangeValue={(value) => {
             if (isCustomerFilter(value)) setFilter(value);
           }}
-          options={CUSTOMER_FILTER_OPTIONS.map((option) => ({
+          options={customerFilterOptions(t).map((option) => ({
             value: option.value,
             label: option.label,
           }))}
@@ -140,7 +139,7 @@ function CustomersWorkspace() {
           <AppInput
             type="number"
             name="umbral-frecuente"
-            label="Frecuente desde (reservas)"
+            label={t('customers.filters.frequentFrom')}
             inputMode="numeric"
             min={1}
             max={100}
@@ -150,7 +149,7 @@ function CustomersWorkspace() {
           <AppInput
             type="number"
             name="umbral-ausente"
-            label="Dejó de venir tras (días)"
+            label={t('customers.filters.lapsedAfter')}
             inputMode="numeric"
             min={1}
             max={730}
@@ -161,26 +160,26 @@ function CustomersWorkspace() {
       </section>
 
       {query.isLoading ? (
-        <ListSkeleton rows={3} label="Cargando clientes" />
+        <ListSkeleton rows={3} label={t('customers.loadingList')} />
       ) : loadError ? (
         <div className="grid gap-sm">
           <InlineError message={loadError} />
           <AppButton variant="neutral" fullWidth={false} onPress={() => void query.refetch()}>
-            Reintentar
+            {t('customers.retry')}
           </AppButton>
         </div>
       ) : (
         <section aria-labelledby="clientes-lista" className="grid gap-sm">
           <SectionHeader
             id="clientes-lista"
-            title="Clientes"
-            description={`${book.customers.length} en el periodo${book.withoutPhone > 0 ? ` · ${book.withoutPhone} reservas sin teléfono no se agrupan` : ''}`}
+            title={t('customers.list.title')}
+            description={`${t('customers.list.inPeriod', { count: book.customers.length })}${book.withoutPhone > 0 ? ` · ${t('customers.list.withoutPhone', { count: book.withoutPhone })}` : ''}`}
           />
           {customers.length === 0 ? (
             <p role="status" className="m-0 text-md leading-[1.5] text-muted">
               {book.customers.length === 0
-                ? 'Aún no hay reservas con teléfono en este periodo.'
-                : 'Ningún cliente cumple ese filtro.'}
+                ? t('customers.list.emptyPeriod')
+                : t('customers.list.emptyFilter')}
             </p>
           ) : (
             <ul className="m-0 grid list-none gap-sm p-0">
@@ -195,39 +194,53 @@ function CustomersWorkspace() {
                         <span className="font-bold text-text">{customer.name}</span>
                         <span className="text-md text-muted">{formatPhone(customer.phone)}</span>
                         {customer.isFrequent ? (
-                          <AppBadge variant="success">Frecuente</AppBadge>
+                          <AppBadge variant="success">{t('customers.list.frequent')}</AppBadge>
                         ) : null}
                         {customer.isLapsed ? (
-                          <AppBadge variant="warning">Dejó de venir</AppBadge>
+                          <AppBadge variant="warning">{t('customers.list.lapsed')}</AppBadge>
                         ) : null}
                       </span>
                       <span className="text-sm leading-[18px] text-text">
-                        {customer.bookings} {customer.bookings === 1 ? 'reserva' : 'reservas'} ·
-                        última{' '}
+                        {t('customers.list.bookings', { count: customer.bookings })} ·{' '}
+                        {t('customers.list.last')}{' '}
                         {formatSlotWhen(
                           customer.history[0]?.startAt ?? '',
                           customer.history[0]?.endAt ?? '',
                           timeZone,
+                          locale,
                         )}{' '}
-                        · gastado {formatMoneyMinor(customer.spentMinor, customer.currency)}
-                        {customer.noShows > 0 ? ` · ${customer.noShows} no asistió` : ''}
+                        · {t('customers.list.spent')}{' '}
+                        {formatMoneyMinor(customer.spentMinor, customer.currency, locale)}
+                        {customer.noShows > 0
+                          ? ` · ${t('customers.list.noShows', { count: customer.noShows })}`
+                          : ''}
                       </span>
                     </summary>
                     <ul className="m-0 mt-sm grid list-none gap-xs p-0">
                       {customer.history.map((reservation) => {
-                        const status = reservationStatus(reservation.status);
+                        const status = reservationStatus(reservation.status, t);
                         return (
                           <li
                             key={reservation.id}
                             className="flex flex-wrap items-center gap-sm text-sm leading-[18px] text-text"
                           >
                             <span className="first-letter:uppercase">
-                              {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+                              {formatSlotWhen(
+                                reservation.startAt,
+                                reservation.endAt,
+                                timeZone,
+                                locale,
+                              )}
                             </span>
                             <span>{reservation.pitch.name}</span>
                             <AppBadge variant={status.variant}>{status.label}</AppBadge>
                             <span>
-                              pagado {formatMoneyMinor(reservation.paidMinor, reservation.currency)}
+                              {t('customers.list.paid')}{' '}
+                              {formatMoneyMinor(
+                                reservation.paidMinor,
+                                reservation.currency,
+                                locale,
+                              )}
                             </span>
                           </li>
                         );

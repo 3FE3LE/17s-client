@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useActionState, useTransition, type FormEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton } from '@17suit/ui';
 import { reserveAction, type BookingFormState } from '@/app/c/[slug]/actions';
 import { policySummaryLines, type PolicySummaryInput } from '@/lib/deposit-policy';
@@ -30,26 +31,36 @@ export interface GuestBookingFormProps {
 
 // Cheap checks before the round trip. The server action still owns phone normalization by country.
 const guestBookingSchema = z.object({
-  customerName: z.string().trim().min(2, 'Escribe tu nombre.').max(80),
+  customerName: z.string().trim().min(2, 'nameRequired').max(80),
   customerPhone: z
     .string()
     .trim()
-    .regex(/^\+?[\d\s().-]{7,20}$/, 'Escribe el número con indicativo, p. ej. +57 300 123 4567.'),
+    .regex(/^\+?[\d\s().-]{7,20}$/, 'phoneInvalid'),
   notes: z.string().max(300),
 });
 type GuestBookingValues = z.infer<typeof guestBookingSchema>;
 
 const INITIAL: BookingFormState = { fieldErrors: {}, formError: null };
 
-function holdText(minutes: number): string {
-  if (minutes < 60) return `${minutes} minutos`;
+type PlayT = ReturnType<typeof useTranslation<'play'>>['t'];
+
+function holdText(minutes: number, t: PlayT): string {
+  if (minutes < 60) return t('guestForm.minutes', { minutes });
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
-  const base = `${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-  return rest === 0 ? base : `${base} y ${rest} minutos`;
+  const base = t('guestForm.hours', { count: hours });
+  return rest === 0 ? base : t('guestForm.hoursAndMinutes', { base, rest });
+}
+
+/** Schema errors are stable codes; anything else (server text) passes through. */
+function fieldMessage(code: string | undefined, t: PlayT): string | null {
+  if (code === 'nameRequired') return t('guestForm.nameRequired');
+  if (code === 'phoneInvalid') return t('guestForm.phoneInvalid');
+  return code ?? null;
 }
 
 export function GuestBookingForm(props: GuestBookingFormProps) {
+  const { t } = useTranslation('play');
   const [state, formAction, isPending] = useActionState(
     reserveAction.bind(null, props.slug),
     INITIAL,
@@ -76,7 +87,7 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
       className="grid gap-md rounded-[var(--radius-lg)] border border-border-strong p-md"
     >
       <h2 id="reservar-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
-        Reserva este horario
+        {t('guestForm.title')}
       </h2>
       <input type="hidden" name="pitchId" value={props.pitchId} />
       <input type="hidden" name="startAt" value={props.startAt} />
@@ -85,28 +96,31 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
 
       <dl className="m-0 grid gap-xs text-md text-text">
         <div className="grid gap-[2px]">
-          <dt className="text-sm leading-[18px] text-muted">Cancha y horario</dt>
+          <dt className="text-sm leading-[18px] text-muted">{t('guestForm.pitchAndTime')}</dt>
           <dd className="m-0">
             {props.pitchName} · {props.when}
           </dd>
         </div>
         <div className="grid gap-[2px]">
-          <dt className="text-sm leading-[18px] text-muted">Precio total</dt>
+          <dt className="text-sm leading-[18px] text-muted">{t('guestForm.total')}</dt>
           <dd className="m-0">{props.priceLabel}</dd>
         </div>
         <div className="grid gap-[2px]">
-          <dt className="text-sm leading-[18px] text-muted">Anticipo</dt>
+          <dt className="text-sm leading-[18px] text-muted">{t('guestForm.deposit')}</dt>
           <dd className="m-0">
             {needsDeposit
-              ? `${props.depositLabel} (${props.depositPercent} %)`
-              : 'No pide anticipo'}
+              ? t('guestForm.depositValue', {
+                  amount: props.depositLabel,
+                  percent: props.depositPercent,
+                })
+              : t('guestForm.noDeposit')}
           </dd>
         </div>
       </dl>
       <p className="m-0 text-sm leading-[18px] text-muted">
         {needsDeposit
-          ? `Apartamos el turno ${holdText(props.holdMinutes)} para que pagues el anticipo. Si no llega a tiempo, el horario se libera.`
-          : 'Tu reserva se confirma al instante.'}
+          ? t('guestForm.holdNote', { hold: holdText(props.holdMinutes, t) })
+          : t('guestForm.instant')}
       </p>
 
       <section
@@ -114,10 +128,10 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
         className="grid gap-xs rounded-[var(--radius-md)] border border-border-default p-sm"
       >
         <h3 id="condiciones-titulo" className="m-0 text-sm font-bold leading-[18px] text-text">
-          Condiciones de esta reserva
+          {t('guestForm.conditionsTitle')}
         </h3>
         <ul className="m-0 grid list-disc gap-[2px] pl-md text-sm leading-[18px] text-muted">
-          {policySummaryLines(props.policy).map((line) => (
+          {policySummaryLines(props.policy, t).map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
@@ -126,10 +140,7 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
             {props.policy.conditionsText.trim()}
           </p>
         ) : null}
-        <p className="m-0 text-sm leading-[18px] text-muted">
-          Al reservar aceptas estas condiciones. El pago del anticipo se arregla directamente con el
-          complejo.
-        </p>
+        <p className="m-0 text-sm leading-[18px] text-muted">{t('guestForm.accept')}</p>
       </section>
 
       <div className="grid gap-md md:grid-cols-2">
@@ -140,14 +151,16 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
             <HintedInput
               type="text"
               name="customerName"
-              label="Tu nombre"
+              label={t('guestForm.name')}
               autoComplete="name"
               maxLength={80}
-              errorMessage={fieldState.error?.message ?? state.fieldErrors.name ?? null}
+              errorMessage={
+                fieldMessage(fieldState.error?.message, t) ?? state.fieldErrors.name ?? null
+              }
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              hint="Como quieres que te llame el complejo."
+              hint={t('guestForm.nameHint')}
             />
           )}
         />
@@ -158,16 +171,18 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
             <HintedInput
               type="tel"
               name="customerPhone"
-              label="Tu teléfono o WhatsApp"
+              label={t('guestForm.phone')}
               autoComplete="tel"
               inputMode="tel"
               spellCheck={false}
               placeholder="+57 300 123 4567"
-              errorMessage={fieldState.error?.message ?? state.fieldErrors.phone ?? null}
+              errorMessage={
+                fieldMessage(fieldState.error?.message, t) ?? state.fieldErrors.phone ?? null
+              }
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}
-              hint="El complejo lo usa para confirmarte o avisarte de cambios."
+              hint={t('guestForm.phoneHint')}
             />
           )}
         />
@@ -177,7 +192,7 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
         name="notes"
         render={({ field }) => (
           <TextAreaField
-            label="Nota (opcional)"
+            label={t('guestForm.note')}
             name="notes"
             maxLength={300}
             value={field.value}
@@ -189,7 +204,7 @@ export function GuestBookingForm(props: GuestBookingFormProps) {
       <InlineError message={state.formError} />
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={pending}>
-          {pending ? 'Reservando…' : 'Reservar'}
+          {pending ? t('guestForm.submitting') : t('guestForm.submit')}
         </AppButton>
       </div>
     </form>

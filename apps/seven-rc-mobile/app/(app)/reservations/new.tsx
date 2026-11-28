@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from '@17suit/i18n/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { sevenRcQueryKeys } from '@17suit/module-seven-reservations-club/client';
 import { Controller, useForm } from 'react-hook-form';
@@ -34,18 +35,20 @@ import { bookingPolicyLine, useVenueSnapshot, type VenueSnapshot } from '../../.
 import { humanizeError } from '../../../lib/error-messages';
 import { formatMoney, formatVenueTime } from '../../../lib/reservation-format';
 import { venueTimeLabel } from '../../../lib/timezone-label';
+import type { MobileT } from '../../../lib/i18n';
 
 type AvailabilitySlot = PitchAvailability['slots'][number];
 
+/** Schema messages are `reservationNew.errors.*` catalog keys; the screen translates them. */
 const reservationSchema = z.object({
-  pitchId: z.string().trim().min(1, 'Selecciona una cancha.'),
+  pitchId: z.string().trim().min(1, 'pitchRequired'),
   invitedCount: z
     .string()
     .trim()
-    .regex(/^\d{0,3}$/, 'Usa un número entero entre 0 y 100.')
-    .refine((value) => value === '' || Number(value) <= 100, 'Usa un número entero entre 0 y 100.')
+    .regex(/^\d{0,3}$/, 'invitedInvalid')
+    .refine((value) => value === '' || Number(value) <= 100, 'invitedInvalid')
     .optional(),
-  notes: z.string().trim().max(500, 'Máximo 500 caracteres.').optional(),
+  notes: z.string().trim().max(500, 'notesMax').optional(),
 });
 
 type ReservationFormValues = z.infer<typeof reservationSchema>;
@@ -86,20 +89,20 @@ function addDays(value: Date, days: number) {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate() + days);
 }
 
-function dayChipLabel(day: Date, index: number) {
-  if (index === 0) return 'Hoy';
-  if (index === 1) return 'Mañana';
-  return new Intl.DateTimeFormat('es-CO', { weekday: 'short' }).format(day).replace('.', '');
+function dayChipLabel(day: Date, index: number, locale: string, t: MobileT) {
+  if (index === 0) return t('reservationNew.today');
+  if (index === 1) return t('reservationNew.tomorrow');
+  return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(day).replace('.', '');
 }
 
-function dayChipCaption(day: Date) {
-  return new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short' })
+function dayChipCaption(day: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' })
     .format(day)
     .replace('.', '');
 }
 
-function longDay(day: Date) {
-  return new Intl.DateTimeFormat('es-CO', {
+function longDay(day: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -129,12 +132,13 @@ function contiguousRun(slots: AvailabilitySlot[], start: AvailabilitySlot | null
 /** Holds the form (and every date it renders) until the venue's timezone is known. */
 export default function NewReservationScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { venue, venueId, isLoading, isMissing, error, refetch } = useVenueSnapshot();
 
   if (venue) return <NewReservationForm key={venue.id} venue={venue} />;
 
   return (
-    <Screen title="Nueva reserva">
+    <Screen title={t('reservationNew.title')}>
       {isLoading || (!isMissing && !error) ? (
         <GapView gap="md">
           <AppSkeleton height={44} rounded="md" />
@@ -144,24 +148,22 @@ export default function NewReservationScreen() {
         <GapView gap="md">
           <AppAlert
             variant="warning"
-            title="No pudimos cargar el complejo"
+            title={t('reservationNew.venueError')}
             description={
-              error
-                ? humanizeError(error, 'load')
-                : 'No lo encontramos. Vuelve al inicio y elígelo otra vez.'
+              error ? humanizeError(error, t, 'load') : t('reservationNew.venueNotFound')
             }
             {...(venueId
               ? {
                   action: (
                     <AppButton variant="warning" onPress={refetch}>
-                      Reintentar
+                      {t('common.retry')}
                     </AppButton>
                   ),
                 }
               : {})}
           />
           <AppButton variant="neutral" onPress={() => router.replace('/home')}>
-            Volver al inicio
+            {t('common.backHome')}
           </AppButton>
         </GapView>
       )}
@@ -171,6 +173,9 @@ export default function NewReservationScreen() {
 
 function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
+  const locale = t('intlLocale');
+  const errorText = (code?: string) => (code ? t(`reservationNew.errors.${code}`) : null);
   const queryClient = useQueryClient();
   const { theme } = useAppTheme();
   const params = useLocalSearchParams<{ pitchId?: string | string[] }>();
@@ -180,7 +185,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
   const venueTimeZone = venue.timezone;
   const now = useNow();
   const createReservation = useCreateReservationMutation();
-  // The date, not its index: "Hoy" shifts when the venue's day rolls over.
+  // The date, not its index: "Today" shifts when the venue's day rolls over.
   const [pickedDateKey, setPickedDateKey] = useState<string | null>(null);
   const [pickedStartAt, setPickedStartAt] = useState<string | null>(null);
   const [pickedTurns, setPickedTurns] = useState(1);
@@ -253,7 +258,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
   const firstChosen = chosenSlots[0] ?? null;
   const lastChosen = chosenSlots[chosenSlots.length - 1] ?? null;
   const totalMinor = chosenSlots.reduce((sum, slot) => sum + slot.priceMinor, 0);
-  const totalLabel = formatMoney(totalMinor, currency);
+  const totalLabel = formatMoney(totalMinor, currency, locale);
   const slotMinutes =
     availabilityQuery.data?.slotDurationMinutes ??
     pitchesQuery.data?.find((pitch) => pitch.id === selectedPitchId)?.slotDurationMinutes ??
@@ -265,7 +270,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
     setSubmitError(null);
     if (!firstChosen || !lastChosen) return;
     if (new Date(firstChosen.startAt).getTime() <= Date.now()) {
-      setSubmitError('Ese horario ya pasó. Elige otro.');
+      setSubmitError(t('reservationNew.slotPassed'));
       setPickedStartAt(null);
       return;
     }
@@ -279,13 +284,13 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
         notes: values.notes?.trim() || undefined,
       });
       if (created.status === 'pending_confirmation') {
-        feedback.success('Reserva enviada', 'El complejo debe confirmarla.');
+        feedback.success(t('reservationNew.sentTitle'), t('reservationNew.sentMessage'));
       } else {
-        feedback.success('Reserva creada', 'Revisa los detalles de tu reserva.');
+        feedback.success(t('reservationNew.createdTitle'), t('reservationNew.createdMessage'));
       }
       router.replace(`/reservations/${created.id}`);
     } catch (error) {
-      setSubmitError(humanizeError(error, 'create'));
+      setSubmitError(humanizeError(error, t, 'create'));
       void availabilityQuery.refetch();
     }
   });
@@ -296,28 +301,31 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
 
   let ctaLabel: string;
   if (isSubmitting) {
-    ctaLabel = 'Reservando…';
+    ctaLabel = t('reservationNew.booking');
   } else if (!pitchExists) {
-    ctaLabel = 'Elige una cancha';
+    ctaLabel = t('reservationNew.pickCourt');
   } else if (!firstChosen || !lastChosen) {
-    ctaLabel = 'Elige un horario';
+    ctaLabel = t('reservationNew.pickSlot');
   } else {
-    const range = `${formatVenueTime(firstChosen.startAt, venueTimeZone)}–${formatVenueTime(
+    const range = `${formatVenueTime(firstChosen.startAt, venueTimeZone, locale)}–${formatVenueTime(
       lastChosen.endAt,
       venueTimeZone,
+      locale,
     )}`;
-    ctaLabel = totalLabel ? `Confirmar · ${range} · ${totalLabel}` : `Confirmar · ${range}`;
+    ctaLabel = totalLabel
+      ? t('reservationNew.confirmWithTotal', { range, total: totalLabel })
+      : t('reservationNew.confirm', { range });
   }
   const canSubmit = pitchExists && Boolean(firstChosen) && !isSubmitting;
 
   return (
     <Screen
-      title="Nueva reserva"
+      title={t('reservationNew.title')}
       subtitle={venue.name}
       footer={
         <>
           <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
-            {bookingPolicyLine(venue, firstChosen ? totalMinor : undefined)}
+            {bookingPolicyLine(venue, t, firstChosen ? totalMinor : undefined)}
           </Text>
           <FormError message={submitError} />
           <AppButton onPress={onSubmit} disabled={!canSubmit} busy={isSubmitting}>
@@ -345,19 +353,23 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
                   setPickedTurns(1);
                 }}
                 options={pitchOptions}
-                label="Cancha"
-                placeholder={pitchesQuery.isLoading ? 'Cargando canchas…' : 'Seleccionar cancha'}
+                label={t('common.court')}
+                placeholder={
+                  pitchesQuery.isLoading
+                    ? t('reservationNew.loadingCourts')
+                    : t('reservationNew.selectCourt')
+                }
                 disabled={pitchesQuery.isLoading}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />
 
         <GapView gap="sm">
           <AppTypography variant="subtitle2" accessibilityRole="header">
-            Fecha
+            {t('reservationNew.date')}
           </AppTypography>
           <AppScrollView
             horizontal
@@ -371,9 +383,9 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
               {days.map((day, index) => (
                 <ChoiceChip
                   key={toDateKey(day)}
-                  label={dayChipLabel(day, index)}
-                  caption={dayChipCaption(day)}
-                  accessibilityLabel={longDay(day)}
+                  label={dayChipLabel(day, index, locale, t)}
+                  caption={dayChipCaption(day, locale)}
+                  accessibilityLabel={longDay(day, locale)}
                   selected={index === dayIndex}
                   minWidth={64}
                   onPress={() => {
@@ -389,14 +401,14 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
 
         <GapView gap="sm">
           <AppTypography variant="subtitle2" accessibilityRole="header">
-            Hora de inicio
+            {t('reservationNew.startTime')}
           </AppTypography>
           <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
-            {`${longDay(selectedDate)} · ${venueTimeLabel(venueTimeZone)}`}
+            {`${longDay(selectedDate, locale)} · ${venueTimeLabel(venueTimeZone, t)}`}
           </Text>
 
           {!pitchExists && !pitchesQuery.isLoading ? (
-            <Text style={mutedSmall}>Elige una cancha para ver los horarios libres.</Text>
+            <Text style={mutedSmall}>{t('reservationNew.pickCourtHint')}</Text>
           ) : null}
 
           {pitchExists && availabilityQuery.isLoading ? (
@@ -406,8 +418,8 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
           {availabilityQuery.error ? (
             <AppAlert
               variant="warning"
-              title="No pudimos cargar los horarios libres"
-              description={humanizeError(availabilityQuery.error, 'load')}
+              title={t('reservationNew.availabilityError')}
+              description={humanizeError(availabilityQuery.error, t, 'load')}
               action={
                 <AppButton
                   variant="warning"
@@ -415,15 +427,13 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
                     void availabilityQuery.refetch();
                   }}
                 >
-                  Reintentar
+                  {t('common.retry')}
                 </AppButton>
               }
             />
           ) : null}
 
-          {isNoSlotsDay ? (
-            <Text style={mutedSmall}>No quedan horarios libres este día. Prueba otra fecha.</Text>
-          ) : null}
+          {isNoSlotsDay ? <Text style={mutedSmall}>{t('reservationNew.noSlots')}</Text> : null}
 
           {availableSlots.length > 0 ? (
             <View
@@ -434,7 +444,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
                 <ChoiceChip
                   key={slot.startAt}
                   label={slot.localStartTime}
-                  caption={formatMoney(slot.priceMinor, currency)}
+                  caption={formatMoney(slot.priceMinor, currency, locale)}
                   selected={slot.startAt === startSlot?.startAt}
                   onPress={() => {
                     setPickedStartAt(slot.startAt);
@@ -449,7 +459,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
         {maxTurns > 0 ? (
           <GapView gap="sm">
             <AppTypography variant="subtitle2" accessibilityRole="header">
-              Duración
+              {t('reservationNew.duration')}
             </AppTypography>
             <View
               accessibilityRole="radiogroup"
@@ -458,8 +468,8 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
               {Array.from({ length: maxTurns }, (_unused, index) => index + 1).map((count) => (
                 <ChoiceChip
                   key={count}
-                  label={count === 1 ? '1 turno' : `${count} turnos`}
-                  caption={`${count * slotMinutes} min`}
+                  label={t('reservationNew.turns', { count })}
+                  caption={t('reservationNew.minutes', { count: count * slotMinutes })}
                   selected={count === turns}
                   onPress={() => setPickedTurns(count)}
                 />
@@ -467,9 +477,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
             </View>
             {maxTurns < MAX_TURNS ? (
               <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
-                {maxTurns === 1
-                  ? 'Desde esta hora solo hay 1 turno libre seguido.'
-                  : `Desde esta hora hay ${maxTurns} turnos libres seguidos.`}
+                {t('reservationNew.freeTurns', { count: maxTurns })}
               </Text>
             ) : null}
           </GapView>
@@ -494,7 +502,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
               fontSize: chipLabelType.fontSize,
             }}
           >
-            {showDetails ? 'Ocultar detalles' : 'Agregar detalles (invitados, notas)'}
+            {showDetails ? t('reservationNew.hideDetails') : t('reservationNew.addDetails')}
           </Text>
         </Pressable>
 
@@ -507,7 +515,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
                 <AppInput
                   value={field.value ?? ''}
                   onChangeText={field.onChange}
-                  label="Invitados extra"
+                  label={t('reservationNew.extraGuests')}
                   placeholder="0"
                   keyboardType="number-pad"
                 />
@@ -521,11 +529,11 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
                   <AppInput
                     value={field.value ?? ''}
                     onChangeText={field.onChange}
-                    label="Notas para el complejo"
-                    placeholder="Ej. traemos balón propio"
+                    label={t('reservationNew.notesLabel')}
+                    placeholder={t('reservationNew.notesPlaceholder')}
                     error={fieldState.invalid}
                   />
-                  <FormError message={fieldState.error?.message ?? null} />
+                  <FormError message={errorText(fieldState.error?.message)} />
                 </>
               )}
             />
