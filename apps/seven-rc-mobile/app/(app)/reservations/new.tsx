@@ -33,6 +33,7 @@ import { VenueLinks } from '../../../components/venue-links';
 import { feedback } from '../../../lib/feedback';
 import { useNow, useScreenFocus } from '../../../lib/focus';
 import { bookingPolicyLine, useVenueSnapshot, type VenueSnapshot } from '../../../lib/venue-params';
+import { bookingDayChipCount, MAX_CONSECUTIVE_SLOTS } from '../../../lib/booking-limits';
 import { humanizeError } from '../../../lib/error-messages';
 import { formatMoney, formatVenueTime } from '../../../lib/reservation-format';
 import { venueTimeLabel } from '../../../lib/timezone-label';
@@ -56,11 +57,6 @@ const reservationSchema = z.object({
 });
 
 type ReservationFormValues = z.infer<typeof reservationSchema>;
-
-const MAX_TURNS = 4;
-const MAX_DAY_CHIPS = 30;
-/** The venue search omits the horizon (see `VenueSnapshot`); the server still enforces it. */
-const DEFAULT_HORIZON_DAYS = 14;
 
 function toOptionalNumber(value?: string) {
   if (!value) return undefined;
@@ -115,13 +111,17 @@ function longDay(day: Date, locale: string) {
 
 /**
  * The selected start slot plus the AVAILABLE slots that follow it back-to-back,
- * capped at {@link MAX_TURNS}. A gap or a taken slot ends the run.
+ * capped at {@link MAX_CONSECUTIVE_SLOTS}. A gap or a taken slot ends the run.
  */
 function contiguousRun(slots: AvailabilitySlot[], start: AvailabilitySlot | null) {
   if (!start) return [];
   const startIndex = slots.indexOf(start);
   const run: AvailabilitySlot[] = [];
-  for (let index = startIndex; index < slots.length && run.length < MAX_TURNS; index += 1) {
+  for (
+    let index = startIndex;
+    index < slots.length && run.length < MAX_CONSECUTIVE_SLOTS;
+    index += 1
+  ) {
     const slot = slots[index];
     if (!slot || slot.status !== 'AVAILABLE') break;
     const previous = run[run.length - 1];
@@ -220,10 +220,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
   const pitchExists = pitchOptions.some((option) => option.value === selectedPitchId);
 
   const today = venueToday(venueTimeZone, now);
-  const horizonDays = Math.min(
-    MAX_DAY_CHIPS,
-    Math.max(1, venue.bookingHorizonDays ?? DEFAULT_HORIZON_DAYS),
-  );
+  const horizonDays = bookingDayChipCount(venue.bookingHorizonDays);
   const days = Array.from({ length: horizonDays }, (_unused, index) => addDays(today, index));
   const dayIndex = Math.max(
     0,
@@ -482,7 +479,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
                 />
               ))}
             </View>
-            {maxTurns < MAX_TURNS ? (
+            {maxTurns < MAX_CONSECUTIVE_SLOTS ? (
               <Text style={{ color: theme.colors.muted, fontSize: 13, lineHeight: 18 }}>
                 {t('reservationNew.freeTurns', { count: maxTurns })}
               </Text>

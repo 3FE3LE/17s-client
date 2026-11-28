@@ -7,6 +7,9 @@ import {
   createPublicReservation,
   fetchPublicVenue,
 } from '@/lib/public-venue-api';
+import { describeApiError, resolveErrorKey } from '@17suit/i18n';
+import { getProductLocale } from '@17suit/i18n/next';
+import { isSlotConflictErrorKey } from '@/lib/slot-conflict';
 import { E164_PATTERN, normalizePhone } from '@/lib/phone';
 
 export interface BookingFormState {
@@ -86,6 +89,11 @@ export async function reserveAction(
     revalidatePath(`/c/${encodeURIComponent(slug)}`);
     redirect(`${back}${back.includes('?') ? '&' : '?'}condiciones=1`);
   }
+  if (isSlotConflictErrorKey(result.errorKey)) {
+    // Availability is never cached; the redirect refetches it and shows the specific reason.
+    revalidatePath(`/c/${encodeURIComponent(slug)}`);
+    redirect(`${back}${back.includes('?') ? '&' : '?'}conflicto=${result.errorKey}`);
+  }
   if (result.status === 409) {
     // Availability is re-fetched by the redirect, so the taken slot disappears from the list.
     redirect(`${back}${back.includes('?') ? '&' : '?'}conflicto=1`);
@@ -94,6 +102,12 @@ export async function reserveAction(
     return failure({}, 'Demasiados intentos seguidos. Espera un minuto e intenta de nuevo.');
   }
   if (result.status === 404) redirect(`/c/${encodeURIComponent(slug)}`);
+  if (result.status === 400 || result.status === 409) {
+    const apiError = { errorKey: result.errorKey, params: result.params };
+    if (resolveErrorKey(apiError) !== 'unknown') {
+      return failure({}, describeApiError(apiError, await getProductLocale()));
+    }
+  }
   if (result.status === 400) {
     return failure({}, 'Revisa los datos e intenta de nuevo. Si el horario ya pasó, elige otro.');
   }

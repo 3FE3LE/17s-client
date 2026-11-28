@@ -15,12 +15,17 @@ function apiBaseUrl(): string {
 }
 
 /** `null` when the venue does not exist or is not published (server answers 404). */
-async function getPublic<T>(path: string, init: RequestInit): Promise<T | null> {
+async function getPublic<T>(
+  path: string,
+  init: RequestInit,
+  onBadRequest?: () => T,
+): Promise<T | null> {
   const response = await fetch(`${apiBaseUrl()}/api/7rc/public/${path}`, {
     ...init,
     headers: { Accept: 'application/json' },
   });
   if (response.status === 404) return null;
+  if (response.status === 400 && onBadRequest) return onBadRequest();
   if (!response.ok) {
     throw new Error(`Public venue request failed (${response.status})`);
   }
@@ -29,11 +34,15 @@ async function getPublic<T>(path: string, init: RequestInit): Promise<T | null> 
 
 export function fetchPublicVenue(slug: string): Promise<PublicVenue | null> {
   return getPublic<PublicVenue>(`venues/${encodeURIComponent(slug)}`, {
-    next: { revalidate: 60 },
+    // `today` and `policyVersion` must be current at request time, so this is never cached.
+    cache: 'no-store',
   });
 }
 
-/** Availability changes with every booking, so it is never cached. */
+/**
+ * Availability changes with every booking, so it is never cached. A 400 (date outside the
+ * booking window, e.g. a stale `today`) comes back as an empty day instead of a 500.
+ */
 export function fetchPublicVenueAvailability(
   slug: string,
   date: string,
@@ -41,7 +50,12 @@ export function fetchPublicVenueAvailability(
   return getPublic<PublicVenueAvailability>(
     `venues/${encodeURIComponent(slug)}/availability?date=${encodeURIComponent(date)}`,
     { cache: 'no-store' },
+    () => emptyAvailability(date),
   );
+}
+
+export function emptyAvailability(date: string): PublicVenueAvailability {
+  return { venueId: '', date, timezone: '', currency: '', pitches: [] };
 }
 
 /** `null` when the token does not match any reservation. Never cached: status changes. */
@@ -53,11 +67,34 @@ export function fetchPublicReservation(token: string): Promise<PublicReservation
 
 export type CreatePublicReservationResult =
   | { ok: true; reservation: PublicReservation }
-  | { ok: false; status: number; message: string; code: string };
+  | {
+      ok: false;
+      status: number;
+      message: string;
+      code: string;
+      errorKey: string;
+      params: Record<string, string | number>;
+    };
 
 function errorCode(body: unknown): string {
   const code = (body as { code?: unknown } | null)?.code;
   return typeof code === 'string' ? code : '';
+}
+
+function errorKey(body: unknown): string {
+  const key = (body as { errorKey?: unknown } | null)?.errorKey;
+  return typeof key === 'string' ? key : '';
+}
+
+function errorParams(body: unknown): Record<string, string | number> {
+  const params = (body as { params?: unknown } | null)?.params;
+  if (!params || typeof params !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(params).filter(
+      (entry): entry is [string, string | number] =>
+        typeof entry[1] === 'string' || typeof entry[1] === 'number',
+    ),
+  );
 }
 
 function errorMessage(body: unknown): string {
@@ -87,6 +124,8 @@ export async function createPublicReservation(
       status: response.status,
       message: errorMessage(body),
       code: errorCode(body),
+      errorKey: errorKey(body),
+      params: errorParams(body),
     };
   }
   return { ok: true, reservation: body as PublicReservation };
