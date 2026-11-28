@@ -19,6 +19,7 @@ export const errors = {
   notReservationOwner: 'Only the person who booked can do this.',
   reservationAccessDenied: 'You cannot see this reservation.',
   invalidField: 'Check this field.',
+  duplicateOpeningDay: 'Each weekday can only appear once in the opening hours.',
   invalidTimeRange: 'The end time must be after the start time.',
   outsideBookingWindow: 'That date is outside the period the venue accepts bookings.',
   reservationNotPending: 'This request was already handled. The list was refreshed.',
