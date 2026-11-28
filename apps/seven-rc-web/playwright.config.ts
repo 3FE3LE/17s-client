@@ -69,8 +69,6 @@ export default defineConfig({
         NEXT_DIST_DIR: '.next-e2e',
         API_BASE_URL: `http://127.0.0.1:${STUB_PORT}/api`,
         NEXT_PUBLIC_API_BASE_URL: `http://127.0.0.1:${STUB_PORT}/api`,
-        // Never inherit a developer's real Sentry DSN into test runs.
-        SENTRY_DSN: '',
       },
     },
   ],
