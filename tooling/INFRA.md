@@ -41,5 +41,4 @@ A small set of apps keep legacy ports that don't follow the formula (e.g. `admin
 ## Future additions
 
 - Local Postgres bootstrap command + container lifecycle (`./dev.sh --local-db` already covers this — moved here for completeness).
-- Sentry DSN rotation cadence.
 - Twilio A2P 10DLC registration owner.

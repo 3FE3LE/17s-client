@@ -34,11 +34,6 @@
           "imageWidth": 120
         }
       ]
-    ],
-    "extra": {
-      "sentryDsn": "SENTRY_DSN",
-      "sentryEnvironment": "SENTRY_ENVIRONMENT",
-      "sentryTracesSampleRate": "SENTRY_TRACES_SAMPLE_RATE"
-    }
+    ]
   }
 }
