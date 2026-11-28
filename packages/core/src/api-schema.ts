@@ -1720,6 +1720,23 @@ export interface components {
     };
     /** @enum {string} */
     DepositPolicy: 'refund' | 'retain' | 'owner_decides';
+    PitchReadinessResponseDto: {
+      /** Format: uuid */
+      pitchId: string;
+      ready: boolean;
+      missing: ('noOpeningHours' | 'noSlots' | 'durationOutOfRange' | 'priceMissing')[];
+    };
+    VenueReadinessResponseDto: {
+      /** @description True when the venue can be published */
+      ready: boolean;
+      missing: (
+        | 'slugMissing'
+        | 'noReadyPitch'
+        | 'timezoneInvalid'
+        | 'paymentInstructionsMissing'
+      )[];
+      pitches: components['schemas']['PitchReadinessResponseDto'][];
+    };
     VenueResponseDto: {
       /** Format: uuid */
       id: string;
@@ -1749,6 +1766,8 @@ export interface components {
       policyVersion: number;
       /** @description Only on settings update: active upcoming reservations that keep the previous conditions (0 when no condition changed) */
       reservationsKeepingPolicy?: number;
+      /** @description Computed on the owner list and on settings update: what is still missing to publish */
+      readiness?: components['schemas']['VenueReadinessResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */
@@ -1787,6 +1806,8 @@ export interface components {
       policyVersion: number;
       /** @description Only on settings update: active upcoming reservations that keep the previous conditions (0 when no condition changed) */
       reservationsKeepingPolicy?: number;
+      /** @description Computed on the owner list and on settings update: what is still missing to publish */
+      readiness?: components['schemas']['VenueReadinessResponseDto'];
       /** Format: date-time */
       createdAt: string;
       /** Format: date-time */

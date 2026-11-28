@@ -13,6 +13,7 @@ export const errors: CatalogShape<typeof en> = {
   rateLimited: 'Demasiados intentos. Espera un minuto e inténtalo de nuevo.',
   slugRequired: 'Elige un enlace público antes de publicar.',
   slugTaken: 'Ese enlace ya está en uso. Prueba con otro.',
+  venueNotReady: 'Completa la configuración del complejo antes de publicarlo.',
   venueNotFound: 'Ese complejo ya no existe. Actualiza la página.',
   pitchNotFound: 'Esa cancha ya no existe. Actualiza la página.',
   reservationNotFound: 'Esa reserva ya no existe. Actualiza la página.',

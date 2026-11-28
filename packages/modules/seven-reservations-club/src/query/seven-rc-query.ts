@@ -153,6 +153,8 @@ export function useSevenRcConfigurePitchSlotsMutation(
         );
         void queryClient.invalidateQueries({ queryKey });
       }
+      // Venue readiness (publish checklist) is computed on the server from the pitch hours.
+      void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues });
       void queryClient.invalidateQueries({
         queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
       });
@@ -277,6 +279,8 @@ export function useSevenRcConfigurePitchPricingMutation(
           queryKey: sevenRcQueryKeys.ownerVenuePitches(venueId),
         });
       }
+      // Venue readiness (publish checklist) depends on the pitch price.
+      void queryClient.invalidateQueries({ queryKey: sevenRcQueryKeys.ownerVenues });
       void queryClient.invalidateQueries({
         queryKey: sevenRcQueryKeys.pitchAvailabilityBase(pitchId),
       });

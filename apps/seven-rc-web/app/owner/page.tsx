@@ -240,18 +240,30 @@ function OwnerWorkspace() {
   const pitchesReady = pitchesQuery.data !== undefined;
   const hasVenue = venues.length > 0;
   const hasPitch = pitches.length > 0;
-  const withoutHours = pitches.filter(
-    (pitch) => Object.keys(pitch.openingHours ?? {}).length === 0,
-  );
-  const withoutPrice = pitches.filter(
-    (pitch) => pitch.basePriceMinor <= 0 && pitch.priceRules.length === 0,
-  );
+  // Readiness is computed by the server; the checklist only renders it.
+  const readiness = selectedVenue?.readiness;
+  const pitchesMissing = (codes: string[]) =>
+    pitches.filter((pitch) =>
+      readiness?.pitches
+        .find((entry) => entry.pitchId === pitch.id)
+        ?.missing.some((code) => codes.includes(code)),
+    );
+  const withoutHours = pitchesMissing(['noOpeningHours', 'noSlots']);
+  const withoutDuration = pitchesMissing(['durationOutOfRange']);
+  const withoutPrice = pitchesMissing(['priceMissing']);
   const missingIn = (missing: PitchWithPricing[]) =>
     missing.length > 0 && pitches.length > 1
       ? ` ${t('page.setup.missingIn', { pitches: missing.map((pitch) => pitch.name).join(', ') })}`
       : '';
   const publishMissing = [
     ...(hasPitch ? [] : [t('page.publishMissing.pitch')]),
+    ...(hasPitch && withoutDuration.length > 0
+      ? [
+          t('page.publishMissing.duration', {
+            pitches: withoutDuration.map((pitch) => pitch.name).join(', '),
+          }),
+        ]
+      : []),
     ...(hasPitch && withoutHours.length > 0
       ? [
           t('page.publishMissing.hours', {
@@ -265,6 +277,10 @@ function OwnerWorkspace() {
             pitches: withoutPrice.map((pitch) => pitch.name).join(', '),
           }),
         ]
+      : []),
+    ...(readiness?.missing.includes('timezoneInvalid') ? [t('page.publishMissing.timezone')] : []),
+    ...(readiness?.missing.includes('paymentInstructionsMissing')
+      ? [t('page.publishMissing.payment')]
       : []),
   ];
   const setupItems: SetupItem[] = [
