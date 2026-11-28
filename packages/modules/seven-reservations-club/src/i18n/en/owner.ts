@@ -106,6 +106,9 @@ export const owner = {
       pitch: 'a pitch',
       hours: 'opening hours in {{pitches}}',
       price: 'price in {{pitches}}',
+      duration: 'pitch durations of 30 to 240 minutes in {{pitches}}',
+      timezone: 'a valid time zone',
+      payment: 'payment instructions (a deposit is set)',
     },
     config: {
       title: 'Settings',

@@ -110,6 +110,9 @@ export const owner: CatalogShape<typeof en> = {
       pitch: 'una cancha',
       hours: 'horario en {{pitches}}',
       price: 'precio en {{pitches}}',
+      duration: 'duración de 30 a 240 minutos en {{pitches}}',
+      timezone: 'una zona horaria válida',
+      payment: 'instrucciones de pago (hay anticipo configurado)',
     },
     config: {
       title: 'Configuración',

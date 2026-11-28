@@ -10,6 +10,7 @@ export const errors = {
   rateLimited: 'Too many attempts. Wait a minute and try again.',
   slugRequired: 'Choose a public link before publishing.',
   slugTaken: 'That link is already taken. Try another one.',
+  venueNotReady: 'Finish setting up the venue before publishing it.',
   venueNotFound: 'That venue no longer exists. Refresh the page.',
   pitchNotFound: 'That pitch no longer exists. Refresh the page.',
   reservationNotFound: 'That reservation no longer exists. Refresh the page.',
