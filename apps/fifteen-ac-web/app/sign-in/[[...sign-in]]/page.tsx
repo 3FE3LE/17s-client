@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { landingAuthUrl } from '@17suit/core/site-origins';
 import { auth } from '@clerk/nextjs/server';
 
 interface RedirectPageProps {
@@ -7,11 +8,7 @@ interface RedirectPageProps {
 }
 
 function resolveLandingSignInUrl(): string {
-  const configured = process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL;
-  if (configured && configured.trim().length > 0) {
-    return configured;
-  }
-  return 'http://localhost:3000/sign-in';
+  return landingAuthUrl('sign-in');
 }
 
 function resolveAppRootFromHeaders(headerList: Headers): string {
