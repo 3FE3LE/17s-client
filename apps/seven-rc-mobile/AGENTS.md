@@ -2,6 +2,14 @@
 
 > Auto-generated stub. Owner fills in TODO sections within first session.
 
+## Feature freeze (workspace#33)
+
+No new features in this app until the Sprint 3 ADRs are resolved: workspace#53 (centralized app vs independent apps), workspace#52 (PWA vs native), workspace#54 (mobile plan). New MVP work lands in `seven-rc-web` first.
+
+- Allowed: bug fixes, security fixes, i18n and tests of existing behavior, dependency and tooling upkeep.
+- Not allowed: new screens, flows or product rules.
+- Lift: only on the user's explicit go-ahead after the ADRs close.
+
 ## Own files
 
 - `apps/seven-rc-mobile/**` — everything under this directory is owned by this app.
