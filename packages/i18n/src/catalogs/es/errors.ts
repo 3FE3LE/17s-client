@@ -22,6 +22,7 @@ export const errors: CatalogShape<typeof en> = {
   notReservationOwner: 'Solo quien hizo la reserva puede hacer esto.',
   reservationAccessDenied: 'No puedes ver esta reserva.',
   invalidField: 'Revisa este campo.',
+  duplicateOpeningDay: 'Cada día de la semana solo puede aparecer una vez en el horario.',
   invalidTimeRange: 'La hora final debe ser posterior a la inicial.',
   outsideBookingWindow: 'Esa fecha está fuera del periodo en que el complejo recibe reservas.',
   reservationNotPending: 'Esta solicitud ya fue atendida. La lista se actualizó.',
