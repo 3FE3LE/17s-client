@@ -1,6 +1,6 @@
 'use client';
 
-import { intInRange } from '@17suit/core';
+import { applyServerFieldErrors, intInRange } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton } from '@17suit/ui';
 import { useState } from 'react';
@@ -18,6 +18,15 @@ import { useUpdateVenueSettingsMutation, type OwnerVenue } from '@/lib/owner-que
 import { normalizePhone } from '@/lib/phone';
 import { describeError } from '@/lib/seven-rc-errors';
 import { useTranslation } from '@17suit/i18n/react';
+
+/** Server DTO property to form field, only for fields with an inline error. */
+const SERVER_FIELD_MAP = {
+  contactPhone: 'contactPhone',
+  depositPercent: 'depositPercent',
+  holdMinutes: 'holdMinutes',
+  cancellationWindowHours: 'cancellationWindowHours',
+  bookingHorizonDays: 'bookingHorizonDays',
+} as const;
 
 const E164_PATTERN = /^\+[1-9]\d{7,14}$/;
 const POLICY_VALUES = DEPOSIT_POLICY_VALUES as unknown as [DepositPolicy, ...DepositPolicy[]];
@@ -91,7 +100,11 @@ function NumberField({
           min={min}
           max={max}
           step={step}
-          errorMessage={fieldState.error?.message ? t(fieldState.error.message) : null}
+          errorMessage={
+            fieldState.error?.message
+              ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+              : null
+          }
           value={field.value}
           onChangeText={field.onChange}
           onBlur={field.onBlur}
@@ -111,7 +124,7 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
   const mutation = useUpdateVenueSettingsMutation(venue.id);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit, setValue, watch, formState } = useForm<SettingsValues>({
+  const { control, handleSubmit, setValue, watch, formState, setError } = useForm<SettingsValues>({
     resolver: zodResolver(buildSettingsSchema(venue.countryCode, Boolean(venue.contactPhone))),
     defaultValues: {
       contactPhone: venue.contactPhone ?? '',
@@ -150,7 +163,9 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
           keeping > 0 ? t('settings.savedKeeping', { count: keeping }) : t('settings.saved'),
         );
       } catch (caught) {
-        setFormError(describeError(caught, t('settings.saveFailed')));
+        if (!applyServerFieldErrors(caught, setError, SERVER_FIELD_MAP)) {
+          setFormError(describeError(caught, t('settings.saveFailed')));
+        }
       }
     },
     () => {
@@ -187,7 +202,11 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
               inputMode="tel"
               spellCheck={false}
               placeholder={t('settings.contactPhone.placeholder')}
-              errorMessage={fieldState.error?.message ? t(fieldState.error.message) : null}
+              errorMessage={
+                fieldState.error?.message
+                  ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+                  : null
+              }
               value={field.value}
               onChangeText={field.onChange}
               onBlur={field.onBlur}

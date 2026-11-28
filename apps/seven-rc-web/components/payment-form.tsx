@@ -1,5 +1,6 @@
 'use client';
 
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton, AppInput } from '@17suit/ui';
 import { useTranslation } from '@17suit/i18n/react';
@@ -52,6 +53,9 @@ function buildPaymentSchema(paidMinor: number) {
 }
 type PaymentValues = z.infer<ReturnType<typeof buildPaymentSchema>>;
 
+/** Server DTO property to form field, only for fields with an inline error. */
+const SERVER_FIELD_MAP = { amountMinor: 'amount' } as const;
+
 export function PaymentForm({
   reservation,
   timeZone,
@@ -90,7 +94,13 @@ export function PaymentForm({
       : 'balance';
   const defaultAmount = dueByKind[defaultKind];
   const [error, setError] = useState<string | null>(null);
-  const { control, handleSubmit, setValue, watch } = useForm<PaymentValues>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    setError: setFieldError,
+  } = useForm<PaymentValues>({
     resolver: zodResolver(buildPaymentSchema(reservation.paidMinor)),
     defaultValues: {
       kind: defaultKind,
@@ -113,7 +123,9 @@ export function PaymentForm({
         ...(note ? { note } : {}),
       });
     } catch (caught) {
-      setError(describeError(caught, t('payment.error')));
+      if (!applyServerFieldErrors(caught, setFieldError, SERVER_FIELD_MAP)) {
+        setError(describeError(caught, t('payment.error')));
+      }
     }
   });
 
@@ -204,7 +216,11 @@ export function PaymentForm({
             />
             <InlineError
               message={
-                fieldState.error?.message ? t(`payment.errors.${fieldState.error.message}`) : null
+                fieldState.error?.message
+                  ? fieldState.error.message.includes(':')
+                    ? t(fieldState.error.message)
+                    : t(`payment.errors.${fieldState.error.message}`)
+                  : null
               }
             />
           </div>

@@ -234,6 +234,14 @@ export class SevenRcApiError extends Error {
       : undefined;
   }
 
+  /** Per-property validator messages from the server error contract (`fields`), when present. */
+  get fields(): Record<string, string[]> | undefined {
+    const value = this.field('fields');
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, string[]>)
+      : undefined;
+  }
+
   private field(name: string): unknown {
     return this.payload && typeof this.payload === 'object'
       ? (this.payload as Record<string, unknown>)[name]

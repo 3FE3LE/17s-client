@@ -1,6 +1,11 @@
 'use client';
 
-import { coAddressDraftSchema, coAddressFromDraft, EMPTY_CO_ADDRESS_DRAFT } from '@17suit/core';
+import {
+  applyServerFieldErrors,
+  coAddressDraftSchema,
+  coAddressFromDraft,
+  EMPTY_CO_ADDRESS_DRAFT,
+} from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton, AppInput } from '@17suit/ui';
 import { useState } from 'react';
@@ -22,6 +27,9 @@ const createVenueSchema = z.object({
 });
 type CreateVenueValues = z.infer<typeof createVenueSchema>;
 
+/** Server DTO property to form field. Address parts have no single inline field. */
+const SERVER_FIELD_MAP = { name: 'name' } as const;
+
 const EMPTY: CreateVenueValues = {
   name: '',
   timezone: DEFAULT_TIMEZONE,
@@ -33,7 +41,13 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
   const createVenueMutation = useCreateVenueMutation();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit, reset, formState } = useForm<CreateVenueValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState,
+    setError: setFieldError,
+  } = useForm<CreateVenueValues>({
     resolver: zodResolver(createVenueSchema),
     defaultValues: EMPTY,
   });
@@ -53,7 +67,9 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
         setNotice(t('createVenue.created', { name: created.name }));
         onCreated(created.id);
       } catch (caught) {
-        setError(describeError(caught, t('createVenue.failed')));
+        if (!applyServerFieldErrors(caught, setFieldError, SERVER_FIELD_MAP)) {
+          setError(describeError(caught, t('createVenue.failed')));
+        }
       }
     },
     () => {

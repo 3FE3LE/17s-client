@@ -1,6 +1,6 @@
 'use client';
 
-import { intInRange } from '@17suit/core';
+import { applyServerFieldErrors, intInRange } from '@17suit/core';
 import { AppButton, AppInput } from '@17suit/ui';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
@@ -20,12 +20,26 @@ const createPitchSchema = z.object({
 });
 type CreatePitchValues = z.infer<typeof createPitchSchema>;
 
+/** Server DTO property to form field, only for fields with an inline error. */
+const SERVER_FIELD_MAP = {
+  name: 'name',
+  capacity: 'capacity',
+  slotDurationMinutes: 'duration',
+} as const;
+
 export function CreatePitchForm({ venueId, venueName }: { venueId: string; venueName: string }) {
   const { t } = useTranslation('venue');
   const createPitchMutation = useCreateVenuePitchMutation(venueId);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit, reset, getValues, formState } = useForm<CreatePitchValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    getValues,
+    formState,
+    setError: setFieldError,
+  } = useForm<CreatePitchValues>({
     resolver: zodResolver(createPitchSchema),
     defaultValues: { name: '', sportType: 'futbol-5', capacity: '10', duration: '60' },
   });
@@ -45,7 +59,9 @@ export function CreatePitchForm({ venueId, venueName }: { venueId: string; venue
       reset({ ...getValues(), name: '' });
       setNotice(t('createPitch.created', { name: created.name }));
     } catch (caught) {
-      setError(describeError(caught, t('createPitch.failed')));
+      if (!applyServerFieldErrors(caught, setFieldError, SERVER_FIELD_MAP)) {
+        setError(describeError(caught, t('createPitch.failed')));
+      }
     }
   });
 

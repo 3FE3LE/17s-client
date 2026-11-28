@@ -1,5 +1,6 @@
 'use client';
 
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton } from '@17suit/ui';
 import { useState } from 'react';
@@ -20,6 +21,9 @@ const priceSchema = z.object({
 });
 type PriceValues = z.infer<typeof priceSchema>;
 
+/** Server DTO property to form field. Price rules are not edited here. */
+const SERVER_FIELD_MAP = { basePriceMinor: 'amount' } as const;
+
 export function PitchPriceForm({
   venueId,
   currency,
@@ -34,7 +38,13 @@ export function PitchPriceForm({
   const mutation = useConfigurePitchPricingMutation(pitch.id, venueId);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit, watch, formState } = useForm<PriceValues>({
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState,
+    setError: setFieldError,
+  } = useForm<PriceValues>({
     resolver: zodResolver(priceSchema),
     defaultValues: {
       amount: pitch.basePriceMinor > 0 ? formatAmountInput(pitch.basePriceMinor) : '',
@@ -69,7 +79,9 @@ export function PitchPriceForm({
             : t('price.savedNoPrice', { pitch: pitch.name }),
       );
     } catch (caught) {
-      setError(describeError(caught, t('price.saveFailed')));
+      if (!applyServerFieldErrors(caught, setFieldError, SERVER_FIELD_MAP)) {
+        setError(describeError(caught, t('price.saveFailed')));
+      }
     }
   });
   const saving = mutation.isPending || formState.isSubmitting;

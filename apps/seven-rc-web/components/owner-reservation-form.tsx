@@ -1,5 +1,6 @@
 'use client';
 
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from '@17suit/i18n/react';
 import { useState } from 'react';
@@ -29,6 +30,12 @@ import type { ReservationPaymentMethod } from '@/lib/owner-queries';
 
 const RECURRING_DEFAULT_WEEKS = 8;
 const RECURRING_MAX_WEEKS = 52;
+/** Server DTO property to form field, only for fields with an inline error. */
+const CREATE_FIELD_MAP = {
+  customerName: 'customerName',
+  customerPhone: 'customerPhone',
+} as const;
+const SERIES_FIELD_MAP = { ...CREATE_FIELD_MAP, occurrences: 'weeks' } as const;
 const SKIP_REASONS = new Set(['BLOCKED', 'RESERVED', 'UNAVAILABLE']);
 interface ReservationSchemaContext {
   countryCode: string;
@@ -198,7 +205,15 @@ function OwnerReservationForm({
   const isPending =
     createMutation.isPending || paymentMutation.isPending || recurringMutation.isPending;
 
-  const { control, handleSubmit, getValues, reset, watch, formState } = useForm<ReservationValues>({
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    reset,
+    watch,
+    formState,
+    setError: setFieldError,
+  } = useForm<ReservationValues>({
     resolver: (values, context, options) =>
       zodResolver(
         buildReservationSchema({
@@ -222,7 +237,11 @@ function OwnerReservationForm({
   const deposit = watch('deposit');
   const depositMinor = deposit.trim() ? parseAmount(deposit) : null;
   const errorText = (message: string | undefined) =>
-    message ? t(`reservationForm.errors.${message}`, { max: RECURRING_MAX_WEEKS }) : null;
+    message
+      ? message.includes(':')
+        ? t(message)
+        : t(`reservationForm.errors.${message}`, { max: RECURRING_MAX_WEEKS })
+      : null;
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
@@ -269,7 +288,9 @@ function OwnerReservationForm({
         reset({ ...getValues(), customerName: '', customerPhone: '', notes: '', repeat: false });
       } catch (caught) {
         void availabilityQuery.refetch();
-        setError(describeError(caught, t('reservationForm.seriesError')));
+        if (!applyServerFieldErrors(caught, setFieldError, SERIES_FIELD_MAP)) {
+          setError(describeError(caught, t('reservationForm.seriesError')));
+        }
       }
       return;
     }
@@ -287,7 +308,9 @@ function OwnerReservationForm({
     } catch (caught) {
       // Nothing was created. Refresh the slots so a taken turn shows as occupied.
       void availabilityQuery.refetch();
-      setError(describeError(caught, t('reservationForm.createError')));
+      if (!applyServerFieldErrors(caught, setFieldError, CREATE_FIELD_MAP)) {
+        setError(describeError(caught, t('reservationForm.createError')));
+      }
       return;
     }
 
