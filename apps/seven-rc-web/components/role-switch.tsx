@@ -4,6 +4,7 @@ import {
   useCurrentUserRoleQuery,
   useSetCurrentUserRoleMutation,
 } from '@17suit/module-seven-reservations-club/client';
+import { useTranslation } from '@17suit/i18n/react';
 import { buttonRecipe } from '@17suit/ui';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
@@ -11,23 +12,14 @@ import { ConfirmDialog } from '@/components/seven-rc-ui';
 import { describeError } from '@/lib/seven-rc-errors';
 import { getRoleHomePath, type AppRole } from '@/lib/role';
 
-const COPY: Record<AppRole, { label: string; title: string; body: string; confirm: string }> = {
-  OWNER: {
-    label: 'Cambiar a modo jugador',
-    title: '¿Cambiar a modo jugador?',
-    body: 'Verás la búsqueda de canchas y tus reservas como jugador. Tu complejo, canchas y solicitudes siguen guardados; vuelves a ellos cambiando a modo dueño.',
-    confirm: 'Cambiar a jugador',
-  },
-  PLAYER: {
-    label: 'Cambiar a modo dueño',
-    title: '¿Cambiar a modo dueño?',
-    body: 'Verás el panel para administrar un complejo. Tus reservas como jugador siguen guardadas; vuelves a ellas cambiando a modo jugador.',
-    confirm: 'Cambiar a dueño',
-  },
+const COPY_KEY: Record<AppRole, 'ownerToPlayer' | 'playerToOwner'> = {
+  OWNER: 'ownerToPlayer',
+  PLAYER: 'playerToOwner',
 };
 
 /** Header control, next to sign-out, that flips the account between owner and player. */
 export function RoleSwitch() {
+  const { t } = useTranslation('shell');
   const router = useRouter();
   const { role } = useCurrentUserRoleQuery();
   const setRoleMutation = useSetCurrentUserRoleMutation();
@@ -35,7 +27,7 @@ export function RoleSwitch() {
   const [error, setError] = useState<string | null>(null);
 
   if (role !== 'OWNER' && role !== 'PLAYER') return null;
-  const copy = COPY[role];
+  const copyKey = `roleSwitch.${COPY_KEY[role]}` as const;
   const nextRole: AppRole = role === 'OWNER' ? 'PLAYER' : 'OWNER';
 
   async function onConfirm() {
@@ -48,7 +40,7 @@ export function RoleSwitch() {
       router.replace(getRoleHomePath(nextRole));
       router.refresh();
     } catch (caught) {
-      setError(describeError(caught, 'No se pudo cambiar de modo. Intenta de nuevo.'));
+      setError(describeError(caught, t('roleSwitch.error')));
     }
   }
 
@@ -67,21 +59,21 @@ export function RoleSwitch() {
           dialogRef.current?.showModal();
         }}
       >
-        {copy.label}
+        {t(`${copyKey}.label`)}
       </button>
       <ConfirmDialog
         dialogRef={dialogRef}
-        title={copy.title}
-        confirmLabel={copy.confirm}
-        pendingLabel="Cambiando…"
-        dismissLabel="Seguir aquí"
+        title={t(`${copyKey}.title`)}
+        confirmLabel={t(`${copyKey}.confirm`)}
+        pendingLabel={t('roleSwitch.pending')}
+        dismissLabel={t('roleSwitch.dismiss')}
         tone="primary"
         isPending={setRoleMutation.isPending}
         error={error}
         onConfirm={() => void onConfirm()}
         onClosed={() => setError(null)}
       >
-        <p className="m-0">{copy.body}</p>
+        <p className="m-0">{t(`${copyKey}.body`)}</p>
       </ConfirmDialog>
     </>
   );

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VenueReservation } from '@/lib/owner-queries';
+import { tEs } from './test-translate';
 import { buildCustomerBook, clampInt, filterCustomers, normalizePhone } from './owner-customers';
 
 const NOW = Date.parse('2026-11-23T12:00:00Z');
@@ -41,6 +42,7 @@ describe('buildCustomerBook', () => {
         res({ id: 'd', customerPhone: null }),
       ],
       NOW,
+      tEs,
     );
     expect(withoutPhone).toBe(1);
     expect(customers).toHaveLength(2);
@@ -53,18 +55,19 @@ describe('buildCustomerBook', () => {
     const [customer] = buildCustomerBook(
       [res({ status: 'cancelled', paidMinor: 50 }), res({ status: 'no_show', paidMinor: 0 })],
       NOW,
+      tEs,
     ).customers;
     expect(customer).toMatchObject({ bookings: 1, noShows: 1, spentMinor: 50 });
   });
 
   it('flags frequent and lapsed by the configurable thresholds', () => {
     const many = Array.from({ length: 3 }, (_, i) => res({ startAt: daysAgo(100 + i) }));
-    const [lapsed] = buildCustomerBook(many, NOW, {
+    const [lapsed] = buildCustomerBook(many, NOW, tEs, {
       frequentMinBookings: 3,
       lapsedAfterDays: 60,
     }).customers;
     expect(lapsed).toMatchObject({ isFrequent: true, isLapsed: true });
-    const [active] = buildCustomerBook(many, NOW, {
+    const [active] = buildCustomerBook(many, NOW, tEs, {
       frequentMinBookings: 4,
       lapsedAfterDays: 120,
     }).customers;
@@ -75,6 +78,7 @@ describe('buildCustomerBook', () => {
     const [customer] = buildCustomerBook(
       [res({ startAt: daysAgo(200) }), res({ startAt: daysAgo(-3), status: 'confirmed' })],
       NOW,
+      tEs,
     ).customers;
     expect(customer?.isLapsed).toBe(false);
   });
@@ -86,6 +90,7 @@ describe('buildCustomerBook', () => {
         res({ customerPhone: '3000000002', startAt: daysAgo(1), customerName: 'New' }),
       ],
       NOW,
+      tEs,
     );
     expect(customers.map((c) => c.name)).toEqual(['New', 'Old']);
   });
@@ -96,6 +101,7 @@ describe('filterCustomers and clampInt', () => {
     const { customers } = buildCustomerBook(
       [res({ startAt: daysAgo(400) }), res({ customerPhone: '3000000009', startAt: daysAgo(1) })],
       NOW,
+      tEs,
     );
     expect(filterCustomers(customers, 'lapsed')).toHaveLength(1);
     expect(filterCustomers(customers, 'all')).toHaveLength(2);

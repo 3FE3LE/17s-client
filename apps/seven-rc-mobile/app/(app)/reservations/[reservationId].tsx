@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useTranslation } from '@17suit/i18n/react';
 import {
   AppAlert,
   AppBadge,
@@ -84,6 +85,8 @@ function DetailRow({
 
 export default function ReservationDetailScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
+  const locale = t('intlLocale');
   const { theme } = useAppTheme();
   const now = useNow();
   const params = useLocalSearchParams<{ reservationId?: string | string[] }>();
@@ -105,7 +108,7 @@ export default function ReservationDetailScreen() {
   // A just-created reservation arrives with the post-mutation refetch.
   if (reservationsQuery.isLoading || (!reservation && reservationsQuery.isFetching)) {
     return (
-      <Screen title="Reserva">
+      <Screen title={t('common.reservation')}>
         <AppSkeleton height={220} rounded="lg" />
       </Screen>
     );
@@ -113,11 +116,11 @@ export default function ReservationDetailScreen() {
 
   if (reservationsQuery.error && !reservation) {
     return (
-      <Screen title="Reserva">
+      <Screen title={t('common.reservation')}>
         <AppAlert
           variant="warning"
-          title="No pudimos cargar la reserva"
-          description={humanizeError(reservationsQuery.error, 'load')}
+          title={t('reservationDetail.loadError')}
+          description={humanizeError(reservationsQuery.error, t, 'load')}
           action={
             <AppButton
               variant="warning"
@@ -125,7 +128,7 @@ export default function ReservationDetailScreen() {
                 void reservationsQuery.refetch();
               }}
             >
-              Reintentar
+              {t('common.retry')}
             </AppButton>
           }
         />
@@ -135,12 +138,12 @@ export default function ReservationDetailScreen() {
 
   if (!reservation) {
     return (
-      <Screen title="Reserva">
+      <Screen title={t('common.reservation')}>
         <AppEmpty
-          title="No encontramos esta reserva"
-          description="Puede que se haya eliminado. Vuelve al inicio para ver tus reservas."
+          title={t('reservationDetail.notFoundTitle')}
+          description={t('reservationDetail.notFoundDescription')}
           icon={<Feather name="search" size={20} color={theme.colors.brandPrimary} />}
-          actionLabel="Ir al inicio"
+          actionLabel={t('reservationDetail.goHome')}
           onAction={() => router.replace('/home')}
         />
       </Screen>
@@ -153,8 +156,9 @@ export default function ReservationDetailScreen() {
   const canCancel = isReservationCancellable(status, reservation.startAt, cancelWindowHours, now);
   const cancelWindowClosed = !canCancel && isReservationUpcoming(reservation, now);
   const totalLabel =
-    formatMoney(reservation.priceMinor, reservation.currency) ?? 'A confirmar con el complejo';
-  const depositLabel = formatMoney(reservation.depositMinor, reservation.currency);
+    formatMoney(reservation.priceMinor, reservation.currency, locale) ??
+    t('reservationDetail.totalPending');
+  const depositLabel = formatMoney(reservation.depositMinor, reservation.currency, locale);
   const note = {
     color: theme.colors.muted,
     fontFamily: theme.typography.styles.body.nativeFamily,
@@ -162,17 +166,21 @@ export default function ReservationDetailScreen() {
     lineHeight: 22,
   };
   const isCancelling = cancelMutation.isPending;
-  const timeRange = `${formatVenueTime(reservation.startAt, timeZone)}–${formatVenueTime(
+  const timeRange = `${formatVenueTime(reservation.startAt, timeZone, locale)}–${formatVenueTime(
     reservation.endAt,
     timeZone,
+    locale,
   )}`;
 
   const runCancel = async () => {
     try {
       await cancelMutation.mutateAsync(reservation.id);
-      feedback.success('Reserva cancelada', 'Liberamos el horario para otros jugadores.');
+      feedback.success(
+        t('reservationDetail.cancelledTitle'),
+        t('reservationDetail.cancelledMessage'),
+      );
     } catch (error) {
-      feedback.error('No se pudo cancelar', humanizeError(error, 'cancel'));
+      feedback.error(t('reservationDetail.cancelFailed'), humanizeError(error, t, 'cancel'));
     }
   };
 
@@ -191,10 +199,14 @@ export default function ReservationDetailScreen() {
   const confirmCancel = () => {
     confirmDestructive(
       {
-        title: '¿Cancelar esta reserva?',
-        message: `${reservation.pitch?.name ?? 'Cancha'} · ${formatVenueLongDay(reservation.startAt, timeZone)}, ${timeRange}. Esta acción no se puede deshacer.`,
-        confirmText: 'Cancelar reserva',
-        cancelText: 'Mantener reserva',
+        title: t('reservationDetail.askCancelTitle'),
+        message: t('reservationDetail.askCancelMessage', {
+          court: reservation.pitch?.name ?? t('common.court'),
+          day: formatVenueLongDay(reservation.startAt, timeZone, locale),
+          time: timeRange,
+        }),
+        confirmText: t('common.cancelReservation'),
+        cancelText: t('reservationDetail.keep'),
       },
       () => {
         void runCancel();
@@ -204,7 +216,7 @@ export default function ReservationDetailScreen() {
 
   return (
     <Screen
-      title={reservation.venue?.name ?? 'Reserva'}
+      title={reservation.venue?.name ?? t('common.reservation')}
       onRefresh={pullRefresh.onRefresh}
       refreshing={pullRefresh.refreshing}
       footer={
@@ -215,14 +227,11 @@ export default function ReservationDetailScreen() {
             disabled={isCancelling}
             busy={isCancelling}
           >
-            {isCancelling ? 'Cancelando…' : 'Cancelar reserva'}
+            {isCancelling ? t('reservationDetail.cancelling') : t('common.cancelReservation')}
           </AppButton>
         ) : (
-          <AppButton
-            onPress={bookAgain}
-            accessibilityHint="Abre una reserva nueva en la misma cancha"
-          >
-            Reservar de nuevo
+          <AppButton onPress={bookAgain} accessibilityHint={t('reservationDetail.bookAgainHint')}>
+            {t('reservationDetail.bookAgain')}
           </AppButton>
         )
       }
@@ -230,28 +239,24 @@ export default function ReservationDetailScreen() {
       <GapView gap="md">
         <View style={{ flexDirection: 'row' }}>
           <AppBadge variant={reservationBadgeVariant(status)}>
-            {reservationStatusLabel(status)}
+            {reservationStatusLabel(status, t)}
           </AppBadge>
         </View>
 
         {status === 'pending_confirmation' ? (
-          <Text style={note}>
-            El complejo aún debe confirmar tu reserva. Verás el cambio aquí cuando responda.
-          </Text>
+          <Text style={note}>{t('reservationDetail.pendingNote')}</Text>
         ) : null}
         {status === 'expired' ? (
-          <Text style={note}>
-            La solicitud venció sin confirmarse. Puedes hacer una reserva nueva.
-          </Text>
+          <Text style={note}>{t('reservationDetail.expiredNote')}</Text>
         ) : null}
         {cancelWindowClosed ? (
           <Text style={note}>
-            {`El plazo para cancelar terminó ${cancelWindowHours} h antes del inicio. Si no puedes ir, avisa al complejo.`}
+            {t('reservationDetail.windowClosedNote', { hours: cancelWindowHours })}
           </Text>
         ) : null}
         {canCancel && cancelWindowHours > 0 ? (
           <Text style={note}>
-            {`Puedes cancelar hasta ${cancelWindowHours} h antes del inicio.`}
+            {t('reservationDetail.windowOpenNote', { hours: cancelWindowHours })}
           </Text>
         ) : null}
 
@@ -265,26 +270,42 @@ export default function ReservationDetailScreen() {
             gap: theme.spacing.md,
           }}
         >
-          <DetailRow icon="grid" label="Cancha" value={reservation.pitch?.name ?? 'Cancha'} />
+          <DetailRow
+            icon="grid"
+            label={t('common.court')}
+            value={reservation.pitch?.name ?? t('common.court')}
+          />
           <DetailRow
             icon="calendar"
-            label="Fecha"
-            value={formatVenueLongDay(reservation.startAt, timeZone)}
+            label={t('reservationDetail.date')}
+            value={formatVenueLongDay(reservation.startAt, timeZone, locale)}
           />
-          <DetailRow icon="clock" label={venueTimeLabel(timeZone)} value={timeRange} />
-          <DetailRow icon="credit-card" label="Total" value={totalLabel} />
+          <DetailRow icon="clock" label={venueTimeLabel(timeZone, t)} value={timeRange} />
+          <DetailRow icon="credit-card" label={t('reservationDetail.total')} value={totalLabel} />
           {depositLabel ? (
-            <DetailRow icon="credit-card" label="Anticipo" value={depositLabel} />
+            <DetailRow
+              icon="credit-card"
+              label={t('reservationDetail.deposit')}
+              value={depositLabel}
+            />
           ) : null}
           <VenueLinks
             address={reservation.venue?.address}
             phone={reservation.venue?.contactPhone}
           />
           {reservation.invitedCount > 0 ? (
-            <DetailRow icon="users" label="Invitados" value={String(reservation.invitedCount)} />
+            <DetailRow
+              icon="users"
+              label={t('reservationDetail.guests')}
+              value={String(reservation.invitedCount)}
+            />
           ) : null}
           {reservation.notes ? (
-            <DetailRow icon="file-text" label="Notas" value={reservation.notes} />
+            <DetailRow
+              icon="file-text"
+              label={t('reservationDetail.notes')}
+              value={reservation.notes}
+            />
           ) : null}
         </View>
       </GapView>

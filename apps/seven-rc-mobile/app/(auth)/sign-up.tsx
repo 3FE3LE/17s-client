@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { signUpSchema, type SignUpValues } from '@17suit/core';
 import { useSignUp } from '@clerk/clerk-expo';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, AppLinkAction, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -12,6 +13,7 @@ import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { isLoaded, signUp, setActive } = useSignUp();
   const [formError, setFormError] = useState<string | null>(null);
   const { control, handleSubmit, formState } = useForm<SignUpValues>({
@@ -33,29 +35,25 @@ export default function SignUpScreen() {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       router.push('/sign-up-verify');
     } catch (err) {
-      setFormError(humanizeClerkError(err, 'No pudimos crear la cuenta. Inténtalo de nuevo.'));
+      setFormError(humanizeClerkError(err, t('auth.signUp.failed'), t));
     }
   });
 
   return (
-    <Screen
-      back={false}
-      title="Crear cuenta"
-      subtitle="Te enviaremos un código para verificar tu correo."
-    >
+    <Screen back={false} title={t('auth.createAccount')} subtitle={t('auth.signUp.subtitle')}>
       <GapView gap="sm">
         <Controller
           control={control}
           name="email"
           render={({ field, fieldState }) => (
             <FormField
-              label="Correo"
+              label={t('auth.email')}
               kind="email"
               value={field.value}
               onChangeText={field.onChange}
-              placeholder="tu@correo.com"
+              placeholder={t('auth.emailPlaceholder')}
               returnKeyType="next"
-              error={authErrorText(fieldState.error?.message)}
+              error={authErrorText(fieldState.error?.message, t)}
             />
           )}
         />
@@ -64,13 +62,13 @@ export default function SignUpScreen() {
           name="password"
           render={({ field, fieldState }) => (
             <FormField
-              label="Contraseña"
+              label={t('auth.password')}
               kind="new-password"
               value={field.value}
               onChangeText={field.onChange}
-              placeholder="Mínimo 8 caracteres"
+              placeholder={t('auth.passwordHint')}
               returnKeyType="next"
-              error={authErrorText(fieldState.error?.message)}
+              error={authErrorText(fieldState.error?.message, t)}
             />
           )}
         />
@@ -79,7 +77,7 @@ export default function SignUpScreen() {
           name="confirmPassword"
           render={({ field, fieldState }) => (
             <FormField
-              label="Repetir contraseña"
+              label={t('auth.repeatPassword')}
               kind="new-password"
               value={field.value}
               onChangeText={field.onChange}
@@ -87,15 +85,17 @@ export default function SignUpScreen() {
               onSubmitEditing={() => {
                 void handleCreateAccount();
               }}
-              error={authErrorText(fieldState.error?.message)}
+              error={authErrorText(fieldState.error?.message, t)}
             />
           )}
         />
         <FormError message={formError} />
         <AppButton onPress={handleCreateAccount} disabled={formState.isSubmitting}>
-          {formState.isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
+          {formState.isSubmitting ? t('auth.signUp.submitting') : t('auth.createAccount')}
         </AppButton>
-        <AppLinkAction onPress={() => router.push('/sign-in')}>Ya tengo una cuenta</AppLinkAction>
+        <AppLinkAction onPress={() => router.push('/sign-in')}>
+          {t('auth.signUp.haveAccount')}
+        </AppLinkAction>
       </GapView>
     </Screen>
   );

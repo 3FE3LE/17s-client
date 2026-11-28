@@ -1,3 +1,4 @@
+import { useTranslation } from '@17suit/i18n/react';
 import { useState } from 'react';
 import { confirmAction, confirmDestructive } from './confirm';
 import { humanizeError } from './error-messages';
@@ -44,10 +45,11 @@ export function agendaActionsFor(reservation: VenueReservation, now: number): Ow
     : ['cancel'];
 }
 
-export const AGENDA_ACTION_LABELS: Record<OwnerAgendaAction, string> = {
-  complete: 'Completada',
-  no_show: 'No asistió',
-  cancel: 'Cancelar reserva',
+/** Catalog keys (`mobile` namespace) for the agenda action buttons. */
+export const AGENDA_ACTION_LABEL_KEYS: Record<OwnerAgendaAction, string> = {
+  complete: 'ownerActions.complete',
+  no_show: 'ownerActions.noShow',
+  cancel: 'ownerActions.cancelReservation',
 };
 
 export function reservationPlayerName(reservation: VenueReservation): string | null {
@@ -61,6 +63,8 @@ export function reservationPlayerName(reservation: VenueReservation): string | n
  * does not close the sheet mid-edit.
  */
 export function useOwnerReservationActions() {
+  const { t } = useTranslation('mobile');
+  const locale = t('intlLocale');
   const confirmMutation = useConfirmVenueReservationMutation();
   const rejectMutation = useRejectVenueReservationMutation();
   const paymentMutation = useRecordReservationPaymentMutation();
@@ -79,15 +83,15 @@ export function useOwnerReservationActions() {
     try {
       if (action === 'confirm') {
         await confirmMutation.mutateAsync(input);
-        feedback.success('Reserva confirmada', 'El jugador ya ve su reserva como confirmada.');
+        feedback.success(t('ownerActions.confirmedTitle'), t('ownerActions.confirmedMessage'));
       } else {
         await rejectMutation.mutateAsync(input);
-        feedback.success('Reserva rechazada', 'El horario quedó libre para otros jugadores.');
+        feedback.success(t('ownerActions.rejectedTitle'), t('ownerActions.rejectedMessage'));
       }
     } catch (error) {
       feedback.error(
-        action === 'confirm' ? 'No se pudo confirmar' : 'No se pudo rechazar',
-        humanizeError(error, action),
+        action === 'confirm' ? t('ownerActions.confirmFailed') : t('ownerActions.rejectFailed'),
+        humanizeError(error, t, action),
       );
     } finally {
       setBusy(null);
@@ -95,33 +99,40 @@ export function useOwnerReservationActions() {
   };
 
   const describe = (reservation: VenueReservation, timeZone?: string | null) =>
-    `${reservation.pitch?.name ?? 'Cancha'} · ${formatVenueRange(
+    `${reservation.pitch?.name ?? t('common.court')} · ${formatVenueRange(
       reservation.startAt,
       reservation.endAt,
       timeZone,
+      locale,
     )}`;
 
   const askConfirm = (reservation: VenueReservation, timeZone?: string | null) => {
-    const who = reservationPlayerName(reservation) ?? 'El jugador';
+    const who = reservationPlayerName(reservation) ?? t('common.player');
     confirmAction(
       {
-        title: '¿Confirmar esta reserva?',
-        message: `${describe(reservation, timeZone)}. ${who} la verá confirmada. Después no se puede volver a "por confirmar".`,
-        confirmText: 'Confirmar',
-        cancelText: 'Volver',
+        title: t('ownerActions.askConfirmTitle'),
+        message: t('ownerActions.askConfirmMessage', {
+          slot: describe(reservation, timeZone),
+          who,
+        }),
+        confirmText: t('ownerActions.confirm'),
+        cancelText: t('common.back'),
       },
       () => void run(reservation, 'confirm'),
     );
   };
 
   const askReject = (reservation: VenueReservation, timeZone?: string | null) => {
-    const who = reservationPlayerName(reservation) ?? 'El jugador';
+    const who = reservationPlayerName(reservation) ?? t('common.player');
     confirmDestructive(
       {
-        title: '¿Rechazar esta reserva?',
-        message: `${describe(reservation, timeZone)}. ${who} la verá rechazada y el horario quedará libre.`,
-        confirmText: 'Rechazar',
-        cancelText: 'Volver',
+        title: t('ownerActions.askRejectTitle'),
+        message: t('ownerActions.askRejectMessage', {
+          slot: describe(reservation, timeZone),
+          who,
+        }),
+        confirmText: t('ownerActions.reject'),
+        cancelText: t('common.back'),
       },
       () => void run(reservation, 'reject'),
     );
@@ -135,16 +146,16 @@ export function useOwnerReservationActions() {
     try {
       if (action === 'complete') {
         await completeMutation.mutateAsync(reservation.id);
-        feedback.success('Reserva completada');
+        feedback.success(t('ownerActions.completedTitle'));
       } else if (action === 'no_show') {
         await noShowMutation.mutateAsync({ reservationId: reservation.id });
-        feedback.success('Marcada como "No asistió"');
+        feedback.success(t('ownerActions.noShowTitle'));
       } else {
         await cancelMutation.mutateAsync({ reservationId: reservation.id });
-        feedback.success('Reserva cancelada', 'El horario quedó libre.');
+        feedback.success(t('ownerActions.cancelledTitle'), t('ownerActions.cancelledMessage'));
       }
     } catch (error) {
-      feedback.error('No se pudo actualizar la reserva', humanizeError(error, 'manage'));
+      feedback.error(t('ownerActions.updateFailed'), humanizeError(error, t, 'manage'));
     } finally {
       setBusy(null);
     }
@@ -156,26 +167,26 @@ export function useOwnerReservationActions() {
     timeZone?: string | null,
   ) => {
     const slot = describe(reservation, timeZone);
-    const who = reservationPlayerName(reservation) ?? 'el jugador';
+    const who = reservationPlayerName(reservation) ?? t('common.playerLower');
     const onConfirm = () => void runAgendaAction(reservation, action);
 
     if (action === 'complete') {
       confirmAction(
         {
-          title: '¿Marcar como completada?',
-          message: `${slot}. Indica que el turno se jugó; después ya no se puede cancelar.`,
-          confirmText: 'Completada',
-          cancelText: 'Volver',
+          title: t('ownerActions.askCompleteTitle'),
+          message: t('ownerActions.askCompleteMessage', { slot }),
+          confirmText: t('ownerActions.complete'),
+          cancelText: t('common.back'),
         },
         onConfirm,
       );
     } else if (action === 'no_show') {
       confirmDestructive(
         {
-          title: '¿Marcar que no asistió?',
-          message: `${slot}. Quedará registrado que ${who} no asistió. No se puede deshacer.`,
-          confirmText: 'No asistió',
-          cancelText: 'Volver',
+          title: t('ownerActions.askNoShowTitle'),
+          message: t('ownerActions.askNoShowMessage', { slot, who }),
+          confirmText: t('ownerActions.noShow'),
+          cancelText: t('common.back'),
         },
         onConfirm,
       );
@@ -183,18 +194,15 @@ export function useOwnerReservationActions() {
       if (reservation.paidMinor > 0) {
         // The server requires a refund decision for paid reservations; the mobile
         // form for it is not built yet, so it is done from the web app.
-        feedback.error(
-          'Esta reserva tiene dinero pagado',
-          'Cancélala desde la web para registrar la devolución.',
-        );
+        feedback.error(t('ownerActions.paidTitle'), t('ownerActions.paidMessage'));
         return;
       }
       confirmDestructive(
         {
-          title: '¿Cancelar esta reserva?',
-          message: `${slot}. El horario quedará libre y no se puede deshacer.`,
-          confirmText: 'Cancelar reserva',
-          cancelText: 'Volver',
+          title: t('ownerActions.askCancelTitle'),
+          message: t('ownerActions.askCancelMessage', { slot }),
+          confirmText: t('ownerActions.cancelReservation'),
+          cancelText: t('common.back'),
         },
         onConfirm,
       );
@@ -213,12 +221,12 @@ export function useOwnerReservationActions() {
       const confirmed =
         reservation.status === 'pending_confirmation' && updated.status === 'confirmed';
       feedback.success(
-        confirmed ? 'Pago registrado y reserva confirmada' : 'Pago registrado',
-        formatMoney(input.amountMinor, reservation.currency) ?? undefined,
+        confirmed ? t('ownerActions.paymentConfirmedTitle') : t('ownerActions.paymentTitle'),
+        formatMoney(input.amountMinor, reservation.currency, locale) ?? undefined,
       );
       return null;
     } catch (error) {
-      return humanizeError(error, 'payment');
+      return humanizeError(error, t, 'payment');
     } finally {
       setBusy(null);
     }

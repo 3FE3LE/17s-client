@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { tEs } from './test-translate';
 import type { VenueReservation } from '@/lib/owner-queries';
 import {
   buildReservationsCsv,
@@ -57,15 +58,15 @@ describe('summarizeReservations', () => {
 
 describe('validatePeriod', () => {
   it('accepts a valid range and rejects bad ones', () => {
-    expect(validatePeriod('2026-11-01', '2026-11-30')).toBeNull();
-    expect(validatePeriod('', '2026-11-30')).toMatch(/Elige/);
-    expect(validatePeriod('2026-11-30', '2026-11-01')).toMatch(/anterior/);
-    expect(validatePeriod('2025-01-01', '2026-12-31')).toMatch(/366/);
+    expect(validatePeriod('2026-11-01', '2026-11-30', tEs)).toBeNull();
+    expect(validatePeriod('', '2026-11-30', tEs)).toMatch(/Elige/);
+    expect(validatePeriod('2026-11-30', '2026-11-01', tEs)).toMatch(/anterior/);
+    expect(validatePeriod('2025-01-01', '2026-12-31', tEs)).toMatch(/366/);
   });
 
   it('counts inclusive days and allows exactly 366', () => {
     expect(countDateKeys('2026-11-01', '2026-11-01')).toBe(1);
-    expect(validatePeriod('2024-01-01', '2024-12-31')).toBeNull();
+    expect(validatePeriod('2024-01-01', '2024-12-31', tEs)).toBeNull();
   });
 });
 

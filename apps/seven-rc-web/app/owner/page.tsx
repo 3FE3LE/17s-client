@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslation } from '@17suit/i18n/react';
+import type { TranslateFn } from '@17suit/i18n';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRef, useState, type MouseEvent, type RefObject } from 'react';
@@ -18,7 +20,7 @@ import {
   Inbox,
   cx,
 } from '@17suit/ui';
-import { asDepositPolicy, DEPOSIT_OUTCOME_LABEL, DEPOSIT_POLICY_LABEL } from '@/lib/deposit-policy';
+import { asDepositPolicy, depositOutcomeLabel, depositPolicyLabel } from '@/lib/deposit-policy';
 import { CustomerHistoryNote } from '@/components/customer-history-note';
 import { PitchPolicyForm } from '@/components/pitch-policy-form';
 import { PitchPriceRules } from '@/components/pitch-price-rules';
@@ -76,7 +78,7 @@ import {
   type ReservationPaymentMethod,
   type VenueReservation,
 } from '@/lib/owner-queries';
-import { PAYMENT_KIND_OPTIONS, PAYMENT_METHOD_OPTIONS } from '@/lib/owner-payment';
+import { paymentKindOptions, paymentMethodOptions } from '@/lib/owner-payment';
 import { useNow } from '@/lib/use-now';
 
 const DEFAULT_RANGE_DAYS = 7;
@@ -91,79 +93,13 @@ type SettledOutcome = 'confirmed' | 'rejected';
 type OwnerActionKind = 'confirm' | 'reject' | 'complete' | 'no_show' | 'cancel' | 'cancel_series';
 type NoticeArea = 'pending' | 'agenda';
 
-const ACTION_COPY: Record<
-  OwnerActionKind,
-  {
-    title: string;
-    confirmLabel: string;
-    pendingLabel: string;
-    dismissLabel: string;
-    tone: 'primary' | 'destructive';
-    body: string;
-    done: (name: string) => string;
-    fallback: string;
-  }
-> = {
-  confirm: {
-    title: '¿Confirmar esta reserva?',
-    confirmLabel: 'Confirmar reserva',
-    pendingLabel: 'Confirmando…',
-    dismissLabel: 'Volver',
-    tone: 'primary',
-    body: 'El jugador verá la reserva como confirmada y el turno queda apartado. Si luego cambias de idea, tendrás que cancelarla.',
-    done: (name) => `Confirmaste la reserva de ${name}.`,
-    fallback: 'No se pudo confirmar la reserva.',
-  },
-  reject: {
-    title: '¿Rechazar esta solicitud?',
-    confirmLabel: 'Sí, rechazar solicitud',
-    pendingLabel: 'Rechazando…',
-    dismissLabel: 'Volver',
-    tone: 'destructive',
-    body: 'El jugador verá la solicitud como rechazada y el horario quedará libre. No se puede deshacer.',
-    done: (name) => `Rechazaste la solicitud de ${name}.`,
-    fallback: 'No se pudo rechazar la solicitud.',
-  },
-  complete: {
-    title: '¿Marcar como completada?',
-    confirmLabel: 'Marcar completada',
-    pendingLabel: 'Guardando…',
-    dismissLabel: 'Volver',
-    tone: 'primary',
-    body: 'Indica que el turno se jugó. La reserva pasa al historial y ya no se puede cancelar.',
-    done: (name) => `Marcaste como completada la reserva de ${name}.`,
-    fallback: 'No se pudo marcar la reserva como completada.',
-  },
-  no_show: {
-    title: '¿Marcar que no asistió?',
-    confirmLabel: 'Marcar no asistió',
-    pendingLabel: 'Guardando…',
-    dismissLabel: 'Volver',
-    tone: 'destructive',
-    body: 'Queda registrado que nadie llegó al turno. No se puede deshacer.',
-    done: (name) => `Registraste que ${name} no asistió.`,
-    fallback: 'No se pudo registrar la inasistencia.',
-  },
-  cancel: {
-    title: '¿Cancelar esta reserva?',
-    confirmLabel: 'Sí, cancelar reserva',
-    pendingLabel: 'Cancelando…',
-    dismissLabel: 'Conservar reserva',
-    tone: 'destructive',
-    body: 'El horario quedará libre y el jugador verá la reserva cancelada. No se puede deshacer.',
-    done: (name) => `Cancelaste la reserva de ${name}.`,
-    fallback: 'No se pudo cancelar la reserva.',
-  },
-  cancel_series: {
-    title: '¿Cancelar toda la serie semanal?',
-    confirmLabel: 'Sí, cancelar serie',
-    pendingLabel: 'Cancelando…',
-    dismissLabel: 'Conservar serie',
-    tone: 'destructive',
-    body: 'Se cancelan las reservas futuras de esta cancha fija. Las ya jugadas quedan en el historial. No se puede deshacer.',
-    done: (name) => `Cancelaste las reservas futuras de la serie de ${name}.`,
-    fallback: 'No se pudo cancelar la serie.',
-  },
+const ACTION_TONE: Record<OwnerActionKind, 'primary' | 'destructive'> = {
+  confirm: 'primary',
+  reject: 'destructive',
+  complete: 'primary',
+  no_show: 'destructive',
+  cancel: 'destructive',
+  cancel_series: 'destructive',
 };
 
 function pendingRowId(reservationId: string) {
@@ -189,13 +125,14 @@ function focusOnMount(node: HTMLElement | null) {
 
 export default function OwnerPage() {
   const router = useRouter();
+  const { t } = useTranslation('owner');
   const { role, isLoading } = useCurrentUserRoleQuery();
   useRoleGate({ required: 'OWNER', router });
 
   if (isLoading || role !== 'OWNER') {
     return (
-      <AppFrame appName="Mi complejo" subtitle="Cargando tu cuenta…">
-        <ListSkeleton rows={3} label="Cargando tu cuenta" />
+      <AppFrame appName={t('page.title')} subtitle={t('page.loadingAccount')}>
+        <ListSkeleton rows={3} label={t('page.loadingAccountLabel')} />
       </AppFrame>
     );
   }
@@ -219,6 +156,8 @@ interface SetupItem {
 }
 
 function OwnerWorkspace() {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   const venuesQuery = useOwnerVenuesQuery();
   const integrationsQuery = useIntegrationsQuery();
   const venues = venuesQuery.data ?? [];
@@ -309,52 +248,60 @@ function OwnerWorkspace() {
   );
   const missingIn = (missing: PitchWithPricing[]) =>
     missing.length > 0 && pitches.length > 1
-      ? ` Falta en ${missing.map((pitch) => pitch.name).join(', ')}.`
+      ? ` ${t('page.setup.missingIn', { pitches: missing.map((pitch) => pitch.name).join(', ') })}`
       : '';
   const publishMissing = [
-    ...(hasPitch ? [] : ['una cancha']),
+    ...(hasPitch ? [] : [t('page.publishMissing.pitch')]),
     ...(hasPitch && withoutHours.length > 0
-      ? [`horario en ${withoutHours.map((pitch) => pitch.name).join(', ')}`]
+      ? [
+          t('page.publishMissing.hours', {
+            pitches: withoutHours.map((pitch) => pitch.name).join(', '),
+          }),
+        ]
       : []),
     ...(hasPitch && withoutPrice.length > 0
-      ? [`precio en ${withoutPrice.map((pitch) => pitch.name).join(', ')}`]
+      ? [
+          t('page.publishMissing.price', {
+            pitches: withoutPrice.map((pitch) => pitch.name).join(', '),
+          }),
+        ]
       : []),
   ];
   const setupItems: SetupItem[] = [
     {
       key: 'complejo',
-      label: 'Complejo',
-      description: 'Nombre, dirección y zona horaria.',
+      label: t('page.setup.venue.label'),
+      description: t('page.setup.venue.description'),
       done: hasVenue,
       target: 'crear-complejo-title',
     },
     {
       key: 'cancha',
-      label: 'Cancha',
-      description: 'Al menos una cancha con su deporte y capacidad.',
+      label: t('page.setup.pitch.label'),
+      description: t('page.setup.pitch.description'),
       done: hasPitch,
       target: hasVenue ? 'crear-cancha-title' : null,
     },
     {
       key: 'horarios',
-      label: 'Horarios',
-      description: `Días y horas en que cada cancha recibe reservas.${missingIn(withoutHours)}`,
+      label: t('page.setup.hours.label'),
+      description: `${t('page.setup.hours.description')}${missingIn(withoutHours)}`,
       done: hasPitch && withoutHours.length === 0,
       target: hasPitch ? 'horarios-title' : null,
       pitchId: withoutHours[0]?.id,
     },
     {
       key: 'precio',
-      label: 'Precio',
-      description: `Lo que cuesta cada turno. Sin precio, los jugadores ven “a confirmar”.${missingIn(withoutPrice)}`,
+      label: t('page.setup.price.label'),
+      description: `${t('page.setup.price.description')}${missingIn(withoutPrice)}`,
       done: hasPitch && withoutPrice.length === 0,
       target: hasPitch ? 'precio-title' : null,
       pitchId: withoutPrice[0]?.id,
     },
     {
       key: 'ajustes',
-      label: 'Ajustes',
-      description: 'Teléfono de contacto y, si pides anticipo, cómo pagarlo.',
+      label: t('page.setup.settings.label'),
+      description: t('page.setup.settings.description'),
       done: Boolean(
         selectedVenue?.contactPhone &&
         (selectedVenue.depositPercent === 0 || selectedVenue.paymentInstructions?.trim()),
@@ -363,10 +310,10 @@ function OwnerWorkspace() {
     },
     {
       key: 'publicar',
-      label: 'Publicar',
+      label: t('page.setup.publish.label'),
       description: publishMissing.length
-        ? `Para publicar falta: ${publishMissing.join('; ')}.`
-        : 'Define tu enlace y publica la página para que los jugadores reserven.',
+        ? t('page.setup.publish.missing', { items: publishMissing.join('; ') })
+        : t('page.setup.publish.description'),
       done: Boolean(selectedVenue?.isPublished),
       target: hasVenue ? 'publicar-title' : null,
     },
@@ -479,16 +426,16 @@ function OwnerWorkspace() {
     setActionError(null);
     try {
       if (kind === 'cancel_series') {
-        if (!reservation.seriesId) throw new Error('La reserva no pertenece a una serie.');
+        if (!reservation.seriesId) throw new Error(t('page.noSeries'));
         await mutations.cancel_series.mutateAsync(reservation.seriesId);
       } else if (kind === 'cancel') {
         const paid = reservation.paidMinor > 0;
         if (paid && !refundDecision) {
-          setActionError('Indica si devuelves el dinero o si no corresponde devolución.');
+          setActionError(t('page.cancel.decisionRequired'));
           return;
         }
         if (paid && refundDecision === 'none_due' && !refundNote.trim()) {
-          setActionError('Anota por qué no corresponde devolución.');
+          setActionError(t('page.cancel.noteRequired'));
           return;
         }
         await mutations.cancel.mutateAsync({
@@ -502,7 +449,7 @@ function OwnerWorkspace() {
       } else if (kind === 'no_show') {
         const paid = reservation.paidMinor > 0;
         if (paid && !noShowOutcome) {
-          setActionError('Indica si devolviste o conservaste el anticipo.');
+          setActionError(t('page.noShow.outcomeRequired'));
           return;
         }
         await mutations.no_show.mutateAsync({
@@ -512,7 +459,10 @@ function OwnerWorkspace() {
       } else {
         await mutations[kind].mutateAsync(reservation.id);
       }
-      setNotice({ area, message: ACTION_COPY[kind].done(customerLabel(reservation)) });
+      setNotice({
+        area,
+        message: t(`page.actions.${kind}.done`, { name: customerLabel(reservation, t) }),
+      });
       // Close first: the dialog returns focus to its opener, which settleRow then moves.
       actionDialogRef.current?.close();
       if (kind === 'confirm') settleRow(reservation, 'confirmed');
@@ -521,7 +471,7 @@ function OwnerWorkspace() {
       if (kind === 'cancel' || kind === 'cancel_series' || kind === 'no_show')
         focusById(TODAY_HEADING_ID);
     } catch (error) {
-      setActionError(describeError(error, ACTION_COPY[kind].fallback));
+      setActionError(describeError(error, t(`page.actions.${kind}.fallback`)));
       refreshAll();
     }
   }
@@ -536,41 +486,46 @@ function OwnerWorkspace() {
 
   if (venuesQuery.isLoading) {
     return (
-      <AppFrame appName="Mi complejo" subtitle="Cargando tus complejos…">
-        <ListSkeleton rows={3} label="Cargando tus complejos" />
+      <AppFrame appName={t('page.title')} subtitle={t('page.loadingVenues')}>
+        <ListSkeleton rows={3} label={t('page.loadingVenuesLabel')} />
       </AppFrame>
     );
   }
 
   const reservationsBusy = Boolean(venueId) && reservationsQuery.isLoading;
   const reservationsError = reservationsQuery.error
-    ? describeError(reservationsQuery.error, 'No se pudo cargar la agenda.')
+    ? describeError(reservationsQuery.error, t('page.agendaLoadError'))
     : null;
   const todayError = pendingQuery.error
-    ? describeError(pendingQuery.error, 'No se pudo cargar la agenda.')
+    ? describeError(pendingQuery.error, t('page.agendaLoadError'))
     : null;
   const pendingBusy = Boolean(venueId) && pendingQuery.isLoading;
   const pendingError = pendingQuery.error
-    ? describeError(pendingQuery.error, 'No se pudieron cargar las solicitudes.')
+    ? describeError(pendingQuery.error, t('page.pending.loadError'))
     : null;
-  const currentAction = action ? ACTION_COPY[action.kind] : null;
+  const currentAction = action
+    ? {
+        title: t(`page.actions.${action.kind}.title`),
+        confirmLabel: t(`page.actions.${action.kind}.confirm`),
+        pendingLabel: t(`page.actions.${action.kind}.pending`),
+        dismissLabel: t(`page.actions.${action.kind}.dismiss`),
+        tone: ACTION_TONE[action.kind],
+        body: t(`page.actions.${action.kind}.body`),
+      }
+    : null;
 
   return (
     <AppFrame
-      appName="Mi complejo"
+      appName={t('page.title')}
       subtitle={
-        selectedVenue
-          ? `${selectedVenue.name} · solicitudes y agenda en hora del complejo`
-          : 'Crea tu complejo para empezar a recibir reservas.'
+        selectedVenue ? t('page.subtitle', { venue: selectedVenue.name }) : t('page.subtitleEmpty')
       }
     >
       {venuesQuery.error ? (
         <div className="grid gap-sm">
-          <InlineError
-            message={describeError(venuesQuery.error, 'No se pudieron cargar tus complejos.')}
-          />
+          <InlineError message={describeError(venuesQuery.error, t('page.venuesLoadError'))} />
           <AppButton variant="neutral" fullWidth={false} onPress={() => void venuesQuery.refetch()}>
-            Reintentar
+            {t('page.retry')}
           </AppButton>
         </div>
       ) : null}
@@ -578,7 +533,7 @@ function OwnerWorkspace() {
       {venues.length > 1 ? (
         <div className="max-w-[var(--container-form)]">
           <SelectField
-            label="Complejo"
+            label={t('page.venue')}
             name="complejo"
             value={selectedVenue?.id ?? ''}
             onChangeValue={(value) => {
@@ -594,11 +549,11 @@ function OwnerWorkspace() {
       {selectedVenue ? (
         <p className="m-0">
           <Link href="/owner/reports" className="text-text underline">
-            Ver reportes de ingresos y ocupación
+            {t('page.reportsLink')}
           </Link>
           {' · '}
           <Link href="/owner/customers" className="text-text underline">
-            Ver clientes
+            {t('page.customersLink')}
           </Link>
         </p>
       ) : null}
@@ -612,8 +567,8 @@ function OwnerWorkspace() {
           <section aria-labelledby={PENDING_HEADING_ID} className="grid gap-md">
             <SectionHeader
               id={PENDING_HEADING_ID}
-              title={`Solicitudes pendientes${pending.length > 0 ? ` (${pending.length})` : ''}`}
-              description={`Confirma o rechaza cada solicitud de los próximos ${horizonDays} días. Las nuevas aparecen solas mientras tengas esta página abierta.`}
+              title={`${t('page.pending.title')}${pending.length > 0 ? ` (${pending.length})` : ''}`}
+              description={t('page.pending.description', { count: horizonDays })}
               aside={
                 venueId ? (
                   <RefreshControl
@@ -626,7 +581,7 @@ function OwnerWorkspace() {
             />
             <InlineStatus message={notice?.area === 'pending' ? notice.message : null} />
             {pendingBusy ? (
-              <ListSkeleton rows={2} label="Cargando solicitudes" />
+              <ListSkeleton rows={2} label={t('page.pending.loading')} />
             ) : pendingError ? (
               <div className="grid gap-sm">
                 <InlineError message={pendingError} />
@@ -635,13 +590,13 @@ function OwnerWorkspace() {
                   fullWidth={false}
                   onPress={() => void pendingQuery.refetch()}
                 >
-                  Reintentar
+                  {t('page.retry')}
                 </AppButton>
               </div>
             ) : pendingRows.length === 0 ? (
               <p className="m-0 inline-flex items-center gap-sm text-md leading-[1.5] text-muted">
                 <Inbox size={18} aria-hidden />
-                No hay solicitudes por atender.
+                {t('page.pending.empty')}
               </p>
             ) : (
               <ul className="m-0 grid list-none gap-sm p-0">
@@ -650,7 +605,7 @@ function OwnerWorkspace() {
                     key={reservation.id}
                     id={pendingRowId(reservation.id)}
                     tabIndex={-1}
-                    aria-label={`Solicitud de ${customerLabel(reservation)}`}
+                    aria-label={t('page.pending.rowLabel', { name: customerLabel(reservation, t) })}
                     className={cx(
                       'grid gap-sm rounded-[var(--radius-lg)] border bg-background p-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-action-primary/40 md:grid-cols-[minmax(0,1fr)_auto] md:items-center',
                       outcome === 'confirmed'
@@ -673,10 +628,10 @@ function OwnerWorkspace() {
                         {outcome === 'confirmed' ? (
                           <>
                             <CheckCircle2 size={18} aria-hidden className="text-success" />
-                            Confirmada
+                            {t('page.pending.confirmed')}
                           </>
                         ) : (
-                          'Rechazada'
+                          t('page.pending.rejected')
                         )}
                       </p>
                     ) : (
@@ -687,7 +642,7 @@ function OwnerWorkspace() {
                           fullWidth={false}
                           onPress={() => openAction('confirm', reservation, 'pending')}
                         >
-                          Confirmar
+                          {t('page.pending.confirm')}
                         </AppButton>
                         <AppButton
                           variant="neutral"
@@ -695,7 +650,7 @@ function OwnerWorkspace() {
                           fullWidth={false}
                           onPress={() => openAction('reject', reservation, 'pending')}
                         >
-                          Rechazar
+                          {t('page.pending.reject')}
                         </AppButton>
                         {owesDeposit(reservation) && !holdExpired(reservation, now) ? (
                           <AppButton
@@ -704,7 +659,7 @@ function OwnerWorkspace() {
                             fullWidth={false}
                             onPress={() => openPayment(reservation, 'pending')}
                           >
-                            Registrar anticipo
+                            {t('page.pending.recordDeposit')}
                           </AppButton>
                         ) : null}
                       </div>
@@ -718,12 +673,12 @@ function OwnerWorkspace() {
           <section aria-labelledby={TODAY_HEADING_ID} className="mt-lg grid gap-md">
             <SectionHeader
               id={TODAY_HEADING_ID}
-              title="Agenda de hoy"
-              description={`${formatLongDate(todayKey)} · reservas confirmadas`}
+              title={t('page.today.title')}
+              description={`${formatLongDate(todayKey, locale)} · ${t('page.today.confirmedBookings')}`}
             />
             <InlineStatus message={notice?.area === 'agenda' ? notice.message : null} />
             {pendingBusy ? (
-              <ListSkeleton rows={2} label="Cargando la agenda de hoy" />
+              <ListSkeleton rows={2} label={t('page.today.loading')} />
             ) : todayError ? (
               <div className="grid gap-sm">
                 <InlineError message={todayError} />
@@ -732,21 +687,19 @@ function OwnerWorkspace() {
                   fullWidth={false}
                   onPress={() => void pendingQuery.refetch()}
                 >
-                  Reintentar
+                  {t('page.retry')}
                 </AppButton>
               </div>
             ) : today.length === 0 ? (
               <div className="grid gap-xs">
                 <p className="m-0 inline-flex items-center gap-sm text-md font-bold leading-[1.5] text-text">
                   <CalendarClock size={18} aria-hidden />
-                  {pendingToday > 0
-                    ? 'Hoy aún no hay reservas confirmadas'
-                    : 'Hoy no hay reservas confirmadas'}
+                  {pendingToday > 0 ? t('page.today.noneYet') : t('page.today.none')}
                 </p>
                 <p className="m-0 text-md leading-[1.5] text-muted">
                   {pendingToday > 0
-                    ? `${pendingToday === 1 ? 'Una solicitud de hoy espera' : `${pendingToday} solicitudes de hoy esperan`} tu respuesta en “Solicitudes pendientes”. ${pendingToday === 1 ? 'Al confirmarla aparece aquí.' : 'Al confirmarlas aparecen aquí.'}`
-                    : 'Las reservas confirmadas para hoy aparecerán aquí con su horario.'}
+                    ? t('page.today.waiting', { count: pendingToday })
+                    : t('page.today.emptyHint')}
                 </p>
               </div>
             ) : (
@@ -763,17 +716,17 @@ function OwnerWorkspace() {
           <section aria-labelledby="proximos-title" className="mt-lg grid gap-md">
             <SectionHeader
               id="proximos-title"
-              title="Próximos días"
-              description="Estas fechas solo filtran la agenda confirmada. Las solicitudes pendientes siempre muestran todo el periodo reservable."
+              title={t('page.upcoming.title')}
+              description={t('page.upcoming.description')}
             />
             <fieldset className="m-0 grid max-w-[var(--container-form)] grid-cols-2 gap-sm border-0 p-0">
               <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">
-                Fechas de la agenda
+                {t('page.upcoming.dates')}
               </legend>
               <AppInput
                 type="date"
                 name="desde"
-                label="Desde"
+                label={t('page.upcoming.from')}
                 value={dateFrom}
                 min={todayKey}
                 max={dateTo}
@@ -782,14 +735,14 @@ function OwnerWorkspace() {
               <AppInput
                 type="date"
                 name="hasta"
-                label="Hasta"
+                label={t('page.upcoming.to')}
                 value={dateTo}
                 min={dateFrom}
                 onChangeText={(value) => setExplicitTo(value || null)}
               />
             </fieldset>
             {reservationsBusy ? (
-              <ListSkeleton rows={2} label="Cargando próximas reservas" />
+              <ListSkeleton rows={2} label={t('page.upcoming.loading')} />
             ) : reservationsError ? (
               <div className="grid gap-sm">
                 <InlineError message={reservationsError} />
@@ -798,13 +751,11 @@ function OwnerWorkspace() {
                   fullWidth={false}
                   onPress={() => void reservationsQuery.refetch()}
                 >
-                  Reintentar
+                  {t('page.retry')}
                 </AppButton>
               </div>
             ) : upcomingByDay.size === 0 ? (
-              <p className="m-0 text-md leading-[1.5] text-muted">
-                No hay reservas confirmadas en esas fechas.
-              </p>
+              <p className="m-0 text-md leading-[1.5] text-muted">{t('page.upcoming.empty')}</p>
             ) : (
               <div className="grid gap-md">
                 {[...upcomingByDay.entries()]
@@ -812,7 +763,7 @@ function OwnerWorkspace() {
                   .map(([dateKey, dayReservations]) => (
                     <div key={dateKey} className="grid gap-sm">
                       <h3 className="m-0 font-arvo text-md leading-[1.3] text-text first-letter:uppercase">
-                        {formatLongDate(dateKey)}
+                        {formatLongDate(dateKey, locale)}
                       </h3>
                       <AgendaList
                         reservations={dayReservations}
@@ -844,7 +795,7 @@ function OwnerWorkspace() {
           className="m-0 mt-lg inline-flex items-center gap-sm text-md leading-[1.5] text-text"
         >
           <CheckCircle2 size={18} aria-hidden className="text-success" />
-          Tu complejo quedó configurado. Puedes cambiarlo cuando quieras en “Configuración”.
+          {t('page.setup.finished')}
         </p>
       ) : null}
 
@@ -874,10 +825,12 @@ function OwnerWorkspace() {
         className="mt-lg rounded-[var(--radius-lg)] border border-border-strong"
       >
         <summary className="flex min-h-12 cursor-pointer items-center gap-sm px-md text-text">
-          <h2 className="m-0 font-arvo text-lg leading-[1.3] text-text">Configuración</h2>
+          <h2 className="m-0 font-arvo text-lg leading-[1.3] text-text">
+            {t('page.config.title')}
+          </h2>
           {needsSetup ? (
             <AppBadge variant="warning">
-              {venues.length === 0 ? 'Empieza aquí' : 'Falta completar'}
+              {venues.length === 0 ? t('page.config.startHere') : t('page.config.incomplete')}
             </AppBadge>
           ) : null}
         </summary>
@@ -901,7 +854,7 @@ function OwnerWorkspace() {
                 isLoading={pitchesQuery.isLoading}
                 error={
                   pitchesQuery.error && !pitchesReady
-                    ? describeError(pitchesQuery.error, 'No se pudieron cargar las canchas.')
+                    ? describeError(pitchesQuery.error, t('page.config.pitchesLoadError'))
                     : null
                 }
                 onRetry={() => void pitchesQuery.refetch()}
@@ -923,7 +876,7 @@ function OwnerWorkspace() {
         title={currentAction?.title ?? ''}
         confirmLabel={currentAction?.confirmLabel ?? ''}
         pendingLabel={currentAction?.pendingLabel ?? ''}
-        dismissLabel={currentAction?.dismissLabel ?? 'Volver'}
+        dismissLabel={currentAction?.dismissLabel ?? t('page.back')}
         tone={currentAction?.tone ?? 'destructive'}
         isPending={action ? mutations[action.kind].isPending : false}
         error={actionError}
@@ -936,8 +889,13 @@ function OwnerWorkspace() {
         {action && currentAction ? (
           <>
             <p className="m-0 text-text first-letter:uppercase">
-              {customerLabel(action.reservation)} · {action.reservation.pitch.name} ·{' '}
-              {formatSlotWhen(action.reservation.startAt, action.reservation.endAt, timeZone)}
+              {customerLabel(action.reservation, t)} · {action.reservation.pitch.name} ·{' '}
+              {formatSlotWhen(
+                action.reservation.startAt,
+                action.reservation.endAt,
+                timeZone,
+                locale,
+              )}
             </p>
             <p className="m-0">{currentAction.body}</p>
             {action.kind === 'confirm' || action.kind === 'no_show' || action.kind === 'cancel' ? (
@@ -946,73 +904,87 @@ function OwnerWorkspace() {
             {action.kind === 'no_show' && action.reservation.paidMinor > 0 ? (
               <div className="grid gap-sm">
                 <p className="m-0 text-text">
-                  Esta reserva tiene{' '}
-                  {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}{' '}
-                  pagados. Solo queda anotado lo que decidas: la plataforma no mueve dinero.
+                  {t('page.noShow.paidNotice', {
+                    amount: formatMoneyMinor(
+                      action.reservation.paidMinor,
+                      action.reservation.currency,
+                      locale,
+                    ),
+                  })}
                 </p>
                 <SelectField
-                  label="Anticipo"
+                  label={t('page.noShow.deposit')}
                   name="noShowOutcome"
                   value={noShowOutcome}
                   onChangeValue={(value) =>
                     setNoShowOutcome(value === 'refunded' || value === 'retained' ? value : '')
                   }
                   options={[
-                    { value: '', label: 'Elige una opción' },
-                    { value: 'retained', label: DEPOSIT_OUTCOME_LABEL.retained },
-                    { value: 'refunded', label: DEPOSIT_OUTCOME_LABEL.refunded },
+                    { value: '', label: t('page.chooseOption') },
+                    { value: 'retained', label: depositOutcomeLabel('retained', t) },
+                    { value: 'refunded', label: depositOutcomeLabel('refunded', t) },
                   ]}
-                  hint={`Política con que reservó: ${DEPOSIT_POLICY_LABEL[
-                    asDepositPolicy(action.reservation.policySnapshot.noShowDeposit)
-                  ].toLowerCase()}.`}
+                  hint={t('page.noShow.policyHint', {
+                    policy: depositPolicyLabel(
+                      asDepositPolicy(action.reservation.policySnapshot.noShowDeposit),
+                      t,
+                    ).toLowerCase(),
+                  })}
                 />
               </div>
             ) : null}
             {action.kind === 'reject' && action.reservation.paidMinor > 0 ? (
               <p className="m-0 text-text">
-                Registraste pagos por{' '}
-                {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}. Si
-                los vas a devolver, anota la devolución con “Registrar anticipo” antes de continuar:
-                después la reserva sale de la agenda.
+                {t('page.reject.paidNotice', {
+                  amount: formatMoneyMinor(
+                    action.reservation.paidMinor,
+                    action.reservation.currency,
+                    locale,
+                  ),
+                })}
               </p>
             ) : null}
             {action.kind === 'cancel' && action.reservation.paidMinor > 0 ? (
               <div className="grid gap-sm">
                 <p className="m-0 text-text">
-                  Esta reserva tiene{' '}
-                  {formatMoneyMinor(action.reservation.paidMinor, action.reservation.currency)}{' '}
-                  pagados. Antes de cancelar, indica qué pasa con ese dinero.
+                  {t('page.cancel.paidNotice', {
+                    amount: formatMoneyMinor(
+                      action.reservation.paidMinor,
+                      action.reservation.currency,
+                      locale,
+                    ),
+                  })}
                 </p>
                 <SelectField
-                  label="Dinero pagado"
+                  label={t('page.cancel.paidMoney')}
                   name="refundDecision"
                   value={refundDecision}
                   onChangeValue={(value) => setRefundDecision(value as '' | 'refund' | 'none_due')}
                   options={[
-                    { value: '', label: 'Elige una opción' },
-                    { value: 'refund', label: 'Lo devuelvo todo' },
-                    { value: 'none_due', label: 'No corresponde devolución' },
+                    { value: '', label: t('page.chooseOption') },
+                    { value: 'refund', label: t('page.cancel.refundAll') },
+                    { value: 'none_due', label: t('page.cancel.noneDue') },
                   ]}
                 />
                 {refundDecision === 'refund' ? (
                   <SelectField
-                    label="Medio de la devolución"
+                    label={t('page.cancel.refundMethod')}
                     name="refundMethod"
                     value={refundMethod}
                     onChangeValue={(value) => setRefundMethod(value as ReservationPaymentMethod)}
-                    options={PAYMENT_METHOD_OPTIONS}
+                    options={paymentMethodOptions(t)}
                   />
                 ) : null}
                 {refundDecision === 'none_due' ? (
                   <HintedInput
                     name="refundNote"
-                    label="Motivo"
+                    label={t('page.cancel.reason')}
                     autoComplete="off"
                     required
                     maxLength={300}
                     value={refundNote}
                     onChangeText={setRefundNote}
-                    hint="Queda anotado en la reserva."
+                    hint={t('page.cancel.reasonHint')}
                   />
                 ) : null}
               </div>
@@ -1021,10 +993,13 @@ function OwnerWorkspace() {
             owesDeposit(action.reservation) &&
             !holdExpired(action.reservation, now) ? (
               <p className="m-0 text-text">
-                Aún no registras el anticipo de{' '}
-                {formatMoneyMinor(action.reservation.depositMinor, action.reservation.currency)}. Si
-                ya lo recibiste, usa “Registrar anticipo”: confirma la reserva y deja el pago
-                anotado.
+                {t('page.confirm.depositPending', {
+                  amount: formatMoneyMinor(
+                    action.reservation.depositMinor,
+                    action.reservation.currency,
+                    locale,
+                  ),
+                })}
               </p>
             ) : null}
           </>
@@ -1054,6 +1029,7 @@ function SetupChecklist({
   items: SetupItem[];
   onGo: (targetId: string, pitchId?: string) => void;
 }) {
+  const { t } = useTranslation('owner');
   const doneCount = items.filter((item) => item.done).length;
   return (
     <section
@@ -1062,10 +1038,10 @@ function SetupChecklist({
     >
       <div className="flex flex-wrap items-baseline justify-between gap-sm">
         <h2 id="setup-title" className="m-0 font-arvo text-lg leading-[1.3] text-text">
-          Termina de configurar tu complejo
+          {t('page.setup.title')}
         </h2>
         <p className="m-0 text-sm leading-[18px] tabular-nums text-muted">
-          {doneCount} de {items.length} listos
+          {t('page.setup.progress', { done: doneCount, total: items.length })}
         </p>
       </div>
       <ol className="m-0 grid list-none gap-xs p-0">
@@ -1090,7 +1066,9 @@ function SetupChecklist({
                 )}
               >
                 {item.label}
-                <span className="sr-only">{item.done ? ' (listo)' : ' (pendiente)'}</span>
+                <span className="sr-only">
+                  {item.done ? ` ${t('page.setup.doneSr')}` : ` ${t('page.setup.pendingSr')}`}
+                </span>
               </p>
               {item.done ? null : (
                 <p className="m-0 text-sm leading-[18px] text-muted">{item.description}</p>
@@ -1102,11 +1080,11 @@ function SetupChecklist({
                 className="min-h-11 cursor-pointer border-0 bg-transparent px-xs text-sm font-bold text-text underline underline-offset-4"
                 onClick={() => item.target && onGo(item.target, item.pitchId)}
               >
-                Completar
+                {t('page.setup.complete')}
                 <span className="sr-only"> {item.label.toLowerCase()}</span>
               </button>
             ) : (
-              <span className="text-sm leading-[18px] text-muted">Después</span>
+              <span className="text-sm leading-[18px] text-muted">{t('page.setup.later')}</span>
             )}
           </li>
         ))}
@@ -1115,15 +1093,24 @@ function SetupChecklist({
   );
 }
 
-function holdLabel(holdExpiresAt: string, timeZone: string, now: number): string {
+function holdLabel(
+  holdExpiresAt: string,
+  timeZone: string,
+  now: number,
+  t: TranslateFn,
+  locale: string,
+): string {
   const expired = new Date(holdExpiresAt).getTime() <= now;
   const sameDay =
     dateKeyInTimeZone(holdExpiresAt, timeZone) === dateKeyInTimeZone(new Date(now), timeZone);
-  const time = formatTime(holdExpiresAt, timeZone);
+  const time = formatTime(holdExpiresAt, timeZone, locale);
   const when = sameDay
     ? time
-    : `${time} del ${formatLongDate(dateKeyInTimeZone(holdExpiresAt, timeZone))}`;
-  return expired ? `Venció ${when}` : `Vence ${when}`;
+    : t('page.hold.atDate', {
+        time,
+        date: formatLongDate(dateKeyInTimeZone(holdExpiresAt, timeZone), locale),
+      });
+  return expired ? t('page.hold.expired', { when }) : t('page.hold.expires', { when });
 }
 
 function ReservationDetails({
@@ -1141,44 +1128,58 @@ function ReservationDetails({
   hideStatus?: boolean;
   pendingInfo?: boolean;
 }) {
-  const status = reservationStatus(reservation.status);
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
+  const status = reservationStatus(reservation.status, t);
   const meta = [
     reservation.priceMinor > 0
-      ? formatMoneyMinor(reservation.priceMinor, reservation.currency)
-      : 'Precio sin definir',
+      ? formatMoneyMinor(reservation.priceMinor, reservation.currency, locale)
+      : t('page.details.priceUndefined'),
     !pendingInfo && reservation.depositMinor > 0
-      ? `anticipo ${formatMoneyMinor(reservation.depositMinor, reservation.currency)}`
+      ? t('page.details.deposit', {
+          amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+        })
       : null,
     reservation.paidMinor > 0
-      ? `pagado ${formatMoneyMinor(reservation.paidMinor, reservation.currency)}`
+      ? t('page.details.paid', {
+          amount: formatMoneyMinor(reservation.paidMinor, reservation.currency, locale),
+        })
       : null,
-    reservation.invitedCount > 0 ? `${reservation.invitedCount} invitados` : null,
+    reservation.invitedCount > 0
+      ? t('page.details.guests', { count: reservation.invitedCount })
+      : null,
   ].filter(Boolean);
   const phone = reservation.customerPhone?.trim() || null;
   return (
     <div className="grid min-w-0 gap-xs">
       <div className="flex flex-wrap items-center gap-sm">
         <p className="m-0 break-words font-bold leading-[1.3] text-text">
-          {customerLabel(reservation)}
+          {customerLabel(reservation, t)}
         </p>
         {hideStatus ? null : <AppBadge variant={status.variant}>{status.label}</AppBadge>}
       </div>
       <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
         {reservation.pitch.name} ·{' '}
         {showDate
-          ? formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)
-          : formatTimeRange(reservation.startAt, reservation.endAt, timeZone)}
+          ? formatSlotWhen(reservation.startAt, reservation.endAt, timeZone, locale)
+          : formatTimeRange(reservation.startAt, reservation.endAt, timeZone, locale)}
       </p>
       {pendingInfo ? (
         <p className="m-0 text-sm leading-[18px] text-text">
           {reservation.holdExpiresAt ? (
-            <span className="font-bold">{holdLabel(reservation.holdExpiresAt, timeZone, now)}</span>
+            <span className="font-bold">
+              {holdLabel(reservation.holdExpiresAt, timeZone, now, t, locale)}
+            </span>
           ) : null}
           {reservation.holdExpiresAt && reservation.depositMinor > 0 ? ' · ' : null}
           {reservation.depositMinor > 0
             ? owesDeposit(reservation)
-              ? `Anticipo de ${formatMoneyMinor(reservation.depositMinor, reservation.currency)} sin registrar`
-              : `Anticipo de ${formatMoneyMinor(reservation.depositMinor, reservation.currency)} registrado`
+              ? t('page.details.depositUnrecorded', {
+                  amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+                })
+              : t('page.details.depositRecorded', {
+                  amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+                })
             : null}
         </p>
       ) : null}
@@ -1198,7 +1199,7 @@ function ReservationDetails({
       ) : null}
       {reservation.notes ? (
         <p className="m-0 break-words text-sm leading-[18px] text-muted">
-          Nota: {reservation.notes}
+          {t('page.details.note')} {reservation.notes}
         </p>
       ) : null}
     </div>
@@ -1256,19 +1257,24 @@ function RowActions({
   onAction: (kind: OwnerActionKind) => void;
   onPayment: () => void;
 }) {
+  const { t } = useTranslation('owner');
   const started = new Date(reservation.startAt).getTime() <= now;
   const status = reservation.status;
   const items: Array<{ key: string; label: string; run: () => void; destructive?: boolean }> = [];
   if (PAYABLE_STATUSES.has(status)) {
-    items.push({ key: 'pay', label: 'Registrar pago', run: onPayment });
+    items.push({ key: 'pay', label: t('page.rowActions.pay'), run: onPayment });
   } else if (reservation.paidMinor > 0) {
-    items.push({ key: 'refund', label: 'Registrar devolución', run: onPayment });
+    items.push({ key: 'refund', label: t('page.rowActions.refund'), run: onPayment });
   }
   if (status === 'confirmed' && started) {
-    items.push({ key: 'complete', label: 'Marcar completada', run: () => onAction('complete') });
+    items.push({
+      key: 'complete',
+      label: t('page.rowActions.complete'),
+      run: () => onAction('complete'),
+    });
     items.push({
       key: 'no_show',
-      label: 'Marcar no asistió',
+      label: t('page.rowActions.noShow'),
       run: () => onAction('no_show'),
       destructive: true,
     });
@@ -1276,14 +1282,14 @@ function RowActions({
   if (status === 'pending_confirmation' || status === 'confirmed') {
     items.push({
       key: 'cancel',
-      label: 'Cancelar reserva',
+      label: t('page.rowActions.cancel'),
       run: () => onAction('cancel'),
       destructive: true,
     });
     if (reservation.seriesId) {
       items.push({
         key: 'cancel_series',
-        label: 'Cancelar toda la serie',
+        label: t('page.rowActions.cancelSeries'),
         run: () => onAction('cancel_series'),
         destructive: true,
       });
@@ -1312,10 +1318,10 @@ function RowActions({
       className="group relative justify-self-start sm:justify-self-end"
     >
       <summary
-        aria-label={`Acciones para la reserva de ${customerLabel(reservation)}`}
+        aria-label={t('page.rowActions.label', { name: customerLabel(reservation, t) })}
         className="flex min-h-11 cursor-pointer list-none items-center gap-xs rounded-[var(--radius-md)] border border-border-strong px-3 text-sm font-bold text-text hover:border-action-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action-primary/40 [&::-webkit-details-marker]:hidden"
       >
-        Acciones
+        {t('page.rowActions.title')}
         <svg
           aria-hidden
           viewBox="0 0 16 16"
@@ -1366,6 +1372,8 @@ function PaymentDialog({
   onRecorded: (message: string, reservation: VenueReservation, confirmed: boolean) => void;
   onClosed: () => void;
 }) {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   const mutation = useRecordReservationPaymentMutation(venueId);
   return (
     <dialog
@@ -1388,14 +1396,23 @@ function PaymentDialog({
             const updated = await mutation.mutateAsync({ reservationId: reservation.id, input });
             const confirmed =
               reservation.status === 'pending_confirmation' && updated.status === 'confirmed';
-            const amount = formatMoneyMinor(input.amountMinor, reservation.currency);
+            const amount = formatMoneyMinor(input.amountMinor, reservation.currency, locale);
             const kindLabel =
-              PAYMENT_KIND_OPTIONS.find((option) => option.value === input.kind)?.label ?? 'Pago';
+              paymentKindOptions(t).find((option) => option.value === input.kind)?.label ??
+              t('page.payment.fallbackKind');
             dialogRef.current?.close();
             onRecorded(
               confirmed
-                ? `Registraste ${kindLabel.toLowerCase()} de ${amount}. La reserva de ${customerLabel(reservation)} quedó confirmada.`
-                : `Registraste ${kindLabel.toLowerCase()} de ${amount} para ${customerLabel(reservation)}.`,
+                ? t('page.payment.recordedConfirmed', {
+                    kind: kindLabel.toLowerCase(),
+                    amount,
+                    name: customerLabel(reservation, t),
+                  })
+                : t('page.payment.recorded', {
+                    kind: kindLabel.toLowerCase(),
+                    amount,
+                    name: customerLabel(reservation, t),
+                  }),
               reservation,
               confirmed,
             );
@@ -1438,15 +1455,16 @@ function PitchConfig({
   error: string | null;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation('owner');
   const pitch = pitches.find((item) => item.id === selectedId) ?? pitches[0] ?? null;
 
-  if (isLoading) return <ListSkeleton rows={1} label="Cargando canchas" />;
+  if (isLoading) return <ListSkeleton rows={1} label={t('page.config.loadingPitches')} />;
   if (error) {
     return (
       <div className="grid gap-sm">
         <InlineError message={error} />
         <AppButton variant="neutral" fullWidth={false} onPress={onRetry}>
-          Reintentar
+          {t('page.retry')}
         </AppButton>
       </div>
     );
@@ -1454,7 +1472,7 @@ function PitchConfig({
   if (!pitch) {
     return (
       <p id="horarios-title" className="m-0 text-md leading-[1.5] text-muted">
-        Agrega una cancha para definir su precio y sus horarios.
+        {t('page.config.noPitch')}
       </p>
     );
   }
@@ -1464,19 +1482,19 @@ function PitchConfig({
       {pitches.length > 1 ? (
         <div className="max-w-[var(--container-form)]">
           <SelectField
-            label="Cancha a configurar"
+            label={t('page.config.pitchToConfigure')}
             name="pitch"
             value={pitch.id}
             onChangeValue={onSelect}
             options={pitches.map((item) => ({
               value: item.id,
-              label: `${item.name} · ${sportLabel(item.sportType)}`,
+              label: `${item.name} · ${sportLabel(item.sportType, t)}`,
             }))}
           />
         </div>
       ) : (
         <p className="m-0 text-md font-bold leading-[1.5] text-text">
-          {pitch.name} · {sportLabel(pitch.sportType)}
+          {pitch.name} · {sportLabel(pitch.sportType, t)}
         </p>
       )}
       <PitchPriceForm

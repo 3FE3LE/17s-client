@@ -11,6 +11,9 @@
     },
     "./client": {
       "default": "./src/client.ts"
+    },
+    "./i18n": {
+      "default": "./src/i18n/index.ts"
     }
   },
   "scripts": {
@@ -23,6 +26,7 @@
   },
   "dependencies": {
     "@17suit/core": "workspace:*",
+    "@17suit/i18n": "workspace:*",
     "@17suit/ui": "workspace:*",
     "@tanstack/react-query": "^5.90.3",
     "react": "19.3.0",

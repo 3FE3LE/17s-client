@@ -11,6 +11,14 @@ vi.mock('@/lib/public-venue-api', () => ({
   fetchPublicVenue: vi.fn(),
   fetchPublicVenueAvailability: vi.fn(),
 }));
+vi.mock('@/lib/i18n-server', async () => {
+  const { createI18n } = await import('@17suit/i18n');
+  const { sevenRcResources } = await import('@17suit/module-seven-reservations-club/i18n');
+  const i18n = createI18n({ locale: 'es', resources: sevenRcResources });
+  return {
+    getServerT: (ns: 'play') => Promise.resolve({ t: i18n.getFixedT('es', ns), locale: 'es' }),
+  };
+});
 vi.mock('@/components/guest-booking-form', () => ({ GuestBookingForm: () => null }));
 
 import { fetchPublicVenue, fetchPublicVenueAvailability } from '@/lib/public-venue-api';

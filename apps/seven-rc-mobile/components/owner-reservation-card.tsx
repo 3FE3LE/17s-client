@@ -1,3 +1,4 @@
+import { useTranslation } from '@17suit/i18n/react';
 import {
   AppBadge,
   AppButton,
@@ -43,37 +44,41 @@ export function OwnerReservationCard({
   actions,
 }: OwnerReservationCardProps) {
   const { theme } = useAppTheme();
+  const { t } = useTranslation('mobile');
+  const locale = t('intlLocale');
   const awaiting = isAwaitingOwner(reservation, now);
   const expired = isPendingExpired(reservation, now);
   const name = reservationPlayerName(reservation);
-  const price = formatMoney(reservation.priceMinor, reservation.currency);
-  const paid = formatMoney(reservation.paidMinor, reservation.currency);
+  const price = formatMoney(reservation.priceMinor, reservation.currency, locale);
+  const paid = formatMoney(reservation.paidMinor, reservation.currency, locale);
   const hasMoreActions =
     paymentKindsFor(reservation, now).length > 0 || agendaActionsFor(reservation, now).length > 0;
   const details = [
-    name ?? 'Jugador sin nombre',
+    name ?? t('common.unnamedPlayer'),
     reservation.invitedCount > 0
-      ? `${reservation.invitedCount} ${reservation.invitedCount === 1 ? 'invitado' : 'invitados'}`
+      ? t('ownerCard.guests', { count: reservation.invitedCount })
       : null,
     price,
-    paid ? `Pagado ${paid}` : null,
+    paid ? t('ownerCard.paid', { amount: paid }) : null,
   ]
     .filter(Boolean)
     .join(' · ');
   const isBusy = actions.busy?.id === reservation.id;
   const busyAction = isBusy ? actions.busy?.action : null;
-  const pitchName = reservation.pitch?.name ?? 'Cancha';
+  const pitchName = reservation.pitch?.name ?? t('common.court');
   const phone = hasDialablePhone(reservation.customerPhone) ? reservation.customerPhone : null;
 
   return (
     <AppCard
       title={venueName ? `${venueName} · ${pitchName}` : pitchName}
-      subtitle={formatVenueRange(reservation.startAt, reservation.endAt, timeZone)}
+      subtitle={formatVenueRange(reservation.startAt, reservation.endAt, timeZone, locale)}
       tone={awaiting ? 'accent' : 'default'}
       footer={
         <GapView gap="sm">
           <AppBadge variant={expired ? 'neutral' : reservationBadgeVariant(reservation.status)}>
-            {expired ? 'Vencida' : reservationStatusLabel(reservation.status)}
+            {expired
+              ? t('reservationStatus.expired')
+              : reservationStatusLabel(reservation.status, t)}
           </AppBadge>
           {awaiting ? (
             <AppButtonGroup>
@@ -82,18 +87,24 @@ export function OwnerReservationCard({
                 disabled={actions.isPending}
                 busy={busyAction === 'confirm'}
                 onPress={() => actions.askConfirm(reservation, timeZone)}
-                accessibilityLabel={`Confirmar reserva de ${name ?? 'jugador'}, ${pitchName}`}
+                accessibilityLabel={t('ownerCard.confirmA11y', {
+                  name: name ?? t('ownerCard.playerFallback'),
+                  court: pitchName,
+                })}
               >
-                {busyAction === 'confirm' ? 'Confirmando…' : 'Confirmar'}
+                {busyAction === 'confirm' ? t('ownerCard.confirming') : t('ownerActions.confirm')}
               </AppButton>
               <AppButton
                 variant="destructive"
                 disabled={actions.isPending}
                 busy={busyAction === 'reject'}
                 onPress={() => actions.askReject(reservation, timeZone)}
-                accessibilityLabel={`Rechazar reserva de ${name ?? 'jugador'}, ${pitchName}`}
+                accessibilityLabel={t('ownerCard.rejectA11y', {
+                  name: name ?? t('ownerCard.playerFallback'),
+                  court: pitchName,
+                })}
               >
-                {busyAction === 'reject' ? 'Rechazando…' : 'Rechazar'}
+                {busyAction === 'reject' ? t('ownerCard.rejecting') : t('ownerActions.reject')}
               </AppButton>
             </AppButtonGroup>
           ) : null}
@@ -103,9 +114,12 @@ export function OwnerReservationCard({
               disabled={actions.isPending}
               busy={isBusy && !awaiting}
               onPress={() => actions.openSheet(reservation, timeZone)}
-              accessibilityLabel={`Acciones de la reserva de ${name ?? 'jugador'}, ${pitchName}`}
+              accessibilityLabel={t('ownerCard.actionsA11y', {
+                name: name ?? t('ownerCard.playerFallback'),
+                court: pitchName,
+              })}
             >
-              {isBusy && !awaiting ? 'Guardando…' : 'Acciones'}
+              {isBusy && !awaiting ? t('ownerCard.saving') : t('ownerCard.actions')}
             </AppButton>
           ) : null}
           {phone ? (
@@ -113,19 +127,23 @@ export function OwnerReservationCard({
               <View style={{ flex: 1 }}>
                 <AppButton
                   variant="neutral"
-                  onPress={() => void callPhone(phone)}
-                  accessibilityLabel={`Llamar a ${name ?? 'el jugador'}`}
+                  onPress={() => void callPhone(phone, t)}
+                  accessibilityLabel={t('ownerCard.callA11y', {
+                    name: name ?? t('common.playerLower'),
+                  })}
                 >
-                  Llamar
+                  {t('ownerCard.call')}
                 </AppButton>
               </View>
               <View style={{ flex: 1 }}>
                 <AppButton
                   variant="neutral"
-                  onPress={() => void openWhatsApp(phone)}
-                  accessibilityLabel={`Escribir por WhatsApp a ${name ?? 'el jugador'}`}
+                  onPress={() => void openWhatsApp(phone, t)}
+                  accessibilityLabel={t('ownerCard.whatsappA11y', {
+                    name: name ?? t('common.playerLower'),
+                  })}
                 >
-                  WhatsApp
+                  {t('ownerCard.whatsapp')}
                 </AppButton>
               </View>
             </View>

@@ -5,6 +5,7 @@ import { AppButton, AppInput, AppSelect, AppSkeleton, GapView } from '@17suit/ui
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/clerk-expo';
 import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from '@17suit/i18n/react';
 import { useMemo, useState } from 'react';
 import { z } from 'zod';
 import { addressErrorKeys, CoAddressFields } from '../../../components/co-address-fields';
@@ -16,9 +17,10 @@ import { IANA_TIMEZONES } from '../../../lib/iana-timezones';
 import { timeZoneCity } from '../../../lib/timezone-label';
 import { useCreateVenueMutation } from '../../../lib/owner-queries';
 
+/** Schema messages are `venueNew.errors.*` catalog keys; the screen translates them. */
 const createComplexSchema = z.object({
-  name: z.string().trim().min(3, 'El nombre debe tener al menos 3 caracteres.'),
-  timezone: z.string().trim().max(80, 'Máximo 80 caracteres.').optional().or(z.literal('')),
+  name: z.string().trim().min(3, 'nameMin'),
+  timezone: z.string().trim().max(80, 'timezoneMax').optional().or(z.literal('')),
   address: coAddressDraftSchema,
 });
 
@@ -44,6 +46,8 @@ function detectLocalTimezone(): string {
 
 export default function CreateComplexScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
+  const errorText = (code?: string) => (code ? t(`venueNew.errors.${code}`) : null);
   const { user } = useUser();
   const { role, isLoading } = useCurrentUserRoleQuery({
     userId: user?.id,
@@ -55,9 +59,9 @@ export default function CreateComplexScreen() {
     const unique = new Set<string>([detectedTimezone, ...IANA_TIMEZONES]);
     return Array.from(unique).map((value) => ({
       value,
-      label: `${timeZoneCity(value)} · ${value}`,
+      label: `${timeZoneCity(value, t)} · ${value}`,
     }));
-  }, [detectedTimezone]);
+  }, [detectedTimezone, t]);
   const createVenueMutation = useCreateVenueMutation();
   const { control, handleSubmit, formState } = useForm<CreateComplexFormValues>({
     resolver: zodResolver(createComplexSchema),
@@ -71,7 +75,7 @@ export default function CreateComplexScreen() {
 
   if (isLoading || !user) {
     return (
-      <Screen title="Nuevo complejo">
+      <Screen title={t('venueNew.title')}>
         <AppSkeleton height={180} rounded="lg" />
       </Screen>
     );
@@ -79,12 +83,9 @@ export default function CreateComplexScreen() {
 
   if (role !== 'OWNER') {
     return (
-      <Screen
-        title="Nuevo complejo"
-        subtitle="Solo las cuentas que administran complejos pueden crear uno."
-      >
+      <Screen title={t('venueNew.title')} subtitle={t('venueNew.forbidden')}>
         <GapView gap="md">
-          <AppButton onPress={() => router.replace('/home')}>Volver al inicio</AppButton>
+          <AppButton onPress={() => router.replace('/home')}>{t('common.backHome')}</AppButton>
         </GapView>
       </Screen>
     );
@@ -101,17 +102,17 @@ export default function CreateComplexScreen() {
         ...(addressParts ? { addressParts } : {}),
         ...(timezone ? { timezone } : {}),
       });
-      feedback.success('Complejo creado', 'Ya puedes agregar canchas.');
+      feedback.success(t('venueNew.createdTitle'), t('venueNew.createdMessage'));
       router.replace(`/complexes/${created.id}`);
     } catch (error) {
-      setSubmitError(humanizeError(error, 'save'));
+      setSubmitError(humanizeError(error, t, 'save'));
     }
   });
 
   return (
     <Screen
-      title="Nuevo complejo"
-      subtitle="Crea el complejo; después agregas sus canchas y horarios."
+      title={t('venueNew.title')}
+      subtitle={t('venueNew.subtitle')}
       footer={
         <>
           <FormError message={submitError} />
@@ -120,14 +121,14 @@ export default function CreateComplexScreen() {
             disabled={!formState.isValid || formState.isSubmitting}
             busy={formState.isSubmitting}
           >
-            {formState.isSubmitting ? 'Creando…' : 'Guardar complejo'}
+            {formState.isSubmitting ? t('common.creating') : t('venueNew.save')}
           </AppButton>
           <AppButton
             variant="neutral"
             onPress={() => router.back()}
             disabled={formState.isSubmitting}
           >
-            Cancelar
+            {t('common.cancel')}
           </AppButton>
         </>
       }
@@ -141,11 +142,11 @@ export default function CreateComplexScreen() {
               <AppInput
                 value={field.value}
                 onChangeText={field.onChange}
-                label="Nombre del complejo"
-                placeholder="Ej. Club La Cancha"
+                label={t('venueNew.nameLabel')}
+                placeholder={t('venueNew.namePlaceholder')}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />
@@ -169,13 +170,13 @@ export default function CreateComplexScreen() {
                 value={field.value ?? ''}
                 onChangeValue={field.onChange}
                 options={timezoneOptions}
-                label="Zona horaria"
-                placeholder="Seleccionar zona horaria"
+                label={t('venueNew.timezoneLabel')}
+                placeholder={t('venueNew.timezonePlaceholder')}
                 searchable
-                searchPlaceholder="Buscar ciudad o zona"
+                searchPlaceholder={t('venueNew.timezoneSearch')}
                 error={fieldState.invalid}
               />
-              <FormError message={fieldState.error?.message ?? null} />
+              <FormError message={errorText(fieldState.error?.message)} />
             </>
           )}
         />

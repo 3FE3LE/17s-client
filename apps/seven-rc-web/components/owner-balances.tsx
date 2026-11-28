@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from '@17suit/i18n/react';
 import { AppBadge, AppButton, AppInput } from '@17suit/ui';
 import { useState } from 'react';
 import { InlineError, ListSkeleton, SectionHeader, SelectField } from '@/components/seven-rc-ui';
@@ -7,7 +8,7 @@ import {
   canRecordPayment,
   filterByPayment,
   isPaymentFilter,
-  PAYMENT_FILTER_OPTIONS,
+  paymentFilterOptions,
   paymentStatusLabel,
   type PaymentFilter,
 } from '@/lib/owner-balances';
@@ -36,11 +37,13 @@ export function OwnerBalances({
   todayKey: string;
   onRecordPayment: (reservation: VenueReservation) => void;
 }) {
+  const { t, i18n } = useTranslation('owner');
+  const locale = i18n.language;
   const [from, setFrom] = useState(addDaysToDateKey(todayKey, -DEFAULT_PAST_DAYS));
   const [to, setTo] = useState(addDaysToDateKey(todayKey, DEFAULT_FUTURE_DAYS));
   const [filter, setFilter] = useState<PaymentFilter>('all');
 
-  const periodError = validatePeriod(from, to);
+  const periodError = validatePeriod(from, to, t);
   // An invalid period must not hit the API: no venue id disables the query.
   const query = useOwnerVenueReservationsQuery(periodError ? null : venueId, from, to);
   const all = query.data ?? [];
@@ -48,38 +51,44 @@ export function OwnerBalances({
   const totals = summarizeReservations(all);
   const owing = all.filter((reservation) => outstandingMinor(reservation) > 0).length;
   const currency = all[0]?.currency ?? 'COP';
-  const loadError = query.error
-    ? describeError(query.error, 'No se pudieron cargar los pagos.')
-    : null;
+  const loadError = query.error ? describeError(query.error, t('balances.loadError')) : null;
 
   return (
     <section aria-labelledby="saldos-title" className="mt-lg grid gap-md">
       <SectionHeader
         id="saldos-title"
-        title="Pagos y saldos"
-        description="Saldo pendiente por reserva en el periodo elegido. Cuenta solo reservas por confirmar, confirmadas o completadas."
+        title={t('balances.title')}
+        description={t('balances.description')}
       />
       <fieldset className="m-0 grid max-w-[var(--container-form)] gap-sm border-0 p-0 sm:grid-cols-2">
-        <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">Periodo</legend>
+        <legend className="mb-xs p-0 text-sm leading-[1.5] text-muted">
+          {t('balances.period')}
+        </legend>
         <AppInput
           type="date"
           name="saldos-desde"
-          label="Desde"
+          label={t('balances.from')}
           value={from}
           onChangeText={setFrom}
         />
-        <AppInput type="date" name="saldos-hasta" label="Hasta" value={to} onChangeText={setTo} />
+        <AppInput
+          type="date"
+          name="saldos-hasta"
+          label={t('balances.to')}
+          value={to}
+          onChangeText={setTo}
+        />
       </fieldset>
       <InlineError message={periodError} />
       <div className="max-w-[var(--container-form)]">
         <SelectField
-          label="Estado de pago"
+          label={t('balances.paymentStatus')}
           name="estado-pago"
           value={filter}
           onChangeValue={(value) => {
             if (isPaymentFilter(value)) setFilter(value);
           }}
-          options={PAYMENT_FILTER_OPTIONS.map((option) => ({
+          options={paymentFilterOptions(t).map((option) => ({
             value: option.value,
             label: option.label,
           }))}
@@ -87,29 +96,29 @@ export function OwnerBalances({
       </div>
 
       {periodError ? null : query.isLoading ? (
-        <ListSkeleton rows={2} label="Cargando pagos y saldos" />
+        <ListSkeleton rows={2} label={t('balances.loading')} />
       ) : loadError ? (
         <div className="grid gap-sm">
           <InlineError message={loadError} />
           <AppButton variant="neutral" fullWidth={false} onPress={() => void query.refetch()}>
-            Reintentar
+            {t('balances.retry')}
           </AppButton>
         </div>
       ) : (
         <>
           <p role="status" className="m-0 text-md font-bold leading-[1.5] text-text">
-            Pendiente del periodo: {formatMoneyMinor(totals.pendingMinor, currency)} en {owing}{' '}
-            {owing === 1 ? 'reserva' : 'reservas'}
+            {t('balances.pending', {
+              amount: formatMoneyMinor(totals.pendingMinor, currency, locale),
+              count: owing,
+            })}
           </p>
           {rows.length === 0 ? (
-            <p className="m-0 text-md leading-[1.5] text-muted">
-              No hay reservas con ese estado de pago en el periodo.
-            </p>
+            <p className="m-0 text-md leading-[1.5] text-muted">{t('balances.empty')}</p>
           ) : (
             <ul className="m-0 grid list-none gap-sm p-0">
               {rows.map((reservation) => {
                 const balance = outstandingMinor(reservation);
-                const status = reservationStatus(reservation.status);
+                const status = reservationStatus(reservation.status, t);
                 return (
                   <li
                     key={reservation.id}
@@ -121,22 +130,25 @@ export function OwnerBalances({
                           {reservation.user?.name ??
                             reservation.customerName ??
                             reservation.user?.email ??
-                            'Jugador sin nombre'}
+                            t('balances.unnamedPlayer')}
                         </p>
                         <AppBadge variant={status.variant}>{status.label}</AppBadge>
                         <AppBadge variant="neutral">
-                          {paymentStatusLabel(reservation.paymentStatus)}
+                          {paymentStatusLabel(reservation.paymentStatus, t)}
                         </AppBadge>
                       </div>
                       <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
                         {reservation.pitch.name} ·{' '}
-                        {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+                        {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone, locale)}
                       </p>
                       <p className="m-0 text-sm leading-[18px] text-text">
-                        Precio {formatMoneyMinor(reservation.priceMinor, reservation.currency)} ·
-                        pagado {formatMoneyMinor(reservation.paidMinor, reservation.currency)} ·{' '}
+                        {t('balances.price')}{' '}
+                        {formatMoneyMinor(reservation.priceMinor, reservation.currency, locale)} ·{' '}
+                        {t('balances.paid')}{' '}
+                        {formatMoneyMinor(reservation.paidMinor, reservation.currency, locale)} ·{' '}
                         <span className="font-bold">
-                          saldo {formatMoneyMinor(balance, reservation.currency)}
+                          {t('balances.balance')}{' '}
+                          {formatMoneyMinor(balance, reservation.currency, locale)}
                         </span>
                       </p>
                     </div>
@@ -147,7 +159,7 @@ export function OwnerBalances({
                         fullWidth={false}
                         onPress={() => onRecordPayment(reservation)}
                       >
-                        Registrar pago
+                        {t('balances.recordPayment')}
                       </AppButton>
                     ) : null}
                   </li>

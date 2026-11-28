@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { verifyCodeSchema, type VerifyCodeValues } from '@17suit/core';
 import { useSignUp } from '@clerk/clerk-expo';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, AppLinkAction, AppTypography, GapView } from '@17suit/ui-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -13,6 +14,7 @@ import { humanizeClerkError } from '../../lib/error-messages';
 
 export default function SignUpVerifyScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { isLoaded, signUp, setActive } = useSignUp();
   const [isResending, setIsResending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -36,9 +38,9 @@ export default function SignUpVerifyScreen() {
         return;
       }
 
-      setFormError('No pudimos completar la verificación. Inténtalo de nuevo.');
+      setFormError(t('auth.verify.incomplete'));
     } catch (err) {
-      setFormError(humanizeClerkError(err, 'No pudimos verificar tu correo.'));
+      setFormError(humanizeClerkError(err, t('auth.verify.failed'), t));
     }
   });
 
@@ -51,25 +53,21 @@ export default function SignUpVerifyScreen() {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
       setResent(true);
     } catch (err) {
-      setFormError(humanizeClerkError(err, 'No pudimos reenviar el código.'));
+      setFormError(humanizeClerkError(err, t('auth.verify.resendFailed'), t));
     } finally {
       setIsResending(false);
     }
   };
 
   return (
-    <Screen
-      back={false}
-      title="Verifica tu correo"
-      subtitle="Escribe el código de verificación que te enviamos por correo."
-    >
+    <Screen back={false} title={t('auth.verify.title')} subtitle={t('auth.verify.subtitle')}>
       <GapView gap="sm">
         <Controller
           control={control}
           name="code"
           render={({ field, fieldState }) => (
             <FormField
-              label="Código de verificación"
+              label={t('auth.verificationCode')}
               kind="code"
               value={field.value}
               onChangeText={field.onChange}
@@ -77,25 +75,23 @@ export default function SignUpVerifyScreen() {
               onSubmitEditing={() => {
                 void handleVerifyEmail();
               }}
-              error={authErrorText(fieldState.error?.message)}
+              error={authErrorText(fieldState.error?.message, t)}
             />
           )}
         />
         <FormError message={formError} />
         {resent ? (
           <View accessibilityLiveRegion="polite">
-            <AppTypography variant="body">
-              Código enviado. Revisa tu correo, también la carpeta de spam.
-            </AppTypography>
+            <AppTypography variant="body">{t('auth.verify.resent')}</AppTypography>
           </View>
         ) : null}
         <AppButton onPress={handleVerifyEmail} disabled={isSubmitting}>
-          {isSubmitting ? 'Verificando…' : 'Verificar correo'}
+          {isSubmitting ? t('auth.verify.submitting') : t('auth.verify.submit')}
         </AppButton>
         <AppButton variant="neutral" onPress={handleResendCode} disabled={isSubmitting}>
-          Reenviar código
+          {t('auth.verify.resend')}
         </AppButton>
-        <AppLinkAction onPress={() => router.back()}>Cambiar correo</AppLinkAction>
+        <AppLinkAction onPress={() => router.back()}>{t('auth.verify.changeEmail')}</AppLinkAction>
       </GapView>
     </Screen>
   );

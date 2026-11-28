@@ -7,6 +7,7 @@ import {
   paymentStatusLabel,
 } from './owner-balances';
 import { outstandingMinor, summarizeReservations } from './owner-report';
+import { tEs } from './test-translate';
 
 function res(o: Partial<VenueReservation>): VenueReservation {
   return {
@@ -79,6 +80,6 @@ describe('helpers', () => {
   it('validates filter values and labels statuses', () => {
     expect(isPaymentFilter('unpaid')).toBe(true);
     expect(isPaymentFilter('nope')).toBe(false);
-    expect(paymentStatusLabel('deposit_paid')).toBe('Anticipo pagado');
+    expect(paymentStatusLabel('deposit_paid', tEs)).toBe('Anticipo pagado');
   });
 });

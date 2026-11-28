@@ -10,12 +10,13 @@ import { addressErrorKeys, CoAddressFields } from '@/components/co-address-field
 import { InlineError, InlineStatus, SelectField } from '@/components/seven-rc-ui';
 import { useCreateVenueMutation } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
-import { DEFAULT_TIMEZONE, VENUE_TIMEZONE_OPTIONS } from '@/lib/seven-rc-format';
+import { DEFAULT_TIMEZONE, venueTimezoneOptions } from '@/lib/seven-rc-format';
+import { useTranslation } from '@17suit/i18n/react';
 
 export const VENUE_NAME_INPUT_ID = 'nuevo-complejo-nombre';
 
 const createVenueSchema = z.object({
-  name: z.string().trim().min(3, 'El nombre del complejo necesita al menos 3 caracteres.').max(120),
+  name: z.string().trim().min(3, 'common.venueNameMin').max(120),
   timezone: z.string().min(1),
   address: coAddressDraftSchema,
 });
@@ -28,6 +29,7 @@ const EMPTY: CreateVenueValues = {
 };
 
 export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) => void }) {
+  const { t } = useTranslation('venue');
   const createVenueMutation = useCreateVenueMutation();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -48,15 +50,15 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
           timezone: values.timezone,
         });
         reset({ ...EMPTY, timezone: values.timezone, address: { ...EMPTY_CO_ADDRESS_DRAFT } });
-        setNotice(`Creaste “${created.name}”. Ahora agrega sus canchas.`);
+        setNotice(t('createVenue.created', { name: created.name }));
         onCreated(created.id);
       } catch (caught) {
-        setError(describeError(caught, 'No se pudo crear el complejo.'));
+        setError(describeError(caught, t('createVenue.failed')));
       }
     },
     () => {
       setNotice(null);
-      setError('Revisa los campos marcados.');
+      setError(t('common.checkFields'));
     },
   );
   const saving = createVenueMutation.isPending || formState.isSubmitting;
@@ -69,7 +71,7 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
       noValidate
     >
       <h3 id="crear-complejo-title" className="m-0 font-arvo text-md text-text">
-        Nuevo complejo
+        {t('createVenue.title')}
       </h3>
       <div className="grid gap-sm md:grid-cols-2">
         <Controller
@@ -80,7 +82,7 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
               <AppInput
                 id={VENUE_NAME_INPUT_ID}
                 name="name"
-                label="Nombre del complejo"
+                label={t('common.venueName')}
                 autoComplete="organization"
                 required
                 maxLength={120}
@@ -89,7 +91,13 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
                 onChangeText={field.onChange}
                 onBlur={field.onBlur}
               />
-              <InlineError message={fieldState.error?.message ?? null} />
+              <InlineError
+                message={
+                  fieldState.error?.message
+                    ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+                    : null
+                }
+              />
             </div>
           )}
         />
@@ -98,12 +106,12 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
           name="timezone"
           render={({ field }) => (
             <SelectField
-              label="Zona horaria del complejo"
+              label={t('createVenue.timezone.label')}
               name="timezone"
               value={field.value}
               onChangeValue={field.onChange}
-              options={VENUE_TIMEZONE_OPTIONS}
-              hint="Los horarios de las canchas se muestran en esta hora."
+              options={venueTimezoneOptions(t)}
+              hint={t('createVenue.timezone.hint')}
             />
           )}
         />
@@ -121,7 +129,7 @@ export function CreateVenueForm({ onCreated }: { onCreated: (venueId: string) =>
       />
       <div className="grid gap-sm sm:max-w-[280px]">
         <AppButton type="submit" disabled={saving}>
-          {saving ? 'Creando…' : 'Crear complejo'}
+          {saving ? t('createVenue.creating') : t('createVenue.create')}
         </AppButton>
       </div>
       <InlineError message={error} />

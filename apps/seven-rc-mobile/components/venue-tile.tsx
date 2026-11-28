@@ -1,13 +1,14 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppBadge, useAppTheme } from '@17suit/ui-native';
 import { Pressable, Text, View } from 'react-native';
 
 interface VenueTileProps {
   name: string;
   address?: string | null | undefined;
-  /** Extra line under the address, e.g. "3 canchas · 12 reservas". */
+  /** Extra line under the address, e.g. "3 courts · 12 reservations". */
   meta?: string | null;
-  /** Attention badge, e.g. "2 por confirmar". */
+  /** Attention badge, e.g. "2 to confirm". */
   badge?: string | null;
   accessibilityHint: string;
   onPress: () => void;
@@ -26,7 +27,8 @@ export function VenueTile({
   onPress,
 }: VenueTileProps) {
   const { theme } = useAppTheme();
-  const addressLabel = address?.trim().length ? address : 'Dirección pendiente';
+  const { t } = useTranslation('mobile');
+  const addressLabel = address?.trim().length ? address : t('common.pendingAddress');
   const titleType = theme.typography.styles.subtitle2;
   const captionType = theme.typography.styles.caption;
 

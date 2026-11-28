@@ -1,5 +1,6 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
+import type { MobileT } from './i18n';
 
 /**
  * Tracks whether the screen is focused and calls `onRefocus` when the user
@@ -44,13 +45,13 @@ export function useNow(intervalMs = 30_000): number {
   return now;
 }
 
-/** "Actualizado hace un momento" / "hace 3 min" / "hace 2 h". */
-export function formatUpdatedAgo(updatedAt: number, now: number): string | null {
+/** "Updated just now" / "Updated 3 min ago" / "Updated 2 h ago" (per locale). */
+export function formatUpdatedAgo(updatedAt: number, now: number, t: MobileT): string | null {
   if (!updatedAt) return null;
   const seconds = Math.max(0, Math.round((now - updatedAt) / 1000));
-  if (seconds < 60) return 'Actualizado hace un momento';
+  if (seconds < 60) return t('updatedAgo.now');
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `Actualizado hace ${minutes} min`;
+  if (minutes < 60) return t('updatedAgo.minutes', { count: minutes });
   const hours = Math.floor(minutes / 60);
-  return `Actualizado hace ${hours} h`;
+  return t('updatedAgo.hours', { count: hours });
 }

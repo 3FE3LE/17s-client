@@ -1,4 +1,5 @@
 import type { VenueReservation } from '@/lib/owner-queries';
+import type { Translate } from '@/lib/seven-rc-format';
 
 /** Statuses that represent a customer actually holding or using a slot. */
 const COUNTED_STATUSES = new Set(['pending_confirmation', 'confirmed', 'completed', 'no_show']);
@@ -49,12 +50,12 @@ export interface CustomerBook {
   withoutPhone: number;
 }
 
-function displayName(reservation: VenueReservation): string {
+function displayName(reservation: VenueReservation, t: Translate): string {
   return (
     reservation.customerName?.trim() ||
     reservation.user?.name?.trim() ||
     reservation.user?.email?.trim() ||
-    'Cliente sin nombre'
+    t('format:customers.unnamedCustomer')
   );
 }
 
@@ -62,6 +63,7 @@ function displayName(reservation: VenueReservation): string {
 export function buildCustomerBook(
   reservations: readonly VenueReservation[],
   now: number,
+  t: Translate,
   thresholds: CustomerThresholds = DEFAULT_THRESHOLDS,
 ): CustomerBook {
   const groups = new Map<string, VenueReservation[]>();
@@ -83,7 +85,7 @@ export function buildCustomerBook(
     const lapsedBefore = now - thresholds.lapsedAfterDays * DAY_MS;
     customers.push({
       phone,
-      name: displayName(history[0] as VenueReservation),
+      name: displayName(history[0] as VenueReservation, t),
       bookings: counted.length,
       noShows: counted.filter((item) => item.status === 'no_show').length,
       spentMinor: history.reduce((sum, item) => sum + item.paidMinor, 0),
@@ -100,14 +102,16 @@ export function buildCustomerBook(
 
 export type CustomerFilter = 'all' | 'frequent' | 'lapsed';
 
-export const CUSTOMER_FILTER_OPTIONS: ReadonlyArray<{ value: CustomerFilter; label: string }> = [
-  { value: 'all', label: 'Todos' },
-  { value: 'frequent', label: 'Frecuentes' },
-  { value: 'lapsed', label: 'Dejaron de venir' },
-];
+const CUSTOMER_FILTERS: ReadonlyArray<CustomerFilter> = ['all', 'frequent', 'lapsed'];
+
+export function customerFilterOptions(
+  t: Translate,
+): Array<{ value: CustomerFilter; label: string }> {
+  return CUSTOMER_FILTERS.map((value) => ({ value, label: t(`format:customers.filter.${value}`) }));
+}
 
 export function isCustomerFilter(value: string): value is CustomerFilter {
-  return CUSTOMER_FILTER_OPTIONS.some((option) => option.value === value);
+  return CUSTOMER_FILTERS.some((option) => option === value);
 }
 
 export function filterCustomers(

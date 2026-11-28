@@ -1,12 +1,12 @@
 'use client';
 
 import type { CSSProperties } from 'react';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, suitTheme } from '@17suit/ui';
 import {
   SevenReservationsClubRoleOptions,
   type SevenReservationsClubRole,
   type SevenReservationsClubRoleSource,
-  getSevenReservationsClubRoleHint,
 } from '../onboarding-role';
 
 export interface OnboardingRoleSelectorProps {
@@ -41,7 +41,10 @@ export function OnboardingRoleSelector({
   onClearSubmitError,
   onSelectRole,
 }: OnboardingRoleSelectorProps) {
-  const roleHint = getSevenReservationsClubRoleHint(role, source);
+  const { t } = useTranslation('shell');
+  const roleHint = role
+    ? t('roleSelector.currentRole', { source, role })
+    : t('roleSelector.pickRole');
 
   return (
     <div style={{ gap: 12, display: 'flex', flexDirection: 'column' }}>
@@ -52,7 +55,7 @@ export function OnboardingRoleSelector({
           <p style={{ ...paragraphStyle, color: '#ff7676' }}>{roleError}</p>
           {onRetryLoad ? (
             <AppButton onPress={onRetryLoad} variant="info">
-              Reintentar carga de rol
+              {t('roleSelector.retryLoad')}
             </AppButton>
           ) : null}
         </div>
@@ -71,14 +74,24 @@ export function OnboardingRoleSelector({
               flexDirection: 'column',
             }}
           >
-            <p style={{ ...paragraphStyle, fontWeight: 700 }}>{option.title}</p>
-            <p style={{ ...paragraphStyle, opacity: 0.8 }}>{option.subtitle}</p>
+            <p style={{ ...paragraphStyle, fontWeight: 700 }}>
+              {t(option.role === 'OWNER' ? 'roleSelector.ownerTitle' : 'roleSelector.playerTitle')}
+            </p>
+            <p style={{ ...paragraphStyle, opacity: 0.8 }}>
+              {t(
+                option.role === 'OWNER'
+                  ? 'roleSelector.ownerSubtitle'
+                  : 'roleSelector.playerSubtitle',
+              )}
+            </p>
             <AppButton
               variant={option.role === 'OWNER' ? 'success' : 'primary'}
               onPress={() => onSelectRole(option.role)}
               disabled={Boolean(isSubmittingRole)}
             >
-              {isSubmittingRole === option.role ? 'Guardando...' : option.cta}
+              {isSubmittingRole === option.role
+                ? t('roleSelector.saving')
+                : t(option.role === 'OWNER' ? 'roleSelector.ownerCta' : 'roleSelector.playerCta')}
             </AppButton>
           </div>
         ))}
@@ -89,7 +102,7 @@ export function OnboardingRoleSelector({
           <p style={{ ...paragraphStyle, color: '#ff7676' }}>{submitError}</p>
           {onClearSubmitError ? (
             <AppButton onPress={onClearSubmitError} variant="destructive">
-              Cerrar error y reintentar
+              {t('roleSelector.clearError')}
             </AppButton>
           ) : null}
         </div>

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { AppBadge } from '@17suit/ui';
+import { getServerT } from '@/lib/i18n-server';
 import { GuestBookingForm } from '@/components/guest-booking-form';
 import { asDepositPolicy } from '@/lib/deposit-policy';
 import { fetchPublicVenue, fetchPublicVenueAvailability } from '@/lib/public-venue-api';
@@ -19,14 +20,11 @@ const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 type SlotStatus = 'AVAILABLE' | 'RESERVED' | 'BLOCKED' | 'PAST';
 
-const SLOT_STATUS: Record<
-  SlotStatus,
-  { label: string; variant: 'success' | 'neutral' | 'warning' }
-> = {
-  AVAILABLE: { label: 'Libre', variant: 'success' },
-  RESERVED: { label: 'Ocupado', variant: 'neutral' },
-  BLOCKED: { label: 'Bloqueado', variant: 'warning' },
-  PAST: { label: 'Pasado', variant: 'neutral' },
+const SLOT_STATUS_VARIANT: Record<SlotStatus, 'success' | 'neutral' | 'warning'> = {
+  AVAILABLE: 'success',
+  RESERVED: 'neutral',
+  BLOCKED: 'warning',
+  PAST: 'neutral',
 };
 
 interface PageProps {
@@ -42,10 +40,11 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const venue = await fetchPublicVenue(slug);
-  if (!venue) return { title: 'Complejo no encontrado | Seven Reservations Club' };
+  const { t } = await getServerT('play');
+  if (!venue) return { title: t('venuePage.notFound') };
   return {
-    title: `${venue.name} | Seven Reservations Club`,
-    description: `Mira los horarios libres de ${venue.name} y reserva tu cancha.`,
+    title: t('venuePage.metaTitle', { name: venue.name }),
+    description: t('venuePage.metaDescription', { name: venue.name }),
   };
 }
 
@@ -60,6 +59,7 @@ function resolveDate(raw: string | string[] | undefined, today: string, horizon:
 
 export default async function PublicVenuePage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { t, locale } = await getServerT('play');
   const venue = await fetchPublicVenue(slug);
   if (!venue) notFound();
 
@@ -98,7 +98,7 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
         {venue.address ? <p className="m-0 text-md text-muted">{venue.address}</p> : null}
         {venue.contactPhone ? (
           <p className="m-0 text-sm leading-[18px] text-muted">
-            Contacto:{' '}
+            {t('venuePage.contact')}{' '}
             <a href={`tel:${venue.contactPhone}`} className="underline">
               {venue.contactPhone}
             </a>
@@ -111,7 +111,7 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           role="alert"
           className="m-0 rounded-[var(--radius-md)] border border-destructive/50 bg-feedback-error-soft px-3 py-2 text-sm leading-[18px] text-text"
         >
-          El complejo cambió sus condiciones mientras reservabas. Revísalas y confirma de nuevo.
+          {t('venuePage.conditionsChanged')}
         </p>
       ) : null}
 
@@ -120,18 +120,16 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
           role="alert"
           className="m-0 rounded-[var(--radius-md)] border border-destructive/50 bg-feedback-error-soft px-3 py-2 text-sm leading-[18px] text-text"
         >
-          Otra persona acaba de reservar ese horario. Actualizamos la lista: elige otro.
+          {t('venuePage.conflict')}
         </p>
       ) : null}
 
       <section aria-labelledby="canchas-titulo" className="grid gap-sm">
         <h2 id="canchas-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
-          Canchas
+          {t('venuePage.pitchesTitle')}
         </h2>
         {venue.pitches.length === 0 ? (
-          <p className="m-0 text-sm leading-[18px] text-muted">
-            Este complejo todavía no tiene canchas publicadas.
-          </p>
+          <p className="m-0 text-sm leading-[18px] text-muted">{t('venuePage.noPitches')}</p>
         ) : (
           <ul className="m-0 grid list-none gap-sm p-0 sm:grid-cols-2">
             {venue.pitches.map((pitch) => (
@@ -141,11 +139,15 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
               >
                 <p className="m-0 font-arvo text-md leading-[1.3] text-text">{pitch.name}</p>
                 <p className="m-0 text-sm leading-[18px] text-muted">
-                  {sportLabel(pitch.sportType)} · turnos de{' '}
-                  {formatDuration(pitch.slotDurationMinutes)}
+                  {t('venuePage.pitchMeta', {
+                    sport: sportLabel(pitch.sportType, t),
+                    duration: formatDuration(pitch.slotDurationMinutes),
+                  })}
                 </p>
                 <p className="m-0 text-sm leading-[18px] text-text">
-                  {formatMoneyMinor(pitch.basePriceMinor, venue.currency)} por turno
+                  {t('venuePage.perSlot', {
+                    price: formatMoneyMinor(pitch.basePriceMinor, venue.currency, locale),
+                  })}
                 </p>
               </li>
             ))}
@@ -155,12 +157,12 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
 
       <section aria-labelledby="horarios-titulo" className="grid gap-md">
         <h2 id="horarios-titulo" className="m-0 font-arvo text-lg leading-[1.3] text-text">
-          Horarios
+          {t('venuePage.schedulesTitle')}
         </h2>
         <form method="get" className="flex flex-wrap items-end gap-sm">
           <div className="grid gap-xs">
             <label htmlFor="fecha" className="text-sm leading-[18px] text-text">
-              Fecha
+              {t('venuePage.dateLabel')}
             </label>
             <input
               id="fecha"
@@ -178,28 +180,29 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
             type="submit"
             className="min-h-[44px] rounded-[var(--radius-md)] border border-border-strong px-md text-md text-text"
           >
-            Ver horarios
+            {t('venuePage.viewTimes')}
           </button>
         </form>
         <p className="m-0 text-sm leading-[18px] text-muted">
-          {formatLongDate(date)} · hora del complejo. Reserva hasta {venue.bookingHorizonDays} días
-          por adelantado.
+          {t('venuePage.dateNote', {
+            date: formatLongDate(date, locale),
+            days: venue.bookingHorizonDays,
+          })}
         </p>
 
         {availability.pitches.length === 0 ? (
-          <p className="m-0 text-sm leading-[18px] text-muted">No hay canchas para mostrar.</p>
+          <p className="m-0 text-sm leading-[18px] text-muted">{t('venuePage.noPitchesToShow')}</p>
         ) : (
           availability.pitches.map((pitch) => (
             <article key={pitch.pitchId} className="grid gap-sm">
               <h3 className="m-0 font-arvo text-md leading-[1.3] text-text">
-                {pitch.pitchName} · {sportLabel(pitch.sportType)}
+                {pitch.pitchName} · {sportLabel(pitch.sportType, t)}
               </h3>
               {pitch.slots.length === 0 ? (
-                <p className="m-0 text-sm leading-[18px] text-muted">Sin turnos este día.</p>
+                <p className="m-0 text-sm leading-[18px] text-muted">{t('venuePage.noSlots')}</p>
               ) : (
                 <ul className="m-0 grid list-none gap-xs p-0">
                   {pitch.slots.map((slot) => {
-                    const status = SLOT_STATUS[slot.status];
                     const free = slot.status === 'AVAILABLE';
                     return (
                       <li
@@ -207,9 +210,11 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
                         className="flex items-center justify-between gap-sm rounded-[var(--radius-md)] border border-border-default px-md py-sm"
                       >
                         <span className={free ? 'text-md text-text' : 'text-md text-muted'}>
-                          <time dateTime={slot.startAt}>{formatTime(slot.startAt, timeZone)}</time>
+                          <time dateTime={slot.startAt}>
+                            {formatTime(slot.startAt, timeZone, locale)}
+                          </time>
                           {' · '}
-                          {formatMoneyMinor(slot.priceMinor, availability.currency)}
+                          {formatMoneyMinor(slot.priceMinor, availability.currency, locale)}
                         </span>
                         {free ? (
                           <a
@@ -225,14 +230,19 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
                             }
                             className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-border-strong px-md text-sm font-bold text-text"
                           >
-                            Reservar
+                            {t('venuePage.book')}
                             <span className="sr-only">
                               {' '}
-                              {pitch.pitchName} a las {formatTime(slot.startAt, timeZone)}
+                              {t('venuePage.bookSr', {
+                                pitch: pitch.pitchName,
+                                time: formatTime(slot.startAt, timeZone, locale),
+                              })}
                             </span>
                           </a>
                         ) : (
-                          <AppBadge variant={status.variant}>{status.label}</AppBadge>
+                          <AppBadge variant={SLOT_STATUS_VARIANT[slot.status]}>
+                            {t(`venuePage.status.${slot.status}`)}
+                          </AppBadge>
                         )}
                       </li>
                     );
@@ -252,13 +262,14 @@ export default async function PublicVenuePage({ params, searchParams }: PageProp
             date={date}
             pitchId={selectedPitch.pitchId}
             startAt={selectedSlot.startAt}
-            when={formatSlotWhen(selectedSlot.startAt, selectedSlot.endAt, timeZone)}
+            when={formatSlotWhen(selectedSlot.startAt, selectedSlot.endAt, timeZone, locale)}
             pitchName={selectedPitch.pitchName}
-            priceLabel={formatMoneyMinor(selectedSlot.priceMinor, availability.currency)}
+            priceLabel={formatMoneyMinor(selectedSlot.priceMinor, availability.currency, locale)}
             depositPercent={policy.depositPercent}
             depositLabel={formatMoneyMinor(
               Math.ceil((selectedSlot.priceMinor * policy.depositPercent) / 100),
               availability.currency,
+              locale,
             )}
             holdMinutes={policy.holdMinutes}
             policy={policy}

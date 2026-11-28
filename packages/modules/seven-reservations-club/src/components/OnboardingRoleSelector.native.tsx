@@ -1,12 +1,12 @@
 'use client';
 
 import { Text, View } from 'react-native';
+import { useTranslation } from '@17suit/i18n/react';
 import { AppButton, GapView, suitTheme } from '@17suit/ui';
 import {
   SevenReservationsClubRoleOptions,
   type SevenReservationsClubRole,
   type SevenReservationsClubRoleSource,
-  getSevenReservationsClubRoleHint,
 } from '../onboarding-role';
 
 export interface OnboardingRoleSelectorProps {
@@ -30,7 +30,10 @@ export function OnboardingRoleSelector({
   onClearSubmitError,
   onSelectRole,
 }: OnboardingRoleSelectorProps) {
-  const roleHint = getSevenReservationsClubRoleHint(role, source);
+  const { t } = useTranslation('shell');
+  const roleHint = role
+    ? t('roleSelector.currentRole', { source, role })
+    : t('roleSelector.pickRole');
   const bodyType = suitTheme.typography.styles.body;
 
   return (
@@ -62,7 +65,7 @@ export function OnboardingRoleSelector({
           </Text>
           {onRetryLoad ? (
             <AppButton onPress={onRetryLoad} variant="info">
-              Reintentar carga de rol
+              {t('roleSelector.retryLoad')}
             </AppButton>
           ) : null}
         </GapView>
@@ -90,7 +93,9 @@ export function OnboardingRoleSelector({
                   fontWeight: '700',
                 }}
               >
-                {option.title}
+                {t(
+                  option.role === 'OWNER' ? 'roleSelector.ownerTitle' : 'roleSelector.playerTitle',
+                )}
               </Text>
               <Text
                 style={{
@@ -102,14 +107,20 @@ export function OnboardingRoleSelector({
                   opacity: 0.8,
                 }}
               >
-                {option.subtitle}
+                {t(
+                  option.role === 'OWNER'
+                    ? 'roleSelector.ownerSubtitle'
+                    : 'roleSelector.playerSubtitle',
+                )}
               </Text>
               <AppButton
                 variant={option.role === 'OWNER' ? 'success' : 'primary'}
                 onPress={() => onSelectRole(option.role)}
                 disabled={Boolean(isSubmittingRole)}
               >
-                {isSubmittingRole === option.role ? 'Guardando...' : option.cta}
+                {isSubmittingRole === option.role
+                  ? t('roleSelector.saving')
+                  : t(option.role === 'OWNER' ? 'roleSelector.ownerCta' : 'roleSelector.playerCta')}
               </AppButton>
             </GapView>
           </View>
@@ -131,7 +142,7 @@ export function OnboardingRoleSelector({
           </Text>
           {onClearSubmitError ? (
             <AppButton onPress={onClearSubmitError} variant="destructive">
-              Cerrar error y reintentar
+              {t('roleSelector.clearError')}
             </AppButton>
           ) : null}
         </GapView>

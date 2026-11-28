@@ -1,3 +1,4 @@
+import { useTranslation } from '@17suit/i18n/react';
 import { Feather } from '@expo/vector-icons';
 import {
   useSetCurrentUserRoleMutation,
@@ -12,20 +13,20 @@ import { humanizeError } from '../../lib/error-messages';
 
 const ROLE_OPTIONS: ReadonlyArray<{
   role: SevenReservationsClubRole;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   icon: 'calendar' | 'home';
 }> = [
   {
     role: 'PLAYER',
-    title: 'Quiero reservar canchas',
-    description: 'Busca complejos, reserva tu horario y sigue el estado de tus reservas.',
+    titleKey: 'role.player.title',
+    descriptionKey: 'role.player.description',
     icon: 'calendar',
   },
   {
     role: 'OWNER',
-    title: 'Administro un complejo',
-    description: 'Publica tus canchas, define horarios y confirma las reservas que llegan.',
+    titleKey: 'role.owner.title',
+    descriptionKey: 'role.owner.description',
     icon: 'home',
   },
 ];
@@ -37,6 +38,7 @@ const ROLE_OPTIONS: ReadonlyArray<{
  */
 export default function OnboardingRoleScreen() {
   const router = useRouter();
+  const { t } = useTranslation('mobile');
   const { theme } = useAppTheme();
   const setRoleMutation = useSetCurrentUserRoleMutation();
   const [submittingRole, setSubmittingRole] = useState<SevenReservationsClubRole | null>(null);
@@ -51,14 +53,14 @@ export default function OnboardingRoleScreen() {
       await setRoleMutation.mutateAsync(role);
       router.replace('/home');
     } catch (error) {
-      setSubmitError(humanizeError(error, 'save'));
+      setSubmitError(humanizeError(error, t, 'save'));
     } finally {
       setSubmittingRole(null);
     }
   };
 
   return (
-    <AppFrame appName="¿Cómo vas a usar la app?" subtitle="Elige una opción para empezar.">
+    <AppFrame appName={t('role.title')} subtitle={t('role.subtitle')}>
       <GapView gap="md">
         {ROLE_OPTIONS.map((option) => {
           const isSubmitting = submittingRole === option.role;
@@ -70,7 +72,7 @@ export default function OnboardingRoleScreen() {
               }}
               disabled={submittingRole !== null}
               accessibilityRole="button"
-              accessibilityLabel={`${option.title}. ${option.description}`}
+              accessibilityLabel={`${t(option.titleKey)}. ${t(option.descriptionKey)}`}
               accessibilityState={{ disabled: submittingRole !== null, busy: isSubmitting }}
               style={({ pressed }) => ({
                 flexDirection: 'row',
@@ -107,7 +109,7 @@ export default function OnboardingRoleScreen() {
                     letterSpacing: titleType.letterSpacingPx,
                   }}
                 >
-                  {option.title}
+                  {t(option.titleKey)}
                 </Text>
                 <Text
                   style={{
@@ -118,7 +120,7 @@ export default function OnboardingRoleScreen() {
                     letterSpacing: bodyType.letterSpacingPx,
                   }}
                 >
-                  {option.description}
+                  {t(option.descriptionKey)}
                 </Text>
               </View>
               {isSubmitting ? (

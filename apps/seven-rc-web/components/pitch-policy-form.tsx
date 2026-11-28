@@ -13,17 +13,14 @@ import {
   SelectField,
   TextAreaField,
 } from '@/components/seven-rc-ui';
-import {
-  asDepositPolicy,
-  DEPOSIT_POLICY_LABEL,
-  DEPOSIT_POLICY_OPTIONS,
-} from '@/lib/deposit-policy';
+import { asDepositPolicy, DEPOSIT_POLICY_VALUES, type DepositPolicy } from '@/lib/deposit-policy';
 import {
   useConfigurePitchPolicyMutation,
   type OwnerVenue,
   type PitchWithPricing,
 } from '@/lib/owner-queries';
 import { describeError } from '@/lib/seven-rc-errors';
+import { useTranslation } from '@17suit/i18n/react';
 
 /** Empty means "inherit the venue"; anything else must be an integer in range. */
 export function parseOptionalInt(
@@ -38,30 +35,36 @@ export function parseOptionalInt(
   return parsed >= min && parsed <= max ? parsed : 'invalid';
 }
 
+const POLICY_LABEL_KEY: Record<DepositPolicy, string> = {
+  refund: 'depositPolicy.refund',
+  retain: 'depositPolicy.retain',
+  owner_decides: 'depositPolicy.ownerDecides',
+};
+
 const FIELDS = [
   {
     key: 'depositPercent',
     name: 'depositPercent',
-    label: 'Anticipo (% del precio)',
+    labelKey: 'policyFields.depositPercent',
     min: 0,
     max: 100,
-    error: 'Usa un número entero entre 0 y 100.',
+    error: 'policyErrors.depositPercent',
   },
   {
     key: 'holdMinutes',
     name: 'holdMinutes',
-    label: 'Minutos para pagar el anticipo',
+    labelKey: 'policyFields.holdMinutes',
     min: 5,
     max: 1440,
-    error: 'Usa entre 5 y 1440 minutos (24 h).',
+    error: 'policyErrors.holdMinutes',
   },
   {
     key: 'cancellationWindowHours',
     name: 'cancellationWindowHours',
-    label: 'Cancelación en línea (horas antes)',
+    labelKey: 'policyFields.cancellationWindowHours',
     min: 0,
     max: 168,
-    error: 'Usa entre 0 y 168 horas (7 días).',
+    error: 'policyErrors.cancellationWindowHours',
   },
 ] as const;
 
@@ -99,6 +102,11 @@ export function PitchPolicyForm({
   >;
   pitch: PitchWithPricing;
 }) {
+  const { t } = useTranslation('venue');
+  const policyOptions = DEPOSIT_POLICY_VALUES.map((value) => ({
+    value,
+    label: t(POLICY_LABEL_KEY[value]),
+  }));
   const mutation = useConfigurePitchPolicyMutation(pitch.id, venueId);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -134,16 +142,14 @@ export function PitchPolicyForm({
           noShowDeposit: values.noShowDeposit === '' ? null : values.noShowDeposit,
           conditionsText: values.conditionsText.trim() === '' ? null : values.conditionsText.trim(),
         });
-        setNotice(
-          `Guardaste las condiciones de ${pitch.name}. Los campos vacíos usan las del complejo.`,
-        );
+        setNotice(t('pitchPolicy.saved', { pitch: pitch.name }));
       } catch (caught) {
-        setFormError(describeError(caught, 'No se pudieron guardar las condiciones.'));
+        setFormError(describeError(caught, t('pitchPolicy.saveFailed')));
       }
     },
     () => {
       setNotice(null);
-      setFormError('Revisa los campos marcados.');
+      setFormError(t('common.checkFields'));
     },
   );
 
@@ -161,12 +167,9 @@ export function PitchPolicyForm({
       noValidate
     >
       <h3 id="condiciones-cancha-title" className="m-0 font-arvo text-md text-text">
-        Condiciones de reserva de esta cancha
+        {t('pitchPolicy.title')}
       </h3>
-      <p className="m-0 text-sm leading-[18px] text-muted">
-        Deja un campo vacío para usar el valor del complejo. Las reservas ya hechas conservan sus
-        condiciones.
-      </p>
+      <p className="m-0 text-sm leading-[18px] text-muted">{t('pitchPolicy.intro')}</p>
       <div className="grid gap-sm md:grid-cols-3">
         {FIELDS.map((field) => (
           <Controller
@@ -177,11 +180,15 @@ export function PitchPolicyForm({
               <HintedInput
                 type="text"
                 name={field.name}
-                label={field.label}
+                label={t(field.labelKey)}
                 inputMode="numeric"
                 autoComplete="off"
                 placeholder={inherited[field.key]}
-                errorMessage={fieldState.error?.message ?? null}
+                errorMessage={
+                  fieldState.error?.message
+                    ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+                    : null
+                }
                 value={input.value}
                 onChangeText={(value) => {
                   input.onChange(value);
@@ -190,8 +197,8 @@ export function PitchPolicyForm({
                 onBlur={input.onBlur}
                 hint={
                   input.value.trim() === ''
-                    ? `Usa el del complejo: ${inherited[field.key]}.`
-                    : 'Valor propio de esta cancha.'
+                    ? t('pitchPolicy.inheritedHint', { value: inherited[field.key] })
+                    : t('pitchPolicy.ownHint')
                 }
               />
             )}
@@ -205,7 +212,7 @@ export function PitchPolicyForm({
           <HintedInput
             type="text"
             name="paymentInstructions"
-            label="Instrucciones de pago"
+            label={t('policyFields.paymentInstructions')}
             autoComplete="off"
             placeholder={venue.paymentInstructions ?? ''}
             value={field.value}
@@ -214,7 +221,11 @@ export function PitchPolicyForm({
               setNotice(null);
             }}
             onBlur={field.onBlur}
-            hint={field.value.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+            hint={
+              field.value.trim() === ''
+                ? t('pitchPolicy.inheritedHintPlural')
+                : t('pitchPolicy.ownHintPlural')
+            }
           />
         )}
       />
@@ -224,16 +235,18 @@ export function PitchPolicyForm({
           name="lateCancelDeposit"
           render={({ field }) => (
             <SelectField
-              label="Cancelación tardía: anticipo"
+              label={t('policyFields.lateCancelDeposit')}
               name="lateCancelDeposit"
               value={field.value}
               onChangeValue={(value) => field.onChange(value === '' ? '' : asDepositPolicy(value))}
               options={[
                 {
                   value: '',
-                  label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.lateCancelDeposit]})`,
+                  label: t('pitchPolicy.sameAsVenue', {
+                    policy: t(POLICY_LABEL_KEY[venue.lateCancelDeposit]),
+                  }),
                 },
-                ...DEPOSIT_POLICY_OPTIONS,
+                ...policyOptions,
               ]}
             />
           )}
@@ -243,16 +256,18 @@ export function PitchPolicyForm({
           name="noShowDeposit"
           render={({ field }) => (
             <SelectField
-              label="No asistencia: anticipo"
+              label={t('policyFields.noShowDeposit')}
               name="noShowDeposit"
               value={field.value}
               onChangeValue={(value) => field.onChange(value === '' ? '' : asDepositPolicy(value))}
               options={[
                 {
                   value: '',
-                  label: `Igual al complejo (${DEPOSIT_POLICY_LABEL[venue.noShowDeposit]})`,
+                  label: t('pitchPolicy.sameAsVenue', {
+                    policy: t(POLICY_LABEL_KEY[venue.noShowDeposit]),
+                  }),
                 },
-                ...DEPOSIT_POLICY_OPTIONS,
+                ...policyOptions,
               ]}
             />
           )}
@@ -263,19 +278,23 @@ export function PitchPolicyForm({
         name="conditionsText"
         render={({ field }) => (
           <TextAreaField
-            label="Condiciones adicionales"
+            label={t('policyFields.conditionsText')}
             name="conditionsText"
             value={field.value}
             onChangeValue={field.onChange}
             maxLength={1000}
             placeholder={venue.conditionsText ?? ''}
-            hint={field.value.trim() === '' ? 'Usa las del complejo.' : 'Propias de esta cancha.'}
+            hint={
+              field.value.trim() === ''
+                ? t('pitchPolicy.inheritedHintPlural')
+                : t('pitchPolicy.ownHintPlural')
+            }
           />
         )}
       />
       <div>
         <AppButton type="submit" fullWidth={false} disabled={mutation.isPending}>
-          {mutation.isPending ? 'Guardando…' : 'Guardar condiciones'}
+          {mutation.isPending ? t('common.saving') : t('pitchPolicy.save')}
         </AppButton>
       </div>
       {formError ? <InlineError message={formError} /> : null}

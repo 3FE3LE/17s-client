@@ -38,17 +38,28 @@ export function resolveSlotPrice(
   return rule ? rule.priceMinor : basePriceMinor;
 }
 
-/** Spanish message for a single invalid rule, or null. */
-export function validateRule(rule: PriceRuleInput): string | null {
-  if (rule.daysOfWeek.length === 0) return 'Elige al menos un día.';
-  if (!HHMM.test(rule.startTime) || !HHMM.test(rule.endTime)) {
-    return 'Elige hora de inicio y de fin.';
-  }
-  if (toEndMinutes(rule.endTime) <= toMinutes(rule.startTime)) {
-    return 'La hora de fin debe ser posterior a la de inicio.';
-  }
-  if (!Number.isInteger(rule.priceMinor) || rule.priceMinor < 0) return 'Escribe un precio válido.';
+export type RuleErrorCode = 'noDays' | 'noTimes' | 'endBeforeStart' | 'badPrice';
+
+/** Stable error code for a single invalid rule, or null. */
+export function validateRuleCode(rule: PriceRuleInput): RuleErrorCode | null {
+  if (rule.daysOfWeek.length === 0) return 'noDays';
+  if (!HHMM.test(rule.startTime) || !HHMM.test(rule.endTime)) return 'noTimes';
+  if (toEndMinutes(rule.endTime) <= toMinutes(rule.startTime)) return 'endBeforeStart';
+  if (!Number.isInteger(rule.priceMinor) || rule.priceMinor < 0) return 'badPrice';
   return null;
+}
+
+const RULE_MESSAGE: Record<RuleErrorCode, string> = {
+  noDays: 'Elige al menos un día.',
+  noTimes: 'Elige hora de inicio y de fin.',
+  endBeforeStart: 'La hora de fin debe ser posterior a la de inicio.',
+  badPrice: 'Escribe un precio válido.',
+};
+
+/** Spanish message for a single invalid rule, or null (kept for the spec; UI maps the code). */
+export function validateRule(rule: PriceRuleInput): string | null {
+  const code = validateRuleCode(rule);
+  return code ? RULE_MESSAGE[code] : null;
 }
 
 function overlaps(a: PriceRuleInput, b: PriceRuleInput): boolean {

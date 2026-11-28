@@ -6,6 +6,7 @@ import { Suspense, useCallback, useRef, useState, type FormEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { intInRange } from '@17suit/core';
+import { useTranslation } from '@17suit/i18n/react';
 import {
   useCurrentUserRoleQuery,
   useRoleGate,
@@ -68,25 +69,34 @@ const MAX_VENUE_RESULTS = 12;
 const PENDING_POLL_MS = 30_000;
 
 const reserveSchema = z.object({
-  invitedCount: intInRange(0, 50, 'Los invitados deben ser entre 0 y 50.'),
+  invitedCount: intInRange(0, 50, 'invitedRange'),
   notes: z.string().max(500),
 });
 type ReserveValues = z.infer<typeof reserveSchema>;
 
 const RESERVE_FORM_ID = 'reserva-form';
 
+type PlayT = ReturnType<typeof useTranslation<'play'>>['t'];
+
 /** Part-of-day buckets by venue-local start hour. */
 const DAY_PARTS = [
-  { key: 'manana', label: 'Mañana', from: 0, to: 12 },
-  { key: 'tarde', label: 'Tarde', from: 12, to: 18 },
-  { key: 'noche', label: 'Noche', from: 18, to: 24 },
+  { key: 'manana', label: 'morning', from: 0, to: 12 },
+  { key: 'tarde', label: 'afternoon', from: 12, to: 18 },
+  { key: 'noche', label: 'evening', from: 18, to: 24 },
 ] as const;
 
-const SLOT_UNAVAILABLE_LABEL: Record<string, string> = {
-  RESERVED: 'reservado',
-  BLOCKED: 'no disponible',
-  PAST: 'ya pasó',
-};
+function slotUnavailableLabel(status: string, t: PlayT): string {
+  switch (status) {
+    case 'RESERVED':
+      return t('slotUnavailable.RESERVED');
+    case 'BLOCKED':
+      return t('slotUnavailable.BLOCKED');
+    case 'PAST':
+      return t('slotUnavailable.PAST');
+    default:
+      return t('slotUnavailable.other');
+  }
+}
 
 /**
  * The server stores "no price configured" and "free" the same way (0). A slot priced 0
@@ -97,15 +107,17 @@ function describeSlotPrice(
   priceMinor: number,
   pitch: Pick<Pitch, 'basePriceMinor'> | null,
   currency: string,
+  t: PlayT,
+  locale: string,
 ): { short: string; full: string } {
   if (priceMinor > 0) {
-    const amount = formatMoneyMinor(priceMinor, currency);
+    const amount = formatMoneyMinor(priceMinor, currency, locale);
     return { short: amount, full: amount };
   }
   if (!pitch || pitch.basePriceMinor <= 0) {
-    return { short: 'A confirmar', full: 'Precio a confirmar con el complejo' };
+    return { short: t('price.toConfirmShort'), full: t('price.toConfirmFull') };
   }
-  return { short: 'Sin costo', full: 'Sin costo' };
+  return { short: t('price.free'), full: t('price.free') };
 }
 
 /** Mirrors the server's deposit rule (`ceil(price × percent / 100)`). */
@@ -139,14 +151,15 @@ interface CompletedBooking {
 }
 
 export default function PlayPage() {
+  const { t } = useTranslation('play');
   const router = useRouter();
   const { role, isLoading } = useCurrentUserRoleQuery();
   useRoleGate({ required: 'PLAYER', router });
 
   if (isLoading || role !== 'PLAYER') {
     return (
-      <AppFrame appName="Reservar cancha" subtitle="Cargando tu cuenta…">
-        <ListSkeleton rows={3} label="Cargando tu cuenta" />
+      <AppFrame appName={t('common.appName')} subtitle={t('loading.accountSubtitle')}>
+        <ListSkeleton rows={3} label={t('loading.accountLabel')} />
       </AppFrame>
     );
   }
@@ -155,8 +168,8 @@ export default function PlayPage() {
   return (
     <Suspense
       fallback={
-        <AppFrame appName="Reservar cancha" subtitle="Cargando complejos…">
-          <ListSkeleton rows={3} label="Cargando complejos" />
+        <AppFrame appName={t('common.appName')} subtitle={t('loading.venuesSubtitle')}>
+          <ListSkeleton rows={3} label={t('loading.venuesLabel')} />
         </AppFrame>
       }
     >
@@ -198,6 +211,8 @@ function useSelectionParams() {
 }
 
 function PlayerWorkspace() {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   // Search: debounced from the change handler, committed immediately on Enter.
   const [searchInput, setSearchInput] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -258,7 +273,7 @@ function PlayerWorkspace() {
 
   const createReservationMutation = useCreateReservationMutation();
   const slotPrice = selectedSlot
-    ? describeSlotPrice(selectedSlot.priceMinor, selectedPitch, currency)
+    ? describeSlotPrice(selectedSlot.priceMinor, selectedPitch, currency, t, locale)
     : null;
 
   // Venue and pitch may still be defaults (first in the list), so every choice writes
@@ -302,7 +317,7 @@ function PlayerWorkspace() {
   const onReserve = handleSubmit(async (values) => {
     setBookingError(null);
     if (!selectedVenue || !selectedPitch || !selectedSlot) {
-      setBookingError('Elige un horario disponible para reservar.');
+      setBookingError(t('reserve.pickSlot'));
       return;
     }
 
@@ -320,18 +335,15 @@ function PlayerWorkspace() {
       setExplicitSlot(null);
       reset();
     } catch (error) {
-      setBookingError(describeError(error, 'No se pudo enviar la reserva.'));
+      setBookingError(describeError(error, t('reserve.sendFailed')));
       if (isSlotConflict(error)) setExplicitSlot(null);
     }
   });
 
   return (
-    <AppFrame
-      appName="Reservar cancha"
-      subtitle="Elige complejo, cancha, día y horario. Solo ves los turnos que están libres."
-    >
+    <AppFrame appName={t('common.appName')} subtitle={t('reserve.subtitle')}>
       <section aria-labelledby="reservar-title" className="grid gap-lg">
-        <SectionHeader id="reservar-title" title="Nueva reserva" />
+        <SectionHeader id="reservar-title" title={t('reserve.heading')} />
 
         {completedBooking ? (
           <BookingSuccess
@@ -345,8 +357,8 @@ function PlayerWorkspace() {
                 <AppInput
                   type="search"
                   name="q"
-                  label="Buscar complejo"
-                  placeholder="Nombre o dirección"
+                  label={t('reserve.search.label')}
+                  placeholder={t('reserve.search.placeholder')}
                   autoComplete="off"
                   enterKeyHint="search"
                   value={searchInput}
@@ -359,7 +371,7 @@ function PlayerWorkspace() {
                 isLoading={venuesQuery.isLoading}
                 error={
                   venuesQuery.error
-                    ? describeError(venuesQuery.error, 'No se pudieron cargar los complejos.')
+                    ? describeError(venuesQuery.error, t('venues.loadFailed'))
                     : null
                 }
                 onRetry={() => void venuesQuery.refetch()}
@@ -384,7 +396,7 @@ function PlayerWorkspace() {
                   isLoading={pitchesQuery.isLoading}
                   error={
                     pitchesQuery.error
-                      ? describeError(pitchesQuery.error, 'No se pudieron cargar las canchas.')
+                      ? describeError(pitchesQuery.error, t('pitches.loadFailed'))
                       : null
                   }
                   onRetry={() => void pitchesQuery.refetch()}
@@ -397,7 +409,9 @@ function PlayerWorkspace() {
               {selectedPitch ? (
                 <>
                   <fieldset className="m-0 grid min-w-0 gap-sm border-0 p-0">
-                    <legend className="mb-sm p-0 font-arvo text-md text-text">Día</legend>
+                    <legend className="mb-sm p-0 font-arvo text-md text-text">
+                      {t('reserve.day')}
+                    </legend>
                     <div className="-mx-1 flex gap-sm overflow-x-auto px-1 pb-2 [scrollbar-width:thin]">
                       {dateKeys.map((dateKey) => (
                         <ChoiceChip
@@ -406,19 +420,22 @@ function PlayerWorkspace() {
                           value={dateKey}
                           checked={dateKey === selectedDate}
                           onSelect={chooseDate}
-                          ariaLabel={formatLongDate(dateKey)}
+                          ariaLabel={formatLongDate(dateKey, locale)}
                           className="min-w-[68px] shrink-0 items-center text-center"
                         >
                           <span className="text-xs uppercase leading-[1.2] text-muted">
                             {dateKey === todayKey
-                              ? 'Hoy'
-                              : formatDateKey(dateKey, { weekday: 'short' }).replace('.', '')}
+                              ? t('reserve.today')
+                              : formatDateKey(dateKey, { weekday: 'short' }, locale).replace(
+                                  '.',
+                                  '',
+                                )}
                           </span>
                           <span className="font-arvo text-lg leading-[1.2] tabular-nums">
-                            {formatDateKey(dateKey, { day: 'numeric' })}
+                            {formatDateKey(dateKey, { day: 'numeric' }, locale)}
                           </span>
                           <span className="text-xs leading-[1.2] text-muted">
-                            {formatDateKey(dateKey, { month: 'short' }).replace('.', '')}
+                            {formatDateKey(dateKey, { month: 'short' }, locale).replace('.', '')}
                           </span>
                         </ChoiceChip>
                       ))}
@@ -429,10 +446,7 @@ function PlayerWorkspace() {
                     isLoading={availabilityQuery.isLoading}
                     error={
                       availabilityQuery.error
-                        ? describeError(
-                            availabilityQuery.error,
-                            'No se pudieron cargar los horarios.',
-                          )
+                        ? describeError(availabilityQuery.error, t('slots.loadFailed'))
                         : null
                     }
                     onRetry={() => void availabilityQuery.refetch()}
@@ -440,7 +454,7 @@ function PlayerWorkspace() {
                     pitch={selectedPitch}
                     timeZone={timeZone}
                     currency={currency}
-                    dateLabel={formatLongDate(selectedDate)}
+                    dateLabel={formatLongDate(selectedDate, locale)}
                     selectedStart={selectedSlot?.startAt ?? null}
                     onSelect={(startAt) => {
                       if (selectedPitch) setExplicitSlot({ pitchId: selectedPitch.id, startAt });
@@ -465,7 +479,7 @@ function PlayerWorkspace() {
               className="grid gap-md rounded-[var(--radius-lg)] border border-border-strong bg-background p-md lg:sticky lg:top-md"
             >
               <h3 id="resumen-title" className="m-0 font-arvo text-lg leading-[1.3] text-text">
-                Tu reserva
+                {t('reserve.yourBooking')}
               </h3>
               <BookingSummary
                 venue={selectedVenue}
@@ -485,7 +499,7 @@ function PlayerWorkspace() {
                         <AppInput
                           type="number"
                           name="invitedCount"
-                          label="Invitados además de ti (opcional)"
+                          label={t('reserve.guests')}
                           inputMode="numeric"
                           min={0}
                           max={50}
@@ -495,7 +509,13 @@ function PlayerWorkspace() {
                           onChangeText={field.onChange}
                           onBlur={field.onBlur}
                         />
-                        <InlineError message={fieldState.error?.message ?? null} />
+                        <InlineError
+                          message={
+                            fieldState.error?.message === 'invitedRange'
+                              ? t('reserve.invitedRange')
+                              : (fieldState.error?.message ?? null)
+                          }
+                        />
                       </div>
                     )}
                   />
@@ -505,8 +525,8 @@ function PlayerWorkspace() {
                     render={({ field }) => (
                       <AppInput
                         name="notes"
-                        label="Nota para el complejo (opcional)"
-                        placeholder="Ej.: traemos balón"
+                        label={t('reserve.note')}
+                        placeholder={t('reserve.notePlaceholder')}
                         maxLength={500}
                         autoComplete="off"
                         value={field.value}
@@ -522,7 +542,9 @@ function PlayerWorkspace() {
                 disabled={!selectedSlot || createReservationMutation.isPending}
                 aria-describedby={bookingError ? 'reservar-error' : undefined}
               >
-                {createReservationMutation.isPending ? 'Enviando reserva…' : 'Reservar'}
+                {createReservationMutation.isPending
+                  ? t('reserve.submitting')
+                  : t('reserve.submit')}
               </AppButton>
               <InlineError id="reservar-error" message={bookingError} />
             </form>
@@ -533,7 +555,7 @@ function PlayerWorkspace() {
           <MobileBookingBar
             when={
               selectedSlot
-                ? formatTimeRange(selectedSlot.startAt, selectedSlot.endAt, timeZone)
+                ? formatTimeRange(selectedSlot.startAt, selectedSlot.endAt, timeZone, locale)
                 : null
             }
             pitchName={selectedPitch?.name ?? ''}
@@ -570,13 +592,14 @@ function VenuePicker({
   onSelect: (id: string) => void;
   onClearSearch: () => void;
 }) {
-  if (isLoading) return <ListSkeleton rows={2} label="Buscando complejos" />;
+  const { t } = useTranslation('play');
+  if (isLoading) return <ListSkeleton rows={2} label={t('venues.searching')} />;
   if (error) {
     return (
       <div className="grid gap-sm">
         <InlineError message={error} />
         <AppButton variant="neutral" fullWidth={false} onPress={onRetry}>
-          Reintentar
+          {t('common.retry')}
         </AppButton>
       </div>
     );
@@ -585,23 +608,23 @@ function VenuePicker({
     return searchTerm ? (
       <AppEmpty
         icon={<Search size={18} aria-hidden />}
-        title={`Ningún complejo coincide con “${searchTerm}”`}
-        description="Prueba con otra palabra del nombre o de la dirección."
-        actionLabel="Ver todos los complejos"
+        title={t('venues.noMatchTitle', { term: searchTerm })}
+        description={t('venues.noMatchDescription')}
+        actionLabel={t('venues.noMatchAction')}
         onAction={onClearSearch}
       />
     ) : (
       <AppEmpty
         icon={<Inbox size={18} aria-hidden />}
-        title="Todavía no hay complejos publicados"
-        description="Cuando un complejo abra sus canchas en Seven Reservations Club, aparecerá aquí."
+        title={t('venues.emptyTitle')}
+        description={t('venues.emptyDescription')}
       />
     );
   }
 
   return (
     <fieldset className="m-0 grid min-w-0 gap-sm border-0 p-0">
-      <legend className="mb-sm p-0 font-arvo text-md text-text">Complejo</legend>
+      <legend className="mb-sm p-0 font-arvo text-md text-text">{t('venues.legend')}</legend>
       <div className="grid gap-sm sm:grid-cols-2">
         {venues.map((venue) => (
           <ChoiceChip
@@ -620,7 +643,7 @@ function VenuePicker({
       </div>
       {totalCount > venues.length ? (
         <p className="m-0 text-sm leading-[18px] text-muted">
-          Mostrando {venues.length} de {totalCount}. Busca por nombre para encontrar el tuyo.
+          {t('venues.showing', { shown: venues.length, total: totalCount })}
         </p>
       ) : null}
     </fieldset>
@@ -642,13 +665,14 @@ function PitchPicker({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
-  if (isLoading) return <ListSkeleton rows={1} label="Cargando canchas" />;
+  const { t } = useTranslation('play');
+  if (isLoading) return <ListSkeleton rows={1} label={t('pitches.loading')} />;
   if (error) {
     return (
       <div className="grid gap-sm">
         <InlineError message={error} />
         <AppButton variant="neutral" fullWidth={false} onPress={onRetry}>
-          Reintentar
+          {t('common.retry')}
         </AppButton>
       </div>
     );
@@ -657,15 +681,15 @@ function PitchPicker({
     return (
       <AppEmpty
         icon={<Inbox size={18} aria-hidden />}
-        title="Este complejo aún no tiene canchas disponibles"
-        description="Elige otro complejo de la lista."
+        title={t('pitches.emptyTitle')}
+        description={t('pitches.emptyDescription')}
       />
     );
   }
 
   return (
     <fieldset className="m-0 grid min-w-0 gap-sm border-0 p-0">
-      <legend className="mb-sm p-0 font-arvo text-md text-text">Cancha</legend>
+      <legend className="mb-sm p-0 font-arvo text-md text-text">{t('pitches.legend')}</legend>
       <div className="flex flex-wrap gap-sm">
         {pitches.map((pitch) => (
           <ChoiceChip
@@ -677,7 +701,10 @@ function PitchPicker({
           >
             <span className="font-bold leading-[1.3]">{pitch.name}</span>
             <span className="text-sm leading-[18px] text-muted">
-              {sportLabel(pitch.sportType)} · turnos de {formatDuration(pitch.slotDurationMinutes)}
+              {t('pitches.meta', {
+                sport: sportLabel(pitch.sportType, t),
+                duration: formatDuration(pitch.slotDurationMinutes),
+              })}
             </span>
           </ChoiceChip>
         ))}
@@ -713,13 +740,14 @@ function SlotPicker({
   onNextDay: () => void;
   hasNextDay: boolean;
 }) {
+  const { t } = useTranslation('play');
   const availableCount = slots.filter((slot) => slot.status === 'AVAILABLE').length;
 
   return (
     <fieldset className="m-0 grid min-w-0 gap-sm border-0 p-0">
-      <legend className="mb-sm p-0 font-arvo text-md text-text">Horario</legend>
+      <legend className="mb-sm p-0 font-arvo text-md text-text">{t('slots.legend')}</legend>
       {isLoading ? (
-        <div role="status" aria-label="Cargando horarios" className="flex flex-wrap gap-sm">
+        <div role="status" aria-label={t('slots.loading')} className="flex flex-wrap gap-sm">
           {Array.from({ length: 8 }, (_, index) => (
             <AppSkeleton key={index} width={96} height={52} rounded="md" />
           ))}
@@ -728,7 +756,7 @@ function SlotPicker({
         <div className="grid gap-sm">
           <InlineError message={error} />
           <AppButton variant="neutral" fullWidth={false} onPress={onRetry}>
-            Reintentar
+            {t('common.retry')}
           </AppButton>
         </div>
       ) : availableCount === 0 ? (
@@ -736,17 +764,16 @@ function SlotPicker({
           icon={<CalendarClock size={18} aria-hidden />}
           title={
             slots.length === 0
-              ? `La cancha no abre el ${dateLabel}`
-              : `No quedan horarios libres el ${dateLabel}`
+              ? t('slots.closed', { date: dateLabel })
+              : t('slots.noneFree', { date: dateLabel })
           }
-          description="Prueba otro día o elige otra cancha."
-          {...(hasNextDay ? { actionLabel: 'Ver el día siguiente', onAction: onNextDay } : {})}
+          description={t('slots.emptyDescription')}
+          {...(hasNextDay ? { actionLabel: t('slots.nextDay'), onAction: onNextDay } : {})}
         />
       ) : (
         <>
           <p className="m-0 text-sm leading-[18px] text-muted">
-            {availableCount === 1 ? '1 horario libre' : `${availableCount} horarios libres`} · hora
-            del complejo
+            {t('slots.free', { count: availableCount })}
           </p>
           {DAY_PARTS.map((part) => {
             const partSlots = slots.filter((slot) => {
@@ -761,7 +788,7 @@ function SlotPicker({
                   id={headingId}
                   className="m-0 mt-xs text-sm font-bold leading-[18px] text-muted"
                 >
-                  {part.label}
+                  {t(`dayParts.${part.label}`)}
                 </h3>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-sm">
                   {partSlots.map((slot) => (
@@ -800,10 +827,12 @@ function SlotChip({
   checked: boolean;
   onSelect: (startAt: string) => void;
 }) {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   const isAvailable = slot.status === 'AVAILABLE';
-  const start = formatTime(slot.startAt, timeZone);
-  const unavailable = SLOT_UNAVAILABLE_LABEL[slot.status] ?? 'no disponible';
-  const price = describeSlotPrice(slot.priceMinor, pitch, currency);
+  const start = formatTime(slot.startAt, timeZone, locale);
+  const unavailable = slotUnavailableLabel(slot.status, t);
+  const price = describeSlotPrice(slot.priceMinor, pitch, currency, t, locale);
   return (
     <ChoiceChip
       name="horario"
@@ -811,7 +840,10 @@ function SlotChip({
       checked={checked}
       disabled={!isAvailable}
       onSelect={onSelect}
-      ariaLabel={isAvailable ? `${start}, ${price.full}` : `${start}, ${unavailable}`}
+      ariaLabel={t('slots.ariaLabel', {
+        time: start,
+        detail: isAvailable ? price.full : unavailable,
+      })}
       className="items-center text-center"
     >
       <span
@@ -849,6 +881,7 @@ function MobileBookingBar({
   isPending: boolean;
   error: string | null;
 }) {
+  const { t } = useTranslation('play');
   return (
     <>
       <div aria-hidden className="h-28 lg:hidden" />
@@ -857,10 +890,10 @@ function MobileBookingBar({
           <div className="flex items-center gap-md">
             <div className="grid min-w-0 flex-1">
               <p className="m-0 truncate font-bold leading-[1.3] tabular-nums text-text">
-                {when ?? 'Elige otro horario'}
+                {when ?? t('mobileBar.pickOther')}
               </p>
               <p className="m-0 break-words text-sm leading-[18px] text-muted">
-                {when ? `${pitchName} · ${price}` : pitchName}
+                {when ? t('mobileBar.detail', { pitch: pitchName, price }) : pitchName}
               </p>
             </div>
             <AppButton
@@ -869,7 +902,7 @@ function MobileBookingBar({
               fullWidth={false}
               disabled={!when || isPending}
             >
-              {isPending ? 'Enviando…' : 'Reservar'}
+              {isPending ? t('mobileBar.sending') : t('common.book')}
             </AppButton>
           </div>
           <p aria-live="polite" className="m-0 text-sm leading-[18px] text-text empty:sr-only">
@@ -896,26 +929,31 @@ function BookingSummary({
   timeZone: string;
   currency: string;
 }) {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   if (!slot || !pitch || !venue) {
-    return (
-      <p className="m-0 text-md leading-[1.5] text-muted">
-        Elige un horario libre para ver el resumen antes de reservar.
-      </p>
-    );
+    return <p className="m-0 text-md leading-[1.5] text-muted">{t('summary.empty')}</p>;
   }
 
   const rows: Array<[string, string]> = [
-    ['Complejo', venue.name],
-    ['Cancha', `${pitch.name} · ${sportLabel(pitch.sportType)}`],
-    ['Fecha', formatLongDate(dateKeyInTimeZone(slot.startAt, timeZone))],
-    ['Hora', formatTimeRange(slot.startAt, slot.endAt, timeZone)],
-    ['Duración', formatDuration(minutesBetween(slot.startAt, slot.endAt))],
+    [t('summary.venue'), venue.name],
+    [t('summary.pitch'), `${pitch.name} · ${sportLabel(pitch.sportType, t)}`],
+    [t('summary.date'), formatLongDate(dateKeyInTimeZone(slot.startAt, timeZone), locale)],
+    [t('summary.time'), formatTimeRange(slot.startAt, slot.endAt, timeZone, locale)],
+    [t('summary.duration'), formatDuration(minutesBetween(slot.startAt, slot.endAt))],
   ];
-  if (priceLabel) rows.push(['Precio', priceLabel]);
+  if (priceLabel) rows.push([t('summary.price'), priceLabel]);
   if (slot.priceMinor > 0 && venue.depositPercent > 0) {
     rows.push([
-      'Anticipo',
-      `${formatMoneyMinor(depositEstimate(slot.priceMinor, venue.depositPercent), currency)} (${venue.depositPercent} %) para apartar el turno`,
+      t('summary.deposit'),
+      t('summary.depositValue', {
+        amount: formatMoneyMinor(
+          depositEstimate(slot.priceMinor, venue.depositPercent),
+          currency,
+          locale,
+        ),
+        percent: venue.depositPercent,
+      }),
     ]);
   }
 
@@ -940,6 +978,8 @@ function BookingSuccess({
   booking: CompletedBooking;
   onBookAnother: () => void;
 }) {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   const { reservation, pitch } = booking;
   // The venue search returns only name, address and time zone. Payment and cancellation
   // terms come with the reservation list, which refetches right after booking.
@@ -959,41 +999,52 @@ function BookingSuccess({
     >
       <div className="grid gap-xs">
         <h3 className="m-0 font-arvo text-lg leading-[1.3] text-text">
-          {isPending
-            ? 'Solicitud enviada — pendiente de confirmación del complejo'
-            : 'Reserva confirmada'}
+          {isPending ? t('success.pendingTitle') : t('success.confirmedTitle')}
         </h3>
         <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
           {venue.name} · {pitch.name} ·{' '}
-          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone, locale)}
         </p>
         <p className="m-0 text-md leading-[1.5] text-muted">
-          Precio: {describeSlotPrice(reservation.priceMinor, pitch, reservation.currency).full}
+          {t('success.price', {
+            price: describeSlotPrice(reservation.priceMinor, pitch, reservation.currency, t, locale)
+              .full,
+          })}
         </p>
       </div>
 
       <div className="grid gap-xs text-md leading-[1.5] text-text">
-        <p className="m-0 font-bold">Qué sigue</p>
+        <p className="m-0 font-bold">{t('success.next')}</p>
         {isPending ? (
           <>
             {reservation.depositMinor > 0 ? (
               <p className="m-0">
-                El complejo pide un anticipo de{' '}
-                {formatMoneyMinor(reservation.depositMinor, reservation.currency)} para confirmar el
-                turno
                 {reservation.holdExpiresAt
-                  ? `. Si no se confirma ${formatBeforeTime(reservation.holdExpiresAt, timeZone)}, el horario se libera.`
-                  : '.'}
+                  ? t('success.depositAskHold', {
+                      amount: formatMoneyMinor(
+                        reservation.depositMinor,
+                        reservation.currency,
+                        locale,
+                      ),
+                      before: formatBeforeTime(reservation.holdExpiresAt, timeZone, locale, t),
+                    })
+                  : t('success.depositAsk', {
+                      amount: formatMoneyMinor(
+                        reservation.depositMinor,
+                        reservation.currency,
+                        locale,
+                      ),
+                    })}
               </p>
             ) : (
-              <p className="m-0">El complejo revisará tu solicitud y la confirmará.</p>
+              <p className="m-0">{t('success.reviewing')}</p>
             )}
             {venue.paymentInstructions ? (
               <p className="m-0 whitespace-pre-line text-muted">{venue.paymentInstructions}</p>
             ) : null}
             {venue.contactPhone ? (
               <p className="m-0 text-muted">
-                Contacto del complejo:{' '}
+                {t('common.callVenue')}{' '}
                 <a
                   href={`tel:${venue.contactPhone.replace(/[^\d+]/g, '')}`}
                   className="text-text underline underline-offset-2"
@@ -1002,30 +1053,27 @@ function BookingSuccess({
                 </a>
               </p>
             ) : null}
-            <p className="m-0 text-muted">
-              Cuando el complejo confirme, el estado cambiará en “Mis próximas reservas”, más abajo.
-              Ahí también verás estos datos de pago.
-            </p>
+            <p className="m-0 text-muted">{t('success.afterConfirm')}</p>
           </>
         ) : (
           <p className="m-0">
-            Tu turno está apartado.{' '}
+            {t('success.reserved')}{' '}
             {details
-              ? `Si no puedes ir, cancela con al menos ${details.policySnapshot.cancellationWindowHours} h de anticipación desde “Mis próximas reservas”.`
-              : 'Si no puedes ir, revisa el plazo de cancelación en “Mis próximas reservas”.'}
+              ? t('success.cancelWithin', { hours: details.policySnapshot.cancellationWindowHours })
+              : t('success.cancelCheck')}
           </p>
         )}
       </div>
 
       <div className="flex flex-wrap gap-sm">
         <AppButton fullWidth={false} onPress={onBookAnother}>
-          Reservar otro horario
+          {t('success.bookAnother')}
         </AppButton>
         <a
           href="#mis-reservas-title"
           className="inline-flex min-h-11 items-center px-3 text-md font-bold text-text underline underline-offset-4"
         >
-          Ver mis reservas
+          {t('success.viewMine')}
         </a>
       </div>
     </div>
@@ -1033,6 +1081,8 @@ function BookingSuccess({
 }
 
 function MyReservations() {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   // Refetch on focus, and poll every 30 s only while a request awaits the venue and
   // the tab is visible; settled lists cost no background requests.
   const myReservationsQuery = useMyReservationsQuery({
@@ -1078,10 +1128,10 @@ function MyReservations() {
     setCancelError(null);
     try {
       await cancelReservationMutation.mutateAsync(cancelTarget.id);
-      setCancelledNotice(`Cancelaste la reserva en ${cancelTarget.pitch.name}.`);
+      setCancelledNotice(t('mine.cancelled', { pitch: cancelTarget.pitch.name }));
       dialogRef.current?.close();
     } catch (error) {
-      setCancelError(describeError(error, 'No se pudo cancelar la reserva.'));
+      setCancelError(describeError(error, t('mine.cancelFailed')));
     }
   }
 
@@ -1091,7 +1141,7 @@ function MyReservations() {
     <section aria-labelledby="mis-reservas-title" className="mt-lg grid gap-md">
       <SectionHeader
         id="mis-reservas-title"
-        title="Mis próximas reservas"
+        title={t('mine.title')}
         aside={
           <RefreshControl
             dataUpdatedAt={myReservationsQuery.dataUpdatedAt}
@@ -1105,29 +1155,24 @@ function MyReservations() {
       </p>
 
       {myReservationsQuery.isLoading ? (
-        <ListSkeleton rows={2} label="Cargando tus reservas" />
+        <ListSkeleton rows={2} label={t('mine.loading')} />
       ) : myReservationsQuery.error ? (
         <div className="grid gap-sm">
-          <InlineError
-            message={describeError(
-              myReservationsQuery.error,
-              'No se pudieron cargar tus reservas.',
-            )}
-          />
+          <InlineError message={describeError(myReservationsQuery.error, t('mine.loadFailed'))} />
           <AppButton
             variant="neutral"
             fullWidth={false}
             onPress={() => void myReservationsQuery.refetch()}
           >
-            Reintentar
+            {t('common.retry')}
           </AppButton>
         </div>
       ) : upcoming.length === 0 ? (
         <AppEmpty
           icon={<CalendarClock size={18} aria-hidden />}
-          title="No tienes reservas próximas"
-          description="Elige un horario libre arriba y aparecerá aquí con su estado."
-          actionLabel="Elegir horario"
+          title={t('mine.emptyTitle')}
+          description={t('mine.emptyDescription')}
+          actionLabel={t('mine.emptyAction')}
           onAction={() => document.getElementById('reservar-title')?.scrollIntoView()}
         />
       ) : (
@@ -1146,7 +1191,7 @@ function MyReservations() {
       {past.length > 0 ? (
         <details className="group rounded-[var(--radius-lg)] border border-border-default">
           <summary className="flex min-h-11 cursor-pointer items-center px-md font-bold text-text">
-            Historial ({past.length})
+            {t('mine.history', { count: past.length })}
           </summary>
           <ul className="m-0 grid list-none gap-sm p-md pt-0">
             {past.map((reservation) => (
@@ -1158,10 +1203,10 @@ function MyReservations() {
 
       <ConfirmDialog
         dialogRef={dialogRef}
-        title="¿Cancelar esta reserva?"
-        confirmLabel="Sí, cancelar reserva"
-        pendingLabel="Cancelando…"
-        dismissLabel="Conservar reserva"
+        title={t('mine.dialog.title')}
+        confirmLabel={t('mine.dialog.confirm')}
+        pendingLabel={t('mine.dialog.pending')}
+        dismissLabel={t('mine.dialog.dismiss')}
         isPending={cancelReservationMutation.isPending}
         error={cancelError}
         onConfirm={() => void confirmCancel()}
@@ -1174,11 +1219,9 @@ function MyReservations() {
           <>
             <p className="m-0 text-text first-letter:uppercase">
               {cancelTarget.venue.name} · {cancelTarget.pitch.name} ·{' '}
-              {formatSlotWhen(cancelTarget.startAt, cancelTarget.endAt, targetTimeZone)}
+              {formatSlotWhen(cancelTarget.startAt, cancelTarget.endAt, targetTimeZone, locale)}
             </p>
-            <p className="m-0">
-              El horario quedará libre para otros jugadores. Esta acción no se puede deshacer.
-            </p>
+            <p className="m-0">{t('mine.dialog.body')}</p>
           </>
         ) : null}
       </ConfirmDialog>
@@ -1195,8 +1238,10 @@ function ReservationItem({
   now: number;
   onCancel?: () => void;
 }) {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   const timeZone = safeTimeZone(reservation.venue.timezone);
-  const status = reservationStatus(reservation.status);
+  const status = reservationStatus(reservation.status, t);
   const isPending = reservation.status === 'pending_confirmation';
   const isActive = isPending || reservation.status === 'confirmed';
   const windowHours = reservation.policySnapshot.cancellationWindowHours;
@@ -1214,7 +1259,7 @@ function ReservationItem({
           <AppBadge variant={status.variant}>{status.label}</AppBadge>
         </div>
         <p className="m-0 text-md leading-[1.5] text-text first-letter:uppercase">
-          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone)}
+          {formatSlotWhen(reservation.startAt, reservation.endAt, timeZone, locale)}
         </p>
         <p className="m-0 text-sm leading-[18px] text-muted">
           {
@@ -1222,10 +1267,14 @@ function ReservationItem({
               reservation.priceMinor,
               pitchAtBooking(reservation),
               reservation.currency,
+              t,
+              locale,
             ).full
           }
           {!isPending && reservation.depositMinor > 0
-            ? ` · anticipo ${formatMoneyMinor(reservation.depositMinor, reservation.currency)}`
+            ? t('mine.item.deposit', {
+                amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+              })
             : ''}
         </p>
         {isPending && onCancel ? (
@@ -1233,14 +1282,13 @@ function ReservationItem({
         ) : null}
         {isActive && !holdExpired && onCancel && !canCancel ? (
           <p className="m-0 text-sm leading-[18px] text-muted">
-            Ya no se puede cancelar en línea: el complejo acepta cancelaciones hasta {windowHours} h
-            antes.
+            {t('mine.item.noCancel', { hours: windowHours })}
           </p>
         ) : null}
       </div>
       {canCancel ? (
         <AppButton variant="neutral" compact fullWidth={false} onPress={onCancel}>
-          Cancelar reserva
+          {t('mine.item.cancel')}
         </AppButton>
       ) : null}
     </li>
@@ -1261,14 +1309,19 @@ function PendingPaymentInfo({
   timeZone: string;
   now: number;
 }) {
+  const { t, i18n } = useTranslation('play');
+  const locale = i18n.language;
   const { venue } = reservation;
   const owesDeposit =
     reservation.depositMinor > 0 && reservation.paidMinor < reservation.depositMinor;
   const holdExpiresAt = reservation.holdExpiresAt;
   const deadline = holdExpiresAt
     ? dateKeyInTimeZone(holdExpiresAt, timeZone) === dateKeyInTimeZone(new Date(now), timeZone)
-      ? `Paga ${formatBeforeTime(holdExpiresAt, timeZone)}`
-      : `Paga ${formatBeforeTime(holdExpiresAt, timeZone)} del ${formatLongDate(dateKeyInTimeZone(holdExpiresAt, timeZone))}`
+      ? t('pending.payBefore', { before: formatBeforeTime(holdExpiresAt, timeZone, locale, t) })
+      : t('pending.payBeforeOn', {
+          before: formatBeforeTime(holdExpiresAt, timeZone, locale, t),
+          date: formatLongDate(dateKeyInTimeZone(holdExpiresAt, timeZone), locale),
+        })
     : null;
   const expired = isHoldExpired(reservation, now);
   const instructions = expired ? null : venue.paymentInstructions?.trim() || null;
@@ -1279,30 +1332,35 @@ function PendingPaymentInfo({
       {expired ? (
         <>
           <p className="m-0 font-bold">
-            Anticipo: {formatMoneyMinor(reservation.depositMinor, reservation.currency)} · venció el
-            plazo para pagarlo
+            {t('pending.expiredDeposit', {
+              amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+            })}
           </p>
-          <p className="m-0">El horario se liberó. No pagues sin hablar antes con el complejo.</p>
+          <p className="m-0">{t('pending.expiredNote')}</p>
         </>
       ) : owesDeposit ? (
         <>
           <p className="m-0 font-bold">
-            Anticipo: {formatMoneyMinor(reservation.depositMinor, reservation.currency)}
-            {deadline ? ` · ${deadline}` : ''}
+            {deadline
+              ? t('pending.depositDeadline', {
+                  amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+                  deadline,
+                })
+              : t('pending.deposit', {
+                  amount: formatMoneyMinor(reservation.depositMinor, reservation.currency, locale),
+                })}
           </p>
-          {deadline ? (
-            <p className="m-0 text-muted">Si no se registra a tiempo, el horario se libera.</p>
-          ) : null}
+          {deadline ? <p className="m-0 text-muted">{t('pending.releaseNote')}</p> : null}
         </>
       ) : reservation.depositMinor > 0 ? (
-        <p className="m-0 font-bold">Anticipo registrado. Falta la confirmación del complejo.</p>
+        <p className="m-0 font-bold">{t('pending.registered')}</p>
       ) : (
-        <p className="m-0 font-bold">El complejo revisará tu solicitud y la confirmará.</p>
+        <p className="m-0 font-bold">{t('pending.reviewing')}</p>
       )}
       {instructions ? <p className="m-0 whitespace-pre-line">{instructions}</p> : null}
       {phone ? (
         <p className="m-0">
-          Contacto del complejo:{' '}
+          {t('common.callVenue')}{' '}
           <a
             href={`tel:${phone.replace(/[^\d+]/g, '')}`}
             className="font-bold text-text underline underline-offset-2"

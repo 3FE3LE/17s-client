@@ -1,9 +1,11 @@
+import { useTranslation } from '@17suit/i18n/react';
 import { Feather } from '@expo/vector-icons';
 import { useAppTheme } from '@17suit/ui-native';
 import { Tabs } from 'expo-router/js-tabs';
 
 export default function TabsLayout() {
   const { theme } = useAppTheme();
+  const { t } = useTranslation('mobile');
   const labelType = theme.typography.styles.caption;
 
   return (
@@ -30,7 +32,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          title: 'Inicio',
+          title: t('tabs.home'),
           tabBarIcon: ({ color, size }) => (
             <Feather name="home" size={size} color={color as string} />
           ),
@@ -39,7 +41,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil',
+          title: t('tabs.profile'),
           tabBarIcon: ({ color, size }) => (
             <Feather name="user" size={size} color={color as string} />
           ),
