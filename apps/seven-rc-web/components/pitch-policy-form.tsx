@@ -38,6 +38,7 @@ export function parseOptionalInt(
 /** Server DTO property to form field, only for fields with an inline error. */
 const SERVER_FIELD_MAP = {
   depositPercent: 'depositPercent',
+  depositFromMinutes: 'depositFromMinutes',
   holdMinutes: 'holdMinutes',
   cancellationWindowHours: 'cancellationWindowHours',
   paymentInstructions: 'paymentInstructions',
@@ -57,6 +58,14 @@ const FIELDS = [
     min: 0,
     max: 100,
     error: 'policyErrors.depositPercent',
+  },
+  {
+    key: 'depositFromMinutes',
+    name: 'depositFromMinutes',
+    labelKey: 'policyFields.depositFromMinutes',
+    min: 0,
+    max: 1440,
+    error: 'policyErrors.depositFromMinutes',
   },
   {
     key: 'holdMinutes',
@@ -82,8 +91,9 @@ const policyOverride = z.union([z.enum(['retain', 'refund', 'owner_decides']), z
 
 const pitchPolicySchema = z.object({
   depositPercent: optionalIntInRange(0, 100, FIELDS[0].error),
-  holdMinutes: optionalIntInRange(5, 1440, FIELDS[1].error),
-  cancellationWindowHours: optionalIntInRange(0, 168, FIELDS[2].error),
+  depositFromMinutes: optionalIntInRange(0, 1440, FIELDS[1].error),
+  holdMinutes: optionalIntInRange(5, 1440, FIELDS[2].error),
+  cancellationWindowHours: optionalIntInRange(0, 168, FIELDS[3].error),
   paymentInstructions: z.string(),
   lateCancelDeposit: policyOverride,
   noShowDeposit: policyOverride,
@@ -101,6 +111,7 @@ export function PitchPolicyForm({
   venue: Pick<
     OwnerVenue,
     | 'depositPercent'
+    | 'depositFromMinutes'
     | 'holdMinutes'
     | 'cancellationWindowHours'
     | 'paymentInstructions'
@@ -122,6 +133,7 @@ export function PitchPolicyForm({
     resolver: zodResolver(pitchPolicySchema),
     defaultValues: {
       depositPercent: pitch.depositPercent === null ? '' : String(pitch.depositPercent),
+      depositFromMinutes: pitch.depositFromMinutes === null ? '' : String(pitch.depositFromMinutes),
       holdMinutes: pitch.holdMinutes === null ? '' : String(pitch.holdMinutes),
       cancellationWindowHours:
         pitch.cancellationWindowHours === null ? '' : String(pitch.cancellationWindowHours),
@@ -140,6 +152,7 @@ export function PitchPolicyForm({
       try {
         await mutation.mutateAsync({
           depositPercent: parseOptionalInt(values.depositPercent, 0, 100) as number | null,
+          depositFromMinutes: parseOptionalInt(values.depositFromMinutes, 0, 1440) as number | null,
           holdMinutes: parseOptionalInt(values.holdMinutes, 5, 1440) as number | null,
           cancellationWindowHours: parseOptionalInt(values.cancellationWindowHours, 0, 168) as
             | number
@@ -165,6 +178,7 @@ export function PitchPolicyForm({
 
   const inherited: Record<NumericKey, string> = {
     depositPercent: String(venue.depositPercent),
+    depositFromMinutes: String(venue.depositFromMinutes),
     holdMinutes: String(venue.holdMinutes),
     cancellationWindowHours: String(venue.cancellationWindowHours),
   };
@@ -180,7 +194,7 @@ export function PitchPolicyForm({
         {t('pitchPolicy.title')}
       </h3>
       <p className="m-0 text-sm leading-[18px] text-muted">{t('pitchPolicy.intro')}</p>
-      <div className="grid gap-sm md:grid-cols-3">
+      <div className="grid gap-sm md:grid-cols-2">
         {FIELDS.map((field) => (
           <Controller
             key={field.key}

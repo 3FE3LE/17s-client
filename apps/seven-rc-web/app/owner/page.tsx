@@ -1526,7 +1526,7 @@ function PitchConfig({
         pitch={pitch}
       />
       <PitchPolicyForm
-        key={`condiciones-${pitch.id}-${pitch.depositPercent}-${pitch.holdMinutes}-${pitch.cancellationWindowHours}-${pitch.paymentInstructions}-${pitch.lateCancelDeposit}-${pitch.noShowDeposit}-${pitch.conditionsText}`}
+        key={`condiciones-${pitch.id}-${pitch.depositPercent}-${pitch.depositFromMinutes}-${pitch.holdMinutes}-${pitch.cancellationWindowHours}-${pitch.paymentInstructions}-${pitch.lateCancelDeposit}-${pitch.noShowDeposit}-${pitch.conditionsText}`}
         venueId={venueId}
         venue={venue}
         pitch={pitch}

@@ -18,6 +18,7 @@ const venue = {
   contactPhone: '+573001234567',
   paymentInstructions: '',
   depositPercent: 30,
+  depositFromMinutes: 0,
   holdMinutes: 60,
   cancellationWindowHours: 24,
   lateCancelDeposit: 'retain',
@@ -41,11 +42,17 @@ describe('VenueSettingsForm', () => {
   it('saves numeric fields as numbers', async () => {
     render(<VenueSettingsForm venue={venue} />);
     await replace('Anticipo (% del precio)', '50');
+    await replace('Depósito desde (minutos reservados)', '90');
     await userEvent.click(screen.getByRole('button', { name: 'Guardar ajustes' }));
 
     expect(await screen.findByText(/Guardaste los ajustes/)).toBeTruthy();
     expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ depositPercent: 50, holdMinutes: 60, bookingHorizonDays: 30 }),
+      expect.objectContaining({
+        depositPercent: 50,
+        depositFromMinutes: 90,
+        holdMinutes: 60,
+        bookingHorizonDays: 30,
+      }),
     );
   });
 

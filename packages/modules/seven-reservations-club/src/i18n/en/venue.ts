@@ -24,6 +24,7 @@ export const venue = {
   policyFields: {
     paymentInstructions: 'Payment instructions',
     depositPercent: 'Deposit (% of price)',
+    depositFromMinutes: 'Deposit from (minutes booked)',
     holdMinutes: 'Minutes to pay the deposit',
     cancellationWindowHours: 'Online cancellation (hours before)',
     lateCancelDeposit: 'Late cancellation: deposit',
@@ -32,6 +33,7 @@ export const venue = {
   },
   policyErrors: {
     depositPercent: 'Use a whole number between 0 and 100.',
+    depositFromMinutes: 'Use between 0 and 1440 minutes. 0 = always.',
     holdMinutes: 'Use between 5 and 1440 minutes (24 h).',
     cancellationWindowHours: 'Use between 0 and 168 hours (7 days).',
   },
@@ -50,6 +52,9 @@ export const venue = {
     depositPercent: {
       hintZero: 'With 0 %, every booking is confirmed instantly, without going through you.',
       hintPending: 'The booking stays pending until you record the deposit or confirm it.',
+    },
+    depositFromMinutes: {
+      hint: 'The deposit is required only for bookings at least this long. 0 means every online booking needs it.',
     },
     holdMinutes: {
       hint: 'The slot is held for this long. If it expires without a deposit, the time is released.',

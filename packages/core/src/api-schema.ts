@@ -1756,6 +1756,7 @@ export interface components {
       contactPhone?: string | null;
       paymentInstructions?: string | null;
       depositPercent: number;
+      depositFromMinutes: number;
       holdMinutes: number;
       cancellationWindowHours: number;
       lateCancelDeposit: components['schemas']['DepositPolicy'];
@@ -1796,6 +1797,7 @@ export interface components {
       contactPhone?: string | null;
       paymentInstructions?: string | null;
       depositPercent: number;
+      depositFromMinutes: number;
       holdMinutes: number;
       cancellationWindowHours: number;
       lateCancelDeposit: components['schemas']['DepositPolicy'];
@@ -1855,6 +1857,8 @@ export interface components {
       paymentInstructions?: string;
       /** @description Deposit % of slot price to hold a booking */
       depositPercent?: number;
+      /** @description Deposit only when the booked duration is at least N minutes. 0 = always */
+      depositFromMinutes?: number;
       /** @description Minutes an unpaid booking holds the slot */
       holdMinutes?: number;
       /** @description Players can cancel up to N hours before start */
@@ -1922,6 +1926,8 @@ export interface components {
       basePriceMinor: number;
       /** @description Null inherits the venue */
       depositPercent: number | null;
+      /** @description Null inherits the venue */
+      depositFromMinutes: number | null;
       /** @description Null inherits the venue */
       holdMinutes: number | null;
       /** @description Null inherits the venue */
@@ -2035,6 +2041,8 @@ export interface components {
       /** @description Null inherits the venue */
       depositPercent: number | null;
       /** @description Null inherits the venue */
+      depositFromMinutes: number | null;
+      /** @description Null inherits the venue */
       holdMinutes: number | null;
       /** @description Null inherits the venue */
       cancellationWindowHours: number | null;
@@ -2140,6 +2148,8 @@ export interface components {
     ConfigurePitchPolicyDto: {
       /** @description Deposit % for this pitch. Null inherits the venue */
       depositPercent?: number | null;
+      /** @description Deposit only when the booked duration is at least N minutes. Null inherits */
+      depositFromMinutes?: number | null;
       /** @description Minutes an unpaid booking holds this pitch. Null inherits */
       holdMinutes?: number | null;
       /** @description Cancel up to N hours before start. Null inherits */
@@ -2234,6 +2244,7 @@ export interface components {
       /** @description Venue policyVersion when the reservation was created */
       version: number;
       depositPercent: number;
+      depositFromMinutes: number;
       holdMinutes: number;
       /** @description Cancellation window that applies to this reservation */
       cancellationWindowHours: number;
@@ -2677,6 +2688,8 @@ export interface components {
       /** @description Resolved: pitch override, else venue value */
       depositPercent: number;
       /** @description Resolved: pitch override, else venue value */
+      depositFromMinutes: number;
+      /** @description Resolved: pitch override, else venue value */
       holdMinutes: number;
       /** @description Resolved: pitch override, else venue value */
       cancellationWindowHours: number;
@@ -2701,6 +2714,7 @@ export interface components {
       currency: string;
       contactPhone?: string | null;
       depositPercent: number;
+      depositFromMinutes: number;
       holdMinutes: number;
       cancellationWindowHours: number;
       paymentInstructions?: string | null;
@@ -4521,6 +4535,15 @@ export interface operations {
       };
       /** @description Reservation not found */
       404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['ErrorResponseDto'];
+        };
+      };
+      /** @description The hold expired and the slot was released (HOLD_EXPIRED) */
+      409: {
         headers: {
           [name: string]: unknown;
         };
