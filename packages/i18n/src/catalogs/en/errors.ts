@@ -18,6 +18,7 @@ export const errors = {
   notVenueOwner: 'Only the venue owner can do this.',
   notReservationOwner: 'Only the person who booked can do this.',
   reservationAccessDenied: 'You cannot see this reservation.',
+  invalidField: 'Check this field.',
   invalidTimeRange: 'The end time must be after the start time.',
   outsideBookingWindow: 'That date is outside the period the venue accepts bookings.',
   reservationNotPending: 'This request was already handled. The list was refreshed.',

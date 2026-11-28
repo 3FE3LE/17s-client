@@ -1,5 +1,6 @@
 'use client';
 
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
@@ -14,6 +15,9 @@ import { useTranslation } from '@17suit/i18n/react';
 /** Mirrors the server rule (`VENUE_SLUG_PATTERN`, max 60). */
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const SLUG_MAX = 60;
+
+/** Server DTO property to form field. */
+const SERVER_FIELD_MAP = { slug: 'slug' } as const;
 
 function suggestSlug(name: string): string {
   return name
@@ -74,7 +78,9 @@ export function PublishVenueForm({ venue, missing }: PublishVenueFormProps) {
         setError('slug', { message: 'publish.slugTaken' });
         return;
       }
-      setFormError(describeError(caught, t('publish.saveFailed')));
+      if (!applyServerFieldErrors(caught, setError, SERVER_FIELD_MAP)) {
+        setFormError(describeError(caught, t('publish.saveFailed')));
+      }
     }
   }
 

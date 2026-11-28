@@ -1,4 +1,9 @@
-import { EMPTY_CO_ADDRESS_DRAFT, coAddressDraftSchema, coAddressFromDraft } from '@17suit/core';
+import {
+  EMPTY_CO_ADDRESS_DRAFT,
+  applyServerFieldErrors,
+  coAddressDraftSchema,
+  coAddressFromDraft,
+} from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppInput, AppSelect, AppSkeleton, GapView } from '@17suit/ui-native';
@@ -44,10 +49,14 @@ function detectLocalTimezone(): string {
   return 'UTC';
 }
 
+/** Server DTO property to form field. Address parts have no single inline field. */
+const SERVER_FIELD_MAP = { name: 'name' } as const;
+
 export default function CreateComplexScreen() {
   const router = useRouter();
   const { t } = useTranslation('mobile');
-  const errorText = (code?: string) => (code ? t(`venueNew.errors.${code}`) : null);
+  const errorText = (code?: string) =>
+    code ? (code.includes(':') ? t(code) : t(`venueNew.errors.${code}`)) : null;
   const { user } = useUser();
   const { role, isLoading } = useCurrentUserRoleQuery({
     userId: user?.id,
@@ -63,7 +72,7 @@ export default function CreateComplexScreen() {
     }));
   }, [detectedTimezone, t]);
   const createVenueMutation = useCreateVenueMutation();
-  const { control, handleSubmit, formState } = useForm<CreateComplexFormValues>({
+  const { control, handleSubmit, formState, setError } = useForm<CreateComplexFormValues>({
     resolver: zodResolver(createComplexSchema),
     mode: 'onChange',
     defaultValues: {
@@ -105,7 +114,9 @@ export default function CreateComplexScreen() {
       feedback.success(t('venueNew.createdTitle'), t('venueNew.createdMessage'));
       router.replace(`/complexes/${created.id}`);
     } catch (error) {
-      setSubmitError(humanizeError(error, t, 'save'));
+      if (!applyServerFieldErrors(error, setError, SERVER_FIELD_MAP)) {
+        setSubmitError(humanizeError(error, t, 'save'));
+      }
     }
   });
 

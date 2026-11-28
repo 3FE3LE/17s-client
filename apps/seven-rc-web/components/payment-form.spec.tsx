@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ApiError } from '@17suit/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PaymentForm } from './payment-form';
 import type { VenueReservation } from '@/lib/owner-queries';
@@ -79,5 +80,21 @@ describe('PaymentForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Registrar pago' }));
 
     expect(await screen.findByText(/No se pudo registrar el pago/)).toBeTruthy();
+  });
+
+  it('shows server field errors inline without the generic banner', async () => {
+    onSubmit.mockRejectedValue(
+      new ApiError({
+        code: 'HTTP_ERROR',
+        status: 400,
+        message: 'Validation failed',
+        fields: { amountMinor: ['amountMinor must not be greater than 100000000'] },
+      }),
+    );
+    renderForm();
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar pago' }));
+
+    expect(await screen.findByText('Revisa este campo.')).toBeTruthy();
+    expect(screen.queryByText(/No se pudo registrar el pago/)).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { optionalIntInRange } from '@17suit/core';
+import { applyServerFieldErrors, optionalIntInRange } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton } from '@17suit/ui';
 import { useState } from 'react';
@@ -34,6 +34,14 @@ export function parseOptionalInt(
   const parsed = Number(trimmed);
   return parsed >= min && parsed <= max ? parsed : 'invalid';
 }
+
+/** Server DTO property to form field, only for fields with an inline error. */
+const SERVER_FIELD_MAP = {
+  depositPercent: 'depositPercent',
+  holdMinutes: 'holdMinutes',
+  cancellationWindowHours: 'cancellationWindowHours',
+  paymentInstructions: 'paymentInstructions',
+} as const;
 
 const POLICY_LABEL_KEY: Record<DepositPolicy, string> = {
   refund: 'depositPolicy.refund',
@@ -110,7 +118,7 @@ export function PitchPolicyForm({
   const mutation = useConfigurePitchPolicyMutation(pitch.id, venueId);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit } = useForm<PitchPolicyValues>({
+  const { control, handleSubmit, setError } = useForm<PitchPolicyValues>({
     resolver: zodResolver(pitchPolicySchema),
     defaultValues: {
       depositPercent: pitch.depositPercent === null ? '' : String(pitch.depositPercent),
@@ -144,7 +152,9 @@ export function PitchPolicyForm({
         });
         setNotice(t('pitchPolicy.saved', { pitch: pitch.name }));
       } catch (caught) {
-        setFormError(describeError(caught, t('pitchPolicy.saveFailed')));
+        if (!applyServerFieldErrors(caught, setError, SERVER_FIELD_MAP)) {
+          setFormError(describeError(caught, t('pitchPolicy.saveFailed')));
+        }
       }
     },
     () => {
@@ -208,13 +218,18 @@ export function PitchPolicyForm({
       <Controller
         control={control}
         name="paymentInstructions"
-        render={({ field }) => (
+        render={({ field, fieldState }) => (
           <HintedInput
             type="text"
             name="paymentInstructions"
             label={t('policyFields.paymentInstructions')}
             autoComplete="off"
             placeholder={venue.paymentInstructions ?? ''}
+            errorMessage={
+              fieldState.error?.message
+                ? t(fieldState.error.message, { defaultValue: fieldState.error.message })
+                : null
+            }
             value={field.value}
             onChangeText={(value) => {
               field.onChange(value);

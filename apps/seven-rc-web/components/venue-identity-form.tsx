@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  applyServerFieldErrors,
   coAddressDraftSchema,
   coAddressFromDraft,
   draftFromCoAddress,
@@ -24,6 +25,9 @@ const venueIdentitySchema = z.object({
 });
 type VenueIdentityValues = z.infer<typeof venueIdentitySchema>;
 
+/** Server DTO property to form field. Address parts have no single inline field. */
+const SERVER_FIELD_MAP = { name: 'name' } as const;
+
 /**
  * Name and address of a saved venue. The address is edited as three
  * pre-filled components; a venue created before structured addresses shows its
@@ -35,7 +39,7 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
   const saved = parseCoAddress(venue.addressParts);
   const [formError, setFormError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit, formState } = useForm<VenueIdentityValues>({
+  const { control, handleSubmit, formState, setError } = useForm<VenueIdentityValues>({
     resolver: zodResolver(venueIdentitySchema),
     defaultValues: { name: venue.name, address: draftFromCoAddress(saved) },
   });
@@ -55,7 +59,7 @@ export function VenueIdentityForm({ venue }: { venue: OwnerVenue }) {
       );
       if (result.ok) {
         setNotice(t('identity.saved'));
-      } else {
+      } else if (!applyServerFieldErrors(result.error, setError, SERVER_FIELD_MAP)) {
         setFormError(describeError(result.error, t('identity.saveFailed')));
       }
     },

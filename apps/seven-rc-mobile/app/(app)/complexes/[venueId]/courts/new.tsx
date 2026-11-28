@@ -1,3 +1,4 @@
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCurrentUserRoleQuery } from '@17suit/module-seven-reservations-club/client';
 import { AppButton, AppInput, AppSelect, AppSkeleton, GapView } from '@17suit/ui-native';
@@ -13,6 +14,13 @@ import { humanizeError } from '../../../../../lib/error-messages';
 import { feedback } from '../../../../../lib/feedback';
 import { findSport, SPORTS } from '../../../../../lib/sports';
 import { useCreateVenuePitchMutation } from '../../../../../lib/owner-queries';
+
+/** Server DTO property to form field, only for fields with an inline error. */
+const SERVER_FIELD_MAP = {
+  name: 'name',
+  capacity: 'capacity',
+  slotDurationMinutes: 'slotDurationMinutes',
+} as const;
 
 /** Schema messages are `courtNew.errors.*` catalog keys; the screen translates them. */
 const createCourtSchema = z.object({
@@ -55,7 +63,8 @@ export default function CreateCourtScreen() {
     value: String(minutes),
     label: t('common.minutes', { minutes }),
   }));
-  const errorText = (code?: string) => (code ? t(`courtNew.errors.${code}`) : null);
+  const errorText = (code?: string) =>
+    code ? (code.includes(':') ? t(code) : t(`courtNew.errors.${code}`)) : null;
   const { user } = useUser();
   const { role, isLoading } = useCurrentUserRoleQuery({
     userId: user?.id,
@@ -68,7 +77,7 @@ export default function CreateCourtScreen() {
     : (params.venueId ?? null);
   const createPitchMutation = useCreateVenuePitchMutation(venueId ?? '');
   const initialSport = findSport('padel');
-  const { control, handleSubmit, formState, setValue } = useForm<CreateCourtFormValues>({
+  const { control, handleSubmit, formState, setValue, setError } = useForm<CreateCourtFormValues>({
     resolver: zodResolver(createCourtSchema),
     mode: 'onChange',
     defaultValues: {
@@ -109,7 +118,9 @@ export default function CreateCourtScreen() {
       feedback.success(t('courtNew.createdTitle'), t('courtNew.createdMessage'));
       router.replace(`/complexes/${venueId}/courts/${created.id}/slots`);
     } catch (error) {
-      setSubmitError(humanizeError(error, t, 'save'));
+      if (!applyServerFieldErrors(error, setError, SERVER_FIELD_MAP)) {
+        setSubmitError(humanizeError(error, t, 'save'));
+      }
     }
   });
 

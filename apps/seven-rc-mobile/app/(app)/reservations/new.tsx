@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { sevenRcQueryKeys } from '@17suit/module-seven-reservations-club/client';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Feather } from '@expo/vector-icons';
 import {
@@ -38,6 +39,9 @@ import { venueTimeLabel } from '../../../lib/timezone-label';
 import type { MobileT } from '../../../lib/i18n';
 
 type AvailabilitySlot = PitchAvailability['slots'][number];
+
+/** Server DTO property to form field, only for fields with an inline error. */
+const SERVER_FIELD_MAP = { pitchId: 'pitchId', notes: 'notes' } as const;
 
 /** Schema messages are `reservationNew.errors.*` catalog keys; the screen translates them. */
 const reservationSchema = z.object({
@@ -175,7 +179,8 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
   const router = useRouter();
   const { t } = useTranslation('mobile');
   const locale = t('intlLocale');
-  const errorText = (code?: string) => (code ? t(`reservationNew.errors.${code}`) : null);
+  const errorText = (code?: string) =>
+    code ? (code.includes(':') ? t(code) : t(`reservationNew.errors.${code}`)) : null;
   const queryClient = useQueryClient();
   const { theme } = useAppTheme();
   const params = useLocalSearchParams<{ pitchId?: string | string[] }>();
@@ -201,7 +206,7 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
     [pitchesQuery.data],
   );
 
-  const { control, handleSubmit, formState, watch } = useForm<ReservationFormValues>({
+  const { control, handleSubmit, formState, watch, setError } = useForm<ReservationFormValues>({
     resolver: zodResolver(reservationSchema),
     mode: 'onChange',
     defaultValues: {
@@ -290,7 +295,9 @@ function NewReservationForm({ venue }: { venue: VenueSnapshot }) {
       }
       router.replace(`/reservations/${created.id}`);
     } catch (error) {
-      setSubmitError(humanizeError(error, t, 'create'));
+      if (!applyServerFieldErrors(error, setError, SERVER_FIELD_MAP)) {
+        setSubmitError(humanizeError(error, t, 'create'));
+      }
       void availabilityQuery.refetch();
     }
   });

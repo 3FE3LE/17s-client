@@ -1,6 +1,6 @@
 'use client';
 
-import { intInRange } from '@17suit/core';
+import { applyServerFieldErrors, intInRange } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AppButton } from '@17suit/ui';
 import { useState } from 'react';
@@ -18,12 +18,20 @@ const durationSchema = z.object({
 });
 type DurationValues = z.infer<typeof durationSchema>;
 
+/** Server DTO property to form field. */
+const SERVER_FIELD_MAP = { slotDurationMinutes: 'duration' } as const;
+
 export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: PitchWithPricing }) {
   const { t } = useTranslation('venue');
   const mutation = useConfigurePitchSlotsMutation(pitch.id, venueId);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const { control, handleSubmit, formState } = useForm<DurationValues>({
+  const {
+    control,
+    handleSubmit,
+    formState,
+    setError: setFieldError,
+  } = useForm<DurationValues>({
     resolver: zodResolver(durationSchema),
     defaultValues: { duration: String(pitch.slotDurationMinutes) },
   });
@@ -43,7 +51,9 @@ export function SlotDurationForm({ venueId, pitch }: { venueId: string; pitch: P
       });
       setNotice(t('slotDuration.saved', { pitch: pitch.name, duration: formatDuration(parsed) }));
     } catch (caught) {
-      setError(describeError(caught, t('slotDuration.failed')));
+      if (!applyServerFieldErrors(caught, setFieldError, SERVER_FIELD_MAP)) {
+        setError(describeError(caught, t('slotDuration.failed')));
+      }
     }
   });
   const saving = mutation.isPending || formState.isSubmitting;

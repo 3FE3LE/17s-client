@@ -1,5 +1,6 @@
 'use client';
 
+import { applyServerFieldErrors } from '@17suit/core';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from '@17suit/i18n/react';
 import { useState } from 'react';
@@ -109,7 +110,11 @@ function BlockTextField({
           />
           <InlineError
             message={
-              fieldState.error?.message ? t(`pitchBlocks.errors.${fieldState.error.message}`) : null
+              fieldState.error?.message
+                ? fieldState.error.message.includes(':')
+                  ? t(fieldState.error.message)
+                  : t(`pitchBlocks.errors.${fieldState.error.message}`)
+                : null
             }
           />
         </div>
@@ -117,6 +122,9 @@ function BlockTextField({
     />
   );
 }
+
+/** Server DTO property to form field. The reason has no inline error. */
+const SERVER_FIELD_MAP = { startAt: 'startTime', endAt: 'endTime' } as const;
 
 export interface PitchBlocksSectionProps {
   pitches: PitchWithPricing[];
@@ -188,7 +196,13 @@ function PitchBlocksPanel({
   const createMutation = useCreatePitchBlockMutation(pitch.id);
   const deleteMutation = useDeletePitchBlockMutation(pitch.id);
 
-  const { control, handleSubmit, getValues, reset } = useForm<BlockValues>({
+  const {
+    control,
+    handleSubmit,
+    getValues,
+    reset,
+    setError: setFieldError,
+  } = useForm<BlockValues>({
     resolver: zodResolver(buildBlockSchema(timeZone)),
     defaultValues: { date: todayKey, startTime: '', endTime: '', reason: '' },
   });
@@ -222,7 +236,9 @@ function PitchBlocksPanel({
       if (caught instanceof SevenRcApiError && caught.status === 409) {
         setConflicts(caught.conflicts);
       }
-      setError(describeError(caught, t('pitchBlocks.createError')));
+      if (!applyServerFieldErrors(caught, setFieldError, SERVER_FIELD_MAP)) {
+        setError(describeError(caught, t('pitchBlocks.createError')));
+      }
     }
   });
 
