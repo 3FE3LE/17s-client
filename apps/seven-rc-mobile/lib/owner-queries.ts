@@ -17,6 +17,8 @@ import {
   useSevenRcOwnerVenueReservationsQuery,
   useSevenRcOwnerVenuesQuery,
   useSevenRcRecordReservationPaymentMutation,
+  useSevenRcUpdateVenueSettingsMutation,
+  type UpdateVenueSettingsInput,
   type RecordReservationPaymentInput,
   type ReservationPaymentKind,
   type ReservationPaymentMethod,
@@ -77,6 +79,11 @@ export function useOwnerVenuesQuery() {
 export function useCreateVenueMutation() {
   const api = useOwnerApi();
   return useSevenRcCreateVenueMutation(api);
+}
+
+export function useUpdateVenueSettingsMutation(venueId: string) {
+  const api = useOwnerApi();
+  return useSevenRcUpdateVenueSettingsMutation(api, venueId);
 }
 
 export function useOwnerVenuePitchesQuery(venueId: string | null) {
@@ -197,6 +204,7 @@ export type {
   CreateVenueInput,
   RecordReservationPaymentInput,
   ReservationBase,
+  UpdateVenueSettingsInput,
   ReservationPaymentKind,
   ReservationPaymentMethod,
   VenueReservation,
