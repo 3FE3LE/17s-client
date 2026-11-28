@@ -27,6 +27,7 @@ export const venue: CatalogShape<typeof en> = {
   policyFields: {
     paymentInstructions: 'Instrucciones de pago',
     depositPercent: 'Anticipo (% del precio)',
+    depositFromMinutes: 'Depósito desde (minutos reservados)',
     holdMinutes: 'Minutos para pagar el anticipo',
     cancellationWindowHours: 'Cancelación en línea (horas antes)',
     lateCancelDeposit: 'Cancelación tardía: anticipo',
@@ -35,6 +36,7 @@ export const venue: CatalogShape<typeof en> = {
   },
   policyErrors: {
     depositPercent: 'Usa un número entero entre 0 y 100.',
+    depositFromMinutes: 'Usa entre 0 y 1440 minutos. 0 = siempre.',
     holdMinutes: 'Usa entre 5 y 1440 minutos (24 h).',
     cancellationWindowHours: 'Usa entre 0 y 168 horas (7 días).',
   },
@@ -53,6 +55,9 @@ export const venue: CatalogShape<typeof en> = {
     depositPercent: {
       hintZero: 'Con 0 %, cada reserva se confirma al instante, sin pasar por ti.',
       hintPending: 'La reserva queda pendiente hasta que registres el anticipo o la confirmes.',
+    },
+    depositFromMinutes: {
+      hint: 'El anticipo solo se exige en reservas de al menos esta duración. 0 significa que toda reserva en línea lo requiere.',
     },
     holdMinutes: {
       hint: 'El turno queda apartado este tiempo. Si vence sin anticipo, el horario se libera.',

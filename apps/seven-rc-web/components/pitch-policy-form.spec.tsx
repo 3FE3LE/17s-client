@@ -12,6 +12,7 @@ import { PitchPolicyForm, parseOptionalInt } from './pitch-policy-form';
 
 const VENUE = {
   depositPercent: 30,
+  depositFromMinutes: 0,
   holdMinutes: 60,
   cancellationWindowHours: 24,
   paymentInstructions: null,
@@ -23,6 +24,7 @@ const PITCH = {
   id: 'p1',
   name: 'Cancha 1',
   depositPercent: null,
+  depositFromMinutes: null,
   holdMinutes: null,
   cancellationWindowHours: null,
   paymentInstructions: null,
@@ -51,11 +53,17 @@ describe('PitchPolicyForm', () => {
     const user = userEvent.setup();
     render(<PitchPolicyForm venueId="v1" venue={VENUE} pitch={PITCH} />);
     await user.type(screen.getByLabelText('Anticipo (% del precio)'), '0');
+    await user.type(screen.getByLabelText('Depósito desde (minutos reservados)'), '120');
     await user.click(screen.getByRole('button', { name: 'Guardar condiciones' }));
 
     expect(await screen.findByText(/Guardaste las condiciones de Cancha 1/)).toBeTruthy();
     expect(mutateAsync).toHaveBeenCalledWith(
-      expect.objectContaining({ depositPercent: 0, holdMinutes: null, lateCancelDeposit: null }),
+      expect.objectContaining({
+        depositPercent: 0,
+        depositFromMinutes: 120,
+        holdMinutes: null,
+        lateCancelDeposit: null,
+      }),
     );
   });
 });

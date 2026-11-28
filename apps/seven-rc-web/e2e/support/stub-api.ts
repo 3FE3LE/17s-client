@@ -33,6 +33,7 @@ const PITCH = {
   slotDurationMinutes: 60,
   basePriceMinor: 12000000,
   depositPercent: 30,
+  depositFromMinutes: 0,
   holdMinutes: 60,
   cancellationWindowHours: 24,
   paymentInstructions: null,
@@ -67,6 +68,7 @@ function venueDto(): Venue {
     currency: 'COP',
     contactPhone: '+573001234567',
     depositPercent: 30,
+    depositFromMinutes: 0,
     holdMinutes: 60,
     cancellationWindowHours: 24,
     lateCancelDeposit: 'owner_decides',
@@ -127,6 +129,7 @@ function reservationDto(record: Stored): ReservationDto {
     policy: {
       version: 1,
       depositPercent: 30,
+      depositFromMinutes: 0,
       holdMinutes: 60,
       cancellationWindowHours: 24,
       paymentInstructions: null,

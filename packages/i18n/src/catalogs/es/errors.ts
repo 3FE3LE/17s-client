@@ -30,6 +30,8 @@ export const errors: CatalogShape<typeof en> = {
   reservationNotConfirmed:
     'Solo una reserva confirmada se puede cerrar así. La lista se actualizó.',
   reservationNotCancellable: 'Esta reserva ya no se puede cancelar.',
+  holdExpired:
+    'El tiempo para pagar el anticipo venció y el horario se liberó. Pide al jugador que reserve de nuevo.',
   paymentNotAllowed:
     'Esta reserva ya no admite pagos. Si devolviste dinero, regístralo como devolución.',
   refundExceedsPaid: 'La devolución supera lo que se ha pagado.',

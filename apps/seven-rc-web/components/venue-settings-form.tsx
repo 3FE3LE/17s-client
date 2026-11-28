@@ -23,6 +23,7 @@ import { useTranslation } from '@17suit/i18n/react';
 const SERVER_FIELD_MAP = {
   contactPhone: 'contactPhone',
   depositPercent: 'depositPercent',
+  depositFromMinutes: 'depositFromMinutes',
   holdMinutes: 'holdMinutes',
   cancellationWindowHours: 'cancellationWindowHours',
   bookingHorizonDays: 'bookingHorizonDays',
@@ -43,6 +44,7 @@ function buildSettingsSchema(countryCode: string, hadPhone: boolean) {
       contactPhone: z.string(),
       paymentInstructions: z.string().max(500),
       depositPercent: intInRange(0, 100, 'policyErrors.depositPercent'),
+      depositFromMinutes: intInRange(0, 1440, 'policyErrors.depositFromMinutes'),
       holdMinutes: intInRange(5, 1440, 'policyErrors.holdMinutes'),
       cancellationWindowHours: intInRange(0, 168, 'policyErrors.cancellationWindowHours'),
       lateCancelDeposit: z.enum(POLICY_VALUES),
@@ -79,7 +81,12 @@ function NumberField({
   hint,
 }: {
   control: ReturnType<typeof useForm<SettingsValues>>['control'];
-  name: 'depositPercent' | 'holdMinutes' | 'cancellationWindowHours' | 'bookingHorizonDays';
+  name:
+    | 'depositPercent'
+    | 'depositFromMinutes'
+    | 'holdMinutes'
+    | 'cancellationWindowHours'
+    | 'bookingHorizonDays';
   label: string;
   min: number;
   max: number;
@@ -130,6 +137,7 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
       contactPhone: venue.contactPhone ?? '',
       paymentInstructions: venue.paymentInstructions ?? '',
       depositPercent: String(venue.depositPercent),
+      depositFromMinutes: String(venue.depositFromMinutes),
       holdMinutes: String(venue.holdMinutes),
       cancellationWindowHours: String(venue.cancellationWindowHours),
       lateCancelDeposit: venue.lateCancelDeposit,
@@ -150,6 +158,7 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
           ...(phone ? { contactPhone: phone } : {}),
           paymentInstructions: values.paymentInstructions.trim(),
           depositPercent: Number(values.depositPercent),
+          depositFromMinutes: Number(values.depositFromMinutes),
           holdMinutes: Number(values.holdMinutes),
           cancellationWindowHours: Number(values.cancellationWindowHours),
           lateCancelDeposit: values.lateCancelDeposit,
@@ -241,6 +250,15 @@ export function VenueSettingsForm({ venue }: { venue: OwnerVenue }) {
               ? t('settings.depositPercent.hintZero')
               : t('settings.depositPercent.hintPending')
           }
+        />
+        <NumberField
+          control={control}
+          name="depositFromMinutes"
+          label={t('policyFields.depositFromMinutes')}
+          min={0}
+          max={1440}
+          step={15}
+          hint={t('settings.depositFromMinutes.hint')}
         />
         <NumberField
           control={control}

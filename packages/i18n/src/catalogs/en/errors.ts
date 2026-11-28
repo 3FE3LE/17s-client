@@ -27,6 +27,8 @@ export const errors = {
   reservationNotConfirmed:
     'Only a confirmed reservation can be closed this way. The list was refreshed.',
   reservationNotCancellable: 'This reservation can no longer be cancelled.',
+  holdExpired:
+    'The time to pay the deposit expired and the slot was released. Ask the player to book again.',
   paymentNotAllowed:
     'This reservation no longer accepts payments. If you returned money, record it as a refund.',
   refundExceedsPaid: 'The refund is higher than what was paid.',
